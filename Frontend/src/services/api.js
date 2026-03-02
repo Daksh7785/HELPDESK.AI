@@ -1,8 +1,9 @@
 import axios from 'axios';
-import { MOCK_TICKETS, MOCK_USERS } from './mockData';
+import { MOCK_TICKETS } from './mockData';
+import { API_CONFIG } from '../config';
 
-const USE_MOCK = true; // Still using mock for login/signup if backend doesn't support them
-const API_BASE_URL = 'http://localhost:8000';
+const USE_MOCK = true;
+const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 

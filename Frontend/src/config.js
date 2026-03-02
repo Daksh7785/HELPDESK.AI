@@ -5,11 +5,11 @@
 const getBackendUrl = () => {
     // Priority: .env → system default → localhost fallback
     const envUrl = import.meta.env.VITE_BACKEND_URL;
-    if (envUrl) return envUrl.replace(/\/$/, ''); // Remove trailing slash
+    if (envUrl) return envUrl.trim().replace(/\/$/, ''); // Remove whitespace and trailing slash
 
     // In production, we might want to default to something else
     if (import.meta.env.PROD) {
-        return 'https://ritesh-1918-ai-powered-ticket-backend.hf.space'; // Placeholder
+        return 'https://ritesh19180-ai-helpdesk-api.hf.space';
     }
 
     return 'http://localhost:8000';

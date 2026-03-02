@@ -17,11 +17,23 @@ def sync_env_to_vercel():
         
         if "=" in line:
             key, value = line.split("=", 1)
-            print(f"Adding {key} to Vercel...")
-            # We use --force to overwrite if exists, but vercel env add doesn't have --force.
-            # We delete first then add.
+            key = key.strip()
+            value = value.strip()
+            print(f"Syncing {key} to Vercel...")
+            
+            # Remove existing to be sure
             subprocess.run(f"npx vercel env rm {key} -y", shell=True, capture_output=True)
-            subprocess.run(f"echo {value} | npx vercel env add {key} production", shell=True)
+            
+            # Add new value using direct input to avoid shell echo issues
+            try:
+                subprocess.run(
+                    ["npx", "vercel", "env", "add", key, "production"],
+                    input=value.encode(),
+                    check=True,
+                    shell=True
+                )
+            except Exception as e:
+                print(f"Failed to add {key}: {e}")
 
 if __name__ == "__main__":
     sync_env_to_vercel()
