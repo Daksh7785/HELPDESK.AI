@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, Bug, Lightbulb, X, Loader2, Send } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
-import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { Button } from './button';
-import { Textarea } from './textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
 import { useToast } from '../../hooks/use-toast';
 
 export default function FeedbackWidget() {
