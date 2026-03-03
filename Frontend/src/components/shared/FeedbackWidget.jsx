@@ -7,7 +7,7 @@ import useAuthStore from '../../store/authStore';
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
-import { useToast } from '../../hooks/use-toast';
+import useToastStore from '../../store/toastStore';
 
 export default function FeedbackWidget() {
     const [isOpen, setIsOpen] = useState(false);
@@ -17,7 +17,7 @@ export default function FeedbackWidget() {
 
     const location = useLocation();
     const { profile } = useAuthStore();
-    const { toast } = useToast();
+    const { showToast } = useToastStore();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -39,22 +39,14 @@ export default function FeedbackWidget() {
 
             if (error) throw error;
 
-            toast({
-                title: "Feedback Submitted!",
-                description: "Thank you for helping us improve HELPDESK.AI.",
-                variant: "default",
-            });
+            showToast("Feedback Submitted! Thank you for helping us improve.", "success");
 
             // Reset & Close
             setMessage('');
             setIsOpen(false);
         } catch (err) {
             console.error("Feedback submission error:", err);
-            toast({
-                title: "Submission Failed",
-                description: "There was an issue saving your feedback. Please try again.",
-                variant: "destructive",
-            });
+            showToast("Submission Failed: There was an issue saving your feedback.", "error");
         } finally {
             setIsSubmitting(false);
         }
