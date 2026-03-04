@@ -10,7 +10,11 @@
 [![Vite](https://img.shields.io/badge/Vite-B73BFE?style=flat&logo=vite&logoColor=FFD62E)](https://vitejs.dev/)
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Models-orange)](https://huggingface.co/)
 
-[Live Application (Frontend)](https://helpdeskaiv1.vercel.app/) | [Master Admin Portal](https://helpdeskaiv1.vercel.app/master-admin-login) | [AI Backend API](https://ritesh19180-ai-helpdesk-api.hf.space/docs)
+<br/>
+
+[![Live Application](https://img.shields.io/badge/Live_App-Frontend-00A98F?style=for-the-badge&logo=vercel)](https://helpdeskaiv1.vercel.app/)
+[![Master Admin](https://img.shields.io/badge/Master_Admin-Portal-6A0D91?style=for-the-badge)](https://helpdeskaiv1.vercel.app/master-admin-login)
+[![AI Backend API](https://img.shields.io/badge/AI_Backend-API-FF8C00?style=for-the-badge&logo=fastapi)](https://ritesh19180-ai-helpdesk-api.hf.space/docs)
 
 </div>
 
