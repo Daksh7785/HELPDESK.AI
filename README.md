@@ -69,27 +69,27 @@ HELPDESK.AI isn't just a simple client/server app; it's designed to support a mu
 
 ## 🏗️ How It Works (Architecture)
 
-HELPDESK.AI utilizes a modern, decoupled architecture designed for speed and scalability.
+HELPDESK.AI utilizes a clean, decoupled architecture:
 
 ```mermaid
 graph LR
-    A[User (React/Vite Frontend)] -->|Submits Issue| B(FastAPI Backend)
-    B -->|Text Processing| C{AI Inference Engine}
-    C -->|DistilBERT| D[Categorization & Routing]
-    C -->|NER Model| E[Entity Extraction]
-    C -->|Cosine Similarity| F[Duplicate Detection]
-    D --> G[(Supabase DB)]
+    A["User (Frontend)"] -->|"Submits Issue"| B("FastAPI Backend")
+    B -->|"Text Processing"| C{"AI Inference Engine"}
+    C -->|"DistilBERT"| D["Categorization & Routing"]
+    C -->|"NER Model"| E["Entity Extraction"]
+    C -->|"Cosine Similarity"| F["Duplicate Detection"]
+    D --> G[("Supabase DB")]
     E --> G
     F --> G
-    G -->|Real-time Sync| A
-    G -->|Dashboard Data| H[Admin/Agent Portal]
+    G -->|"Real-time Sync"| A
+    G -->|"Dashboard Data"| H["Admin/Agent Portal"]
 ```
 
 ### The Stack
-*   **Frontend**: React 19, Vite, TailwindCSS (for rapid, beautiful UI styling), Zustand (State Management), Framer Motion (Animations).
-*   **Backend Interface**: FastAPI (Python) - Chosen for its incredible speed and native async support.
-*   **AI/ML Core**: PyTorch, Hugging Face `transformers`, `scikit-learn`, `pandas`.
-*   **Database & Auth**: Supabase (PostgreSQL) - Providing real-time subscriptions and robust authentication.
+*   **Frontend**: React 19, Vite, TailwindCSS
+*   **Backend Interface**: FastAPI (Python)
+*   **AI/ML Core**: PyTorch, Hugging Face `transformers`
+*   **Database & Auth**: Supabase (PostgreSQL)
 
 <br/>
 
