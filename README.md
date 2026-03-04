@@ -14,7 +14,7 @@
 
 [![Live Application](https://img.shields.io/badge/Live_App-Frontend-00A98F?style=for-the-badge&logo=vercel)](https://helpdeskaiv1.vercel.app/)
 [![Master Admin](https://img.shields.io/badge/Master_Admin-Portal-6A0D91?style=for-the-badge)](https://helpdeskaiv1.vercel.app/master-admin-login)
-[![AI Backend API](https://img.shields.io/badge/AI_Backend-API-FF8C00?style=for-the-badge&logo=fastapi)](https://ritesh19180-ai-helpdesk-api.hf.space/docs)
+[![AI Backend](https://img.shields.io/badge/AI_Backend-API-FF8C00?style=for-the-badge&logo=huggingface)](https://huggingface.co/spaces/ritesh19180/ai-helpdesk-api)
 
 </div>
 
@@ -101,7 +101,7 @@ graph LR
 
 *   **Live User/Admin Portal**: [https://helpdeskaiv1.vercel.app/](https://helpdeskaiv1.vercel.app/)
 *   **Live Master Admin Portal**: [https://helpdeskaiv1.vercel.app/master-admin-login](https://helpdeskaiv1.vercel.app/master-admin-login)
-*   **Production AI API (Hugging Face Space)**: [https://ritesh19180-ai-helpdesk-api.hf.space](https://ritesh19180-ai-helpdesk-api.hf.space)
+*   **Production AI API (Hugging Face Space)**: [https://huggingface.co/spaces/ritesh19180/ai-helpdesk-api](https://huggingface.co/spaces/ritesh19180/ai-helpdesk-api)
 *   **Interactive API Docs (Swagger UI)**: [https://ritesh19180-ai-helpdesk-api.hf.space/docs](https://ritesh19180-ai-helpdesk-api.hf.space/docs)
 
 <br/>
