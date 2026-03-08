@@ -129,7 +129,7 @@ const AIUnderstanding = () => {
     if (confidence >= 90) confBarColor = "bg-emerald-500";
     else if (confidence >= 70) confBarColor = "bg-amber-500";
 
-    const priorityLower = priority.toLowerCase();
+    const priorityLower = (priority || 'medium').toLowerCase();
     let priorityColor = "bg-slate-100 text-slate-700";
     if (priorityLower === 'high' || priorityLower === 'critical') priorityColor = "bg-red-50 text-red-700";
     else if (priorityLower === 'medium') priorityColor = "bg-amber-50 text-amber-700";
@@ -164,10 +164,12 @@ const AIUnderstanding = () => {
     // ── Explainer data ──
     const signalTexts = entities.map(e => e.text);
     const patternMatch = `${category} > ${subcategory}`;
+    const safeCategory = String(category || 'General').toLowerCase();
+    const safeSubcategory = String(subcategory || 'Support').toLowerCase();
     const confidenceExplanation = confidence >= 90
-        ? `This issue strongly matches known ${category.toLowerCase()} ${subcategory.toLowerCase()} failures.`
+        ? `This issue strongly matches known ${safeCategory} ${safeSubcategory} failures.`
         : confidence >= 70
-            ? `This issue partially matches patterns in ${category.toLowerCase()} issues.`
+            ? `This issue partially matches patterns in ${safeCategory} issues.`
             : `This issue has a weak match; further review may be needed.`;
 
     return (

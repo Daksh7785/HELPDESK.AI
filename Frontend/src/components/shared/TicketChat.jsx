@@ -19,16 +19,24 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
 
     // ─── Fetch Messages ──────────────────────────────────────────────────
     const fetchMessages = async () => {
-        if (!ticketId) return;
+        if (!ticketId) {
+            console.warn("[TicketChat] fetchMessages aborted: No ticketId provided.");
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
+            console.log(`[TicketChat] Fetching messages for ticket: ${ticketId}`);
             const { data, error } = await supabase
                 .from('ticket_messages')
                 .select('*')
                 .eq('ticket_id', ticketId)
                 .order('created_at', { ascending: true });
 
-            if (error) throw error;
+            if (error) {
+                console.error("[TicketChat] Supabase error:", error);
+                throw error;
+            }
             setMessages(data || []);
         } catch (err) {
             console.error("Error fetching messages:", err);

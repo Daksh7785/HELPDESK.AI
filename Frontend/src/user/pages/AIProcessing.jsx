@@ -47,6 +47,13 @@ const AIProcessing = () => {
                 });
 
                 console.log("[AIProcessing] Backend Success:", response.data);
+
+                // === Validate response format (Hugging Face sometimes returns HTML if Space is starting) ===
+                if (typeof response.data !== 'object' || response.data === null || (typeof response.data === 'string' && response.data.trim().startsWith('<!DOCTYPE'))) {
+                    console.warn("[AIProcessing] Backend returned non-JSON (likely HF startup page). Falling back.");
+                    throw new Error("BACKEND_STARTUP");
+                }
+
                 const analysis = response.data;
 
                 // === Build the ticket object — trust backend for everything ===
@@ -67,9 +74,9 @@ const AIProcessing = () => {
                 console.error("[AIProcessing] Analysis Failed:", error);
 
                 // Graceful fallback — build a basic ticket from the text directly
-                // so the user can still proceed even if backend is down
-                if (error.code === 'ERR_NETWORK' || error.message?.includes('Network Error')) {
-                    console.warn("[AIProcessing] Backend unreachable. Using local fallback.");
+                // so the user can still proceed even if backend is down or starting up
+                if (error.code === 'ERR_NETWORK' || error.message === 'BACKEND_STARTUP' || error.message?.includes('Network Error')) {
+                    console.warn("[AIProcessing] Backend unreachable or preparing. Using local fallback.");
 
                     const summary = (text.charAt(0).toUpperCase() + text.slice(1)).substring(0, 100)
                         + (text.length > 100 ? '…' : '');
