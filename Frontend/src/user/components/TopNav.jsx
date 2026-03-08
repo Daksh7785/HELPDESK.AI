@@ -32,7 +32,7 @@ const TopNav = () => {
                 <nav className="hidden md:flex items-center gap-8">
                     <Link className="text-sm font-semibold text-gray-900 hover:text-emerald-600 transition-colors" to="/dashboard">Dashboard</Link>
                     <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors" to="/my-tickets">My Tickets</Link>
-                    <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors" to="#">Help</Link>
+                    <Link className="text-sm font-semibold text-gray-500 hover:text-gray-900 transition-colors" to="/help">Help</Link>
                 </nav>
 
                 {/* Right: Profile */}

@@ -315,8 +315,8 @@ const AdminProfile = () => {
                             <span className="text-sm font-bold text-slate-700">{adminProfile.email}</span>
                         </div>
                         <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Operating Region</label>
-                            <span className="text-sm font-bold text-slate-700">{adminProfile?.country || 'Universal Hub'}</span>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Company / Organization</label>
+                            <span className="text-sm font-bold text-slate-700">{adminProfile?.company || 'Universal Hub'}</span>
                         </div>
                         <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Last Secure Login</label>

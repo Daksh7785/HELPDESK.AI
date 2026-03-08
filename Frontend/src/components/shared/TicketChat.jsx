@@ -15,6 +15,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     const messagesEndRef = useRef(null);
     const scrollContainerRef = useRef(null);
     const inputRef = useRef(null);
+    const channelRef = useRef(null);
 
     // ─── Fetch Messages ──────────────────────────────────────────────────
     const fetchMessages = async () => {
@@ -41,9 +42,11 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     useEffect(() => {
         fetchMessages();
 
+        const channel = supabase.channel(`ticket_chat_${ticketId}`);
+        channelRef.current = channel;
+
         // Subscribe to changes
-        const channel = supabase
-            .channel(`ticket_chat_${ticketId}`)
+        channel
             .on(
                 'postgres_changes',
                 {
@@ -57,7 +60,9 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                     setMessages((prev) => {
                         // Avoid duplicates if we already added it locally
                         if (prev.find(m => m.id === newMessage.id)) return prev;
-                        return [...prev, newMessage];
+                        // Remove optimistic duplicates based on content and time
+                        const filtered = prev.filter(m => !(String(m.id).startsWith('temp-') && m.message === newMessage.message && m.sender_id === newMessage.sender_id));
+                        return [...filtered, newMessage];
                     });
 
                     // Handle notification logic
@@ -70,12 +75,37 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                     }
                 }
             )
+            .on(
+                'broadcast',
+                { event: 'typing' },
+                (payload) => {
+                    if (payload.payload.user_id !== user?.id) {
+                        setIsTyping(true);
+                        clearTimeout(window.typingTimeout);
+                        window.typingTimeout = setTimeout(() => {
+                            setIsTyping(false);
+                        }, 3000);
+                        setTimeout(() => scrollToBottom(), 50);
+                    }
+                }
+            )
             .subscribe();
 
         return () => {
             supabase.removeChannel(channel);
         };
     }, [ticketId]);
+
+    const handleInputChange = (e) => {
+        setInputValue(e.target.value);
+        if (channelRef.current && e.target.value.trim().length > 0) {
+            channelRef.current.send({
+                type: 'broadcast',
+                event: 'typing',
+                payload: { user_id: user?.id }
+            }).catch(() => { });
+        }
+    };
 
     // ─── Auto-scroll ─────────────────────────────────────────────────────
     const scrollToBottom = useCallback((smooth = true) => {
@@ -108,8 +138,16 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
             message: inputValue.trim(),
         };
 
+        const tempMessage = {
+            ...messageData,
+            id: `temp-${Date.now()}`,
+            created_at: new Date().toISOString()
+        };
+
+        setMessages(prev => [...prev, tempMessage]);
         setInputValue('');
         inputRef.current?.focus();
+        setTimeout(() => scrollToBottom(), 50);
 
         try {
             const { error } = await supabase
@@ -117,10 +155,10 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                 .insert([messageData]);
 
             if (error) throw error;
-            scrollToBottom();
         } catch (err) {
             console.error("Error sending message:", err);
-            // Optionally add error feedback to UI
+            // Revert optimistic update on failure
+            setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
         }
     };
 
@@ -247,6 +285,11 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                         );
                     })
                 )}
+                {isTyping && (
+                    <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-widest italic py-1 px-2 animate-pulse">
+                        <Loader2 className="w-3 h-3 animate-spin" /> Someone is typing...
+                    </div>
+                )}
                 <div ref={messagesEndRef} />
             </div>
 
@@ -257,7 +300,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                         ref={inputRef}
                         type="text"
                         value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
+                        onChange={handleInputChange}
                         placeholder="Type your message..."
                         className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all placeholder:text-slate-400"
                     />

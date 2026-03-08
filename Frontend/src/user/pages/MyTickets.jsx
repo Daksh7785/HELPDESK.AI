@@ -10,6 +10,7 @@ import { Card } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Select } from "../../components/ui/select";
 import TicketStatusBadge from "../components/TicketStatusBadge";
+import { format } from 'date-fns';
 import {
     Tooltip,
     TooltipContent,
@@ -302,10 +303,10 @@ function MyTickets() {
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-col">
                                                     <span className="text-sm font-semibold text-gray-700">
-                                                        {new Date(ticket.created_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                                                        {format(new Date(ticket.created_at), 'MMM d, yyyy')}
                                                     </span>
                                                     <span className="text-xs text-gray-400 font-medium">
-                                                        {new Date(ticket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        {format(new Date(ticket.created_at), 'hh:mm a')}
                                                     </span>
                                                 </div>
                                             </td>

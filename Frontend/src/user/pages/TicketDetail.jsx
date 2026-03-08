@@ -109,6 +109,7 @@ const TicketDetail = () => {
     const entities = ticket.entities || [];
     const solutionSteps = Array.isArray(ticket.solution_steps) ? ticket.solution_steps : [];
     const isAutoResolved = ticket.auto_resolve === true;
+    const confidenceScore = ticket.metadata?.confidence ?? ticket.routing_confidence ?? 0.92;
 
     const formatDate = (dateStr) => {
         if (!dateStr) return 'Pending...';
@@ -240,11 +241,11 @@ const TicketDetail = () => {
                             <div className="flex justify-between items-center mb-2">
                                 <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Confidence Score</span>
                                 <span className="font-mono text-xs font-black text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-md">
-                                    {Math.round((ticket.confidence || 0.92) * 100)}%
+                                    {Math.round(confidenceScore * 100)}%
                                 </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${Math.round((ticket.confidence || 0.92) * 100)}%` }}></div>
+                                <div className="bg-emerald-500 h-1.5 rounded-full" style={{ width: `${Math.round(confidenceScore * 100)}%` }}></div>
                             </div>
                         </div>
 

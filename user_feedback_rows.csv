@@ -1,0 +1,20 @@
+id,user_id,user_email,user_role,type,message,url,status,created_at
+1478ec01-a0cc-4471-914a-cf4a0462748f,0187480a-ea5a-4948-b44f-3aaf319630f9,pragatitiwari.dev@gmail.com,user,bug,Extra space in the word 'Extracted',/ticket/897ebe6e-7626-4419-b252-b8e56ae7ea11,new,2026-03-05 10:37:48.203872+00
+1639abbd-fe5c-42e0-a119-cdfd51f097f8,,,anonymous,bug,Demo,/signup,new,2026-03-03 16:39:37.313777+00
+37c0536e-c1b1-405f-b50e-b6f7a1d39dc2,0187480a-ea5a-4948-b44f-3aaf319630f9,pragatitiwari.dev@gmail.com,user,bug,Correct the time,/my-tickets,new,2026-03-05 10:39:55.300664+00
+3b19a146-ae01-43d7-a338-e65a7a398839,352103b0-4ecf-45df-860b-53568cc90c4c,gemini191800@gmail.com,admin,bug,the operating region is showing universal hub rather than my company name,/admin/profile,new,2026-03-03 08:56:46.670818+00
+3df7741e-6ff2-44c6-a1e3-c5578afd8268,0187480a-ea5a-4948-b44f-3aaf319630f9,pragatitiwari.dev@gmail.com,user,bug,Check mic functioning to ensure it is browser compatible,/create-ticket,new,2026-03-05 10:44:13.260061+00
+436a12fc-09a7-479b-b96d-a36ca9117947,0187480a-ea5a-4948-b44f-3aaf319630f9,pragatitiwari.dev@gmail.com,user,improvement,Live Status of the Support Conversation.,/ticket/897ebe6e-7626-4419-b252-b8e56ae7ea11,new,2026-03-05 10:35:24.214617+00
+44163af7-7838-4aaa-aef2-cc325122e6c8,b2af4df0-49dc-46bb-b004-afd4a93c24ec,prayukthikaprasadsatla@gmail.com,user,bug,security credentials are cannot be accessed,/profile,new,2026-03-04 05:14:57.840153+00
+44a90f3f-b2e4-4cff-af54-21e2242bd1dc,b2af4df0-49dc-46bb-b004-afd4a93c24ec,prayukthikaprasadsatla@gmail.com,user,bug,support conversation is not working,/ticket/e0f5bc47-1211-4e71-bb33-2dbc970a30ac,new,2026-03-04 04:36:37.667317+00
+493c7f6b-07ee-4045-b43d-b2c526ccd435,b2af4df0-49dc-46bb-b004-afd4a93c24ec,prayukthikaprasadsatla@gmail.com,user,bug,the ticket which was created cannot be seen in the myticket page and also i cannot access the help page,/my-tickets,new,2026-03-04 04:21:27.049173+00
+526b3106-93b9-4f46-86e3-62a61d1f2771,0187480a-ea5a-4948-b44f-3aaf319630f9,pragatitiwari.dev@gmail.com,user,bug,Mic icon invisible,/create-ticket,new,2026-03-05 10:26:49.591158+00
+58d16dc4-30b9-4c17-a21b-b764d74e5f6f,,,anonymous,bug,very good,/,new,2026-03-03 17:16:57.496251+00
+597c4419-d852-4013-888e-94f404bbbe20,843dfe99-70dd-4283-8eaf-c1bc70047b59,bonthalamadhavi1@gmail.com,user,bug,I'm trying to send msg in the chat but it is not howing anything,/ticket/fcbeee73-ca5b-405b-ad99-28ca2f0a74ce,new,2026-03-03 15:15:09.390671+00
+5efe0fbd-0538-426d-8b3a-6e3b73bd1bce,,,anonymous,bug,hi,/admin-signup,new,2026-03-03 16:20:46.020071+00
+5f8f0eae-c3f4-4c24-ab45-3fa63280aad6,0187480a-ea5a-4948-b44f-3aaf319630f9,pragatitiwari.dev@gmail.com,user,bug,Increase font size of Image processing,/create-ticket,new,2026-03-05 10:29:46.125129+00
+631238e2-cc3a-431b-a51b-13d30c42a5b3,352103b0-4ecf-45df-860b-53568cc90c4c,gemini191800@gmail.com,admin,improvement,Change settings,/admin/settings,new,2026-03-05 11:08:20.389953+00
+695c72f2-7437-44cf-a878-4f5c5316afd3,c4829f3f-8ee9-435d-8f55-f718e1403c6c,duniyavasa.24@gmail.com,user,bug,AI confidence score is static.,/ticket/a290e706-ac2a-4eb0-9f7b-83e8990ab9ec,new,2026-03-07 16:25:10.505506+00
+848acc05-dd42-4152-b7bd-0bfb272770d2,352103b0-4ecf-45df-860b-53568cc90c4c,gemini191800@gmail.com,admin,improvement,Merging Human Review Queue and General Support,/admin/analytics,new,2026-03-05 11:04:47.503105+00
+e8f950af-528c-466f-bfe2-71f822ce42ed,,,anonymous,improvement,demo,/,new,2026-03-03 17:16:43.191396+00
+ed594e50-f5c0-457f-b14a-7da68bab683f,,,anonymous,bug,add feature that profile remove option would be better,/login,new,2026-03-03 17:37:37.313902+00

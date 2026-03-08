@@ -317,7 +317,7 @@ const AIUnderstanding = () => {
                                                 const trimmed = line.trim();
                                                 if (!trimmed) return null;
                                                 return (
-                                                    <span key={idx} className="px-3 py-1 rounded-full bg-white border border-emerald-200 text-gray-700 text-xs font-bold">
+                                                    <span key={idx} className="px-3 py-1 rounded-full bg-white border border-emerald-200 text-gray-700 text-sm font-bold">
                                                         {trimmed}
                                                     </span>
                                                 );

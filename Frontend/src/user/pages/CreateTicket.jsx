@@ -36,6 +36,7 @@ const CreateTicket = () => {
     const navigate = useNavigate();
     const addTicket = useTicketStore((state) => state.addTicket);
     const MAX_CHARS = 1000;
+    const supportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
 
     // Clean up preview URL on unmount
     useEffect(() => {
@@ -58,7 +59,7 @@ const CreateTicket = () => {
     };
 
     const toggleMic = () => {
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        if (!supportsSpeech) {
             setError('Speech Recognition is not supported in this browser. Please try Chrome or Edge.');
             return;
         }
@@ -245,14 +246,16 @@ const CreateTicket = () => {
                                                 className="min-h-[160px] flex-grow rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white transition-all text-base p-4 pb-12 resize-none"
                                                 disabled={isLoading}
                                             />
-                                            <Button
-                                                type="button"
-                                                onClick={toggleMic}
-                                                variant="ghost"
-                                                className={`absolute bottom-3 right-3 rounded-xl size-10 flex items-center justify-center transition-all ${isListening ? 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 animate-pulse' : 'bg-white border border-gray-100 text-gray-400 hover:text-emerald-500 hover:border-emerald-200 shadow-sm'}`}
-                                            >
-                                                {isListening ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
-                                            </Button>
+                                            {supportsSpeech && (
+                                                <Button
+                                                    type="button"
+                                                    onClick={toggleMic}
+                                                    variant="ghost"
+                                                    className={`absolute bottom-3 right-3 rounded-xl size-10 flex items-center justify-center transition-all ${isListening ? 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 animate-pulse' : 'bg-white border border-gray-100 text-gray-400 hover:text-emerald-500 hover:border-emerald-200 shadow-sm'}`}
+                                                >
+                                                    <Mic className="w-5 h-5" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
 
@@ -298,7 +301,7 @@ const CreateTicket = () => {
                                                         </div>
                                                         <div className="flex-1 min-w-0">
                                                             <p className="text-sm font-bold text-gray-900 truncate">{file?.name}</p>
-                                                            <p className="text-xs text-gray-400">
+                                                            <p className="text-sm font-medium text-gray-600 mt-1">
                                                                 {(file?.size / 1024 / 1024).toFixed(2)} MB
                                                                 {isOcrLoading && " • Extracting text..."}
                                                                 {!isOcrLoading && extractedOCR && " • Text extracted"}

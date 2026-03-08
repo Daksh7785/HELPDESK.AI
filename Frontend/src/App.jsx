@@ -38,9 +38,11 @@ import MyTickets from "./user/pages/MyTickets";
 import TicketResult from "./user/pages/TicketResult";
 import Profile from "./user/pages/Profile";
 import TicketDetail from "./user/pages/TicketDetail";
+import TicketProcessing from "./user/pages/AIProcessing"; // Renamed generic import just in case, but keeping AIProcessing
 import AIProcessing from "./user/pages/AIProcessing";
 import AIUnderstanding from "./user/pages/AIUnderstanding";
 import Notifications from "./user/pages/Notifications";
+import Help from "./user/pages/Help";
 
 // NEW Admin Pages (Refactored)
 import AdminDashboard from "./admin/pages/AdminDashboard";
@@ -50,6 +52,7 @@ import AdminUsers from "./admin/pages/AdminUsers";
 import AdminAnalytics from "./admin/pages/AdminAnalytics";
 import AdminProfile from "./admin/pages/AdminProfile";
 import AdminSettings from "./admin/pages/AdminSettings";
+import AiBenchmarking from "./pages/AiBenchmarking";
 import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
 import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedRoute";
 import ProtectedRoute from "./components/shared/ProtectedRoute";
@@ -80,6 +83,7 @@ function TitleUpdater() {
     else if (path.startsWith('/admin/analytics')) title = 'Analytics | Admin';
     else if (path.startsWith('/admin/profile')) title = 'Admin Profile';
     else if (path.startsWith('/admin/settings')) title = 'Settings | Admin';
+    else if (path.startsWith('/admin/benchmarking')) title = 'AI Benchmarking | Admin';
     // Master Admin Routes
     else if (path.startsWith('/master-admin/dashboard')) title = 'Master Dashboard';
     else if (path.startsWith('/master-admin/admin-requests')) title = 'Pending Requests | Master Admin';
@@ -146,6 +150,7 @@ function AppLayout() {
         <Route path="/ticket-tracking" element={<TicketTracking />} />
         <Route path="/ticket-result" element={<TicketResult />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/help" element={<Help />} />
         <Route path="/notifications" element={<Notifications />} />
       </Route>
 
@@ -160,6 +165,7 @@ function AppLayout() {
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/profile" element={<AdminProfile />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/benchmarking" element={<AiBenchmarking />} />
         </Route>
       </Route>
 

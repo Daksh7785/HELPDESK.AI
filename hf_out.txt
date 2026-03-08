@@ -1,0 +1,10 @@
+Updating Hugging Face Space...
+Authenticated as: ritesh19180
+Uploading backend code to Hugging Face... (This might take a minute)
+
+Error deploying to Hugging Face: (Request ID: Root=1-69a7933a-34960c4a41e7630e0c3ad330;3bd96fbd-b6e4-497e-83b4-bcaa223b6914)
+
+403 Forbidden: Repository storage limit reached (Max: 1 GB).
+Cannot access content at: https://huggingface.co/spaces/ritesh19180/ai-helpdesk-api.git/info/lfs/objects/batch.
+Make sure your token has the correct permissions.
+Please ensure you are logged in via 'huggingface-cli login' or have a valid token.

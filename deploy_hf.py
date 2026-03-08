@@ -1,9 +1,27 @@
 import os
 import sys
+import time
+from pathlib import Path
 from huggingface_hub import HfApi, create_repo
+from dotenv import dotenv_values
+
+def load_secrets():
+    secrets = {}
+    
+    # Load from Frontend/.env
+    frontend_env_path = Path(__file__).parent / "Frontend" / ".env"
+    if frontend_env_path.exists():
+        secrets.update(dotenv_values(frontend_env_path))
+        
+    # Load from backend/.env just in case there are specific ones
+    backend_env_path = Path(__file__).parent / "backend" / ".env"
+    if backend_env_path.exists():
+        secrets.update(dotenv_values(backend_env_path))
+        
+    return secrets
 
 def deploy_to_hf():
-    print("Automating Hugging Face Deployment...")
+    print("Automating Hugging Face Deployment & Resolving 1GB Limit...")
     api = HfApi()
     
     try:
@@ -21,9 +39,10 @@ def deploy_to_hf():
     print(f"Cleaning up old Space: {repo_id}...")
     try:
         api.delete_repo(repo_id=repo_id, repo_type="space")
-        print("Successfully deleted old Space history!")
-    except Exception:
-        print("No existing space found, skipping deletion.")
+        print("Successfully deleted old Space history to clear the 1GB quota!")
+        time.sleep(5) # Let HF backend catch up
+    except Exception as e:
+        print(f"Skipping deletion (or error during deletion): {e}")
 
     # 2. Recreate the fresh space
     try:
@@ -38,25 +57,21 @@ def deploy_to_hf():
 
         # 3. Add Secrets
         print("Adding secrets to the Space...")
-        secrets = {
-            "VITE_GEMINI_API_KEY_1": "YOUR_KEY_HERE",
-            "VITE_GEMINI_API_KEY_2": "YOUR_KEY_HERE",
-            "VITE_GEMINI_API_KEY_3": "YOUR_KEY_HERE",
-            "VITE_GEMINI_API_KEY_4": "YOUR_KEY_HERE",
-            "VITE_OPENROUTER_API_KEY_1": "YOUR_KEY_HERE",
-            "VITE_OPENROUTER_API_KEY_2": "YOUR_KEY_HERE",
-            "VITE_OPENROUTER_API_KEY_3": "YOUR_KEY_HERE",
-            "VITE_OPENROUTER_API_KEY_4": "YOUR_KEY_HERE",
-            "VITE_GROQ_API_KEY_1": "YOUR_KEY_HERE",
-            "VITE_GROQ_API_KEY_2": "YOUR_KEY_HERE",
-            "VITE_GROQ_API_KEY_3": "YOUR_KEY_HERE",
-            "VITE_SUPABASE_URL": "YOUR_URL_HERE",
-            "VITE_SUPABASE_ANON_KEY": "YOUR_KEY_HERE",
-            "VITE_BACKEND_URL": "https://ritesh19180-ai-helpdesk-api.hf.space"
-        }
+        secrets = load_secrets()
+        
+        # Hardcode the backend URL secret if it's missing or points to localhost
+        secrets["VITE_BACKEND_URL"] = f"https://{hf_username}-{space_name}.hf.space"
+        
+        added_count = 0
         for key, value in secrets.items():
-            api.add_space_secret(repo_id=repo_id, key=key, value=value)
-        print("All secrets added successfully!")
+            if value and str(value).strip():
+                try:
+                    api.add_space_secret(repo_id=repo_id, key=key, value=str(value))
+                    added_count += 1
+                except Exception as e:
+                    print(f"Warning: Could not add secret {key}: {e}")
+                    
+        print(f"Successfully added {added_count} secrets!")
 
         # 4. Upload backend code
         print("Uploading backend code to Hugging Face... (This might take a minute)")
@@ -64,15 +79,16 @@ def deploy_to_hf():
             folder_path="backend",
             repo_id=repo_id,
             repo_type="space",
-            commit_message="Automated deployment of AI Backend",
-            ignore_patterns=["venv/*", ".venv/*", "env/*", "__pycache__/*", "*.pyc", ".env", ".git/*"]
+            commit_message="Automated deployment of AI Backend (1GB Quota Reset)",
+            ignore_patterns=["venv/*", ".venv/*", "env/*", "__pycache__/*", "*.pyc", ".env", ".git/*", "models/classifier-v2/*", "models/classifier-v3/*", "models/classifier-v2", "models/classifier-v3"]
         )
         print("Upload complete!")
         print(f"Your backend is now building at: https://huggingface.co/spaces/{repo_id}")
         
     except Exception as e:
         print(f"\nError deploying to Hugging Face: {e}")
-        print("Please ensure you are logged in via 'huggingface-cli login' or have a valid token.")
+        traceback.print_exc()
 
 if __name__ == "__main__":
+    import traceback
     deploy_to_hf()
