@@ -12,7 +12,8 @@ import {
     Clock,
     Mic,
     MicOff,
-    Loader2
+    Loader2,
+    Volume2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "../../components/ui/button";
@@ -243,21 +244,79 @@ const CreateTicket = () => {
                                                 value={issue}
                                                 onChange={(e) => setIssue(e.target.value.substring(0, MAX_CHARS))}
                                                 placeholder="Describe your problem. Example: VPN not connecting error 789"
-                                                className="min-h-[160px] flex-grow rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white transition-all text-base p-4 pb-12 resize-none"
+                                                className="min-h-[160px] flex-grow rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white transition-all text-base p-4 resize-none"
                                                 disabled={isLoading}
                                             />
-                                            {supportsSpeech && (
+                                        </div>
+                                    </div>
+
+                                    {/* Premium Voice Visualizer */}
+                                    {supportsSpeech && (
+                                        <div className="relative overflow-hidden rounded-3xl border border-emerald-100 bg-gradient-to-br from-emerald-50/50 to-white p-6 shadow-sm">
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-xl transition-colors duration-500 ${isListening ? 'bg-red-500 text-white shadow-lg shadow-red-200' : 'bg-emerald-100 text-emerald-600'}`}>
+                                                        <Mic size={20} className={isListening ? "animate-pulse" : ""} />
+                                                    </div>
+                                                    <div>
+                                                        <h4 className="text-sm font-bold text-gray-900">Voice Assistant</h4>
+                                                        <p className="text-xs text-gray-500 font-medium">{isListening ? "Listening to your voice..." : "Tap to describe via voice"}</p>
+                                                    </div>
+                                                </div>
                                                 <Button
                                                     type="button"
                                                     onClick={toggleMic}
-                                                    variant="ghost"
-                                                    className={`absolute bottom-3 right-3 rounded-xl size-10 flex items-center justify-center transition-all duration-500 ${isListening ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse border-none hover:bg-red-600' : 'bg-white border border-gray-100 text-gray-400 hover:text-emerald-500 hover:border-emerald-200 shadow-sm'}`}
+                                                    className={`h-12 w-12 rounded-full flex items-center justify-center transition-all duration-500 border-none
+                                                        ${isListening
+                                                            ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-200 scale-110'
+                                                            : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-200'}`}
                                                 >
-                                                    <Mic size={20} />
+                                                    {isListening ? <Volume2 className="animate-bounce" size={24} /> : <Mic size={24} />}
                                                 </Button>
+                                            </div>
+
+                                            {/* Siri-style Wave Animation */}
+                                            <AnimatePresence>
+                                                {isListening && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 40 }}
+                                                        exit={{ opacity: 0, height: 0 }}
+                                                        className="flex items-center justify-center gap-1.5 mb-2 overflow-hidden"
+                                                    >
+                                                        {[...Array(12)].map((_, i) => (
+                                                            <motion.div
+                                                                key={i}
+                                                                animate={{
+                                                                    height: [10, 30, 10],
+                                                                    backgroundColor: ['#10b981', '#3b82f6', '#10b981']
+                                                                }}
+                                                                transition={{
+                                                                    duration: 0.8,
+                                                                    repeat: Infinity,
+                                                                    delay: i * 0.05,
+                                                                    ease: "easeInOut"
+                                                                }}
+                                                                className="w-1 rounded-full bg-emerald-500"
+                                                            />
+                                                        ))}
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+
+                                            {isListening && (
+                                                <motion.div
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    className="bg-white/60 backdrop-blur-sm rounded-xl p-3 border border-emerald-50/50"
+                                                >
+                                                    <p className="text-sm text-emerald-800 font-medium italic">
+                                                        "Speak clearly, our AI is transcribing..."
+                                                    </p>
+                                                </motion.div>
                                             )}
                                         </div>
-                                    </div>
+                                    )}
 
                                     {/* Screenshot Upload */}
                                     <div className="space-y-2">
