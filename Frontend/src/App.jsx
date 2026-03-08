@@ -52,8 +52,8 @@ import AdminUsers from "./admin/pages/AdminUsers";
 import AdminAnalytics from "./admin/pages/AdminAnalytics";
 import AdminProfile from "./admin/pages/AdminProfile";
 import AdminSettings from "./admin/pages/AdminSettings";
-import AdminBugReports from "./admin/pages/AdminBugReports";
 import AiBenchmarking from "./pages/AiBenchmarking";
+import MasterBugReports from "./master-admin/pages/MasterBugReports";
 import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
 import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedRoute";
 import ProtectedRoute from "./components/shared/ProtectedRoute";
@@ -80,7 +80,6 @@ function TitleUpdater() {
     if (path.startsWith('/admin/ticket/')) title = 'Ticket Detail | Admin';
     else if (path.startsWith('/admin/dashboard')) title = 'Admin Dashboard';
     else if (path.startsWith('/admin/tickets')) title = 'Admin Tickets';
-    else if (path.startsWith('/admin/bug-reports')) title = 'Bug Reports | Admin';
     else if (path.startsWith('/admin/users')) title = 'Manage Users | Admin';
     else if (path.startsWith('/admin/analytics')) title = 'Analytics | Admin';
     else if (path.startsWith('/admin/profile')) title = 'Admin Profile';
@@ -91,6 +90,7 @@ function TitleUpdater() {
     else if (path.startsWith('/master-admin/admin-requests')) title = 'Pending Requests | Master Admin';
     else if (path.startsWith('/master-admin/companies')) title = 'Companies | Master Admin';
     else if (path.startsWith('/master-admin/all-admins')) title = 'All Admins | Master Admin';
+    else if (path.startsWith('/master-admin/bug-reports')) title = 'System Bug Radar | Master Admin';
     // User Routes
     else if (path.startsWith('/ticket/')) title = 'Ticket Detail';
     else if (path.startsWith('/ai-understanding')) title = 'AI Understanding';
@@ -163,7 +163,6 @@ function AppLayout() {
           <Route path="/admin/dashboard" element={<AdminDashboard />} />
           <Route path="/admin/tickets" element={<AdminTickets />} />
           <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
-          <Route path="/admin/bug-reports" element={<AdminBugReports />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/analytics" element={<AdminAnalytics />} />
           <Route path="/admin/profile" element={<AdminProfile />} />
@@ -210,6 +209,7 @@ function App() {
             <Route path="/master-admin/admin-requests" element={<PendingAdminRequests />} />
             <Route path="/master-admin/companies" element={<AllCompanies />} />
             <Route path="/master-admin/all-admins" element={<AllAdmins />} />
+            <Route path="/master-admin/bug-reports" element={<MasterBugReports />} />
           </Route>
         </Route>
 

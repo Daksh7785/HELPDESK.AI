@@ -11,7 +11,10 @@ import {
     LogOut,
     ExternalLink,
     Search,
-    UserCircle
+    UserCircle,
+    Bug,
+    Settings,
+    Activity
 } from "lucide-react";
 
 /**
@@ -51,6 +54,7 @@ function MasterAdminLayout() {
         { path: "/master-admin/admin-requests", icon: <Bell />, label: "Pending Requests", count: pendingCount },
         { path: "/master-admin/companies", icon: <Building2 />, label: "All Companies" },
         { path: "/master-admin/all-admins", icon: <Users />, label: "All Admins" },
+        { path: "/master-admin/bug-reports", icon: <Bug />, label: "Bug Radar" },
     ];
 
     return (
