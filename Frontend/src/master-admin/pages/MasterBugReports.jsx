@@ -103,9 +103,9 @@ const MasterBugReports = () => {
 
     const filteredBugs = useMemo(() => {
         return bugs.filter(bug => {
-            const matchesSearch = bug.bug_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                bug.description.toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesStatus = statusFilter === 'All' || bug.status === statusFilter.toLowerCase();
+            const matchesSearch = (bug.bug_title || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+                (bug.description || '').toLowerCase().includes((searchQuery || '').toLowerCase());
+            const matchesStatus = statusFilter === 'All' || (bug.status || '').toLowerCase() === (statusFilter || '').toLowerCase();
             const matchesSeverity = severityFilter === 'All' || bug.severity === severityFilter;
             return matchesSearch && matchesStatus && matchesSeverity;
         });

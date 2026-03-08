@@ -154,7 +154,8 @@ const AutoResolveChat = () => {
 
             setMessages(prev => [...prev, { role: 'bot', text: aiResponse, timestamp: botNow }]);
 
-            if (aiResponse.toLowerCase().includes("resolved") || aiResponse.toLowerCase().includes("successfully")) {
+            const lowerResponse = String(aiResponse || '').toLowerCase();
+            if (lowerResponse.includes("resolved") || lowerResponse.includes("successfully")) {
                 setIsFinal(true);
             }
 
@@ -393,12 +394,12 @@ const AutoResolveChat = () => {
                                     <div className="flex items-center gap-1.5 pr-1">
                                         <button
                                             onClick={toggleMic}
-                                            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300
+                                            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500
                                                 ${isListening
-                                                    ? 'bg-red-500 text-white shadow-lg shadow-red-500/30 animate-pulse scale-110'
-                                                    : 'text-slate-400 hover:bg-red-50 hover:text-red-500'}`}
+                                                    ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-pulse scale-110'
+                                                    : 'bg-white border border-slate-200 text-slate-400 hover:text-emerald-500 hover:border-emerald-200 shadow-sm'}`}
                                         >
-                                            {isListening ? <Mic size={20} /> : <MicOff size={20} />}
+                                            <Mic size={24} />
                                         </button>
                                         <button
                                             onClick={() => handleSendMessage()}

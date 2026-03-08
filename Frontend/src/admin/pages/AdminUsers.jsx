@@ -341,9 +341,9 @@ const AdminUsers = () => {
     // 1. Filter Logic
     const filteredUsers = useMemo(() => {
         return users.filter(user =>
-            user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            user.role?.toLowerCase().includes(searchQuery.toLowerCase())
+            (user.full_name || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+            (user.email || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
+            (user.role || '').toLowerCase().includes((searchQuery || '').toLowerCase())
         );
     }, [users, searchQuery]);
 

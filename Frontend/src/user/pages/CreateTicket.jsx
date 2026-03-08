@@ -251,9 +251,9 @@ const CreateTicket = () => {
                                                     type="button"
                                                     onClick={toggleMic}
                                                     variant="ghost"
-                                                    className={`absolute bottom-3 right-3 rounded-xl size-10 flex items-center justify-center transition-all ${isListening ? 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 animate-pulse' : 'bg-white border border-gray-100 text-gray-400 hover:text-emerald-500 hover:border-emerald-200 shadow-sm'}`}
+                                                    className={`absolute bottom-3 right-3 rounded-xl size-10 flex items-center justify-center transition-all duration-500 ${isListening ? 'bg-red-500 text-white shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse border-none hover:bg-red-600' : 'bg-white border border-gray-100 text-gray-400 hover:text-emerald-500 hover:border-emerald-200 shadow-sm'}`}
                                                 >
-                                                    <Mic className="w-5 h-5" />
+                                                    <Mic size={20} />
                                                 </Button>
                                             )}
                                         </div>

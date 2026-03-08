@@ -44,7 +44,8 @@ const RecentTickets = () => {
     }, [user]);
 
     const getStatusBadge = (status) => {
-        switch (status?.toLowerCase()) {
+        const s = String(status || '').toLowerCase();
+        switch (s) {
             case 'resolved':
             case 'resolved by human support':
                 return <Badge variant="secondary" className="bg-gray-100 text-gray-600 border-none font-medium">Resolved</Badge>;

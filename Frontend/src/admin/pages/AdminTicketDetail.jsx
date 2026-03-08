@@ -205,9 +205,9 @@ const AdminTicketDetail = () => {
                 </div>
 
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    {!displayStatus?.toLowerCase().includes('resolv') ? (
+                    {!displayStatus?.toLowerCase()?.includes('resolv') ? (
                         <>
-                            {displayStatus.toLowerCase() !== 'in progress' && (
+                            {displayStatus?.toLowerCase() !== 'in progress' && (
                                 <button
                                     onClick={handleAccept}
                                     disabled={!!isUpdating}

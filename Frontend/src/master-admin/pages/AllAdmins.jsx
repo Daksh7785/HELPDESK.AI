@@ -40,9 +40,9 @@ function AllAdmins() {
     };
 
     const filteredAdmins = admins.filter(a =>
-        a.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        a.company_rel?.name.toLowerCase().includes(searchTerm.toLowerCase())
+        a.full_name?.toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+        (a.email || '').toLowerCase().includes((searchTerm || '').toLowerCase()) ||
+        a.company_rel?.name?.toLowerCase().includes((searchTerm || '').toLowerCase())
     );
 
     return (

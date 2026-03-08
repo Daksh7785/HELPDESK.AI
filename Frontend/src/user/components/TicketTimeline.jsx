@@ -87,7 +87,7 @@ const getStepState = (idx, activeStep) => {
 // ─── Priority color ───────────────────────────────────────────────────────────
 
 const priorityStyle = (p = '') => {
-    const l = p.toLowerCase();
+    const l = String(p || '').toLowerCase();
     if (l === 'critical' || l === 'high') return 'text-red-600   bg-red-50   border-red-100';
     if (l === 'medium') return 'text-amber-600 bg-amber-50 border-amber-100';
     return 'text-emerald-700 bg-emerald-50 border-emerald-100';
