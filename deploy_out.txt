@@ -1,0 +1,210 @@
+Automating Hugging Face Deployment & Resolving 1GB Limit...
+Authenticated as: ritesh19180
+Cleaning up old Space: ritesh19180/ai-helpdesk-api...
+Successfully deleted old Space history to clear the 1GB quota!
+Creating fresh Docker Space: ritesh19180/ai-helpdesk-api...
+Fresh Space created successfully!
+Adding secrets to the Space...
+Successfully added 16 secrets!
+Uploading backend code to Hugging Face... (This might take a minute)
+
+Processing Files (0 / 0)      : |          |  0.00B /  0.00B            
+
+New Data Upload               : |          |  0.00B /  0.00B            [A
+
+
+  ...ssifier\model.safetensors:   3%|3         | 8.36MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:   3%|3         | 8.39MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors:   3%|3         | 8.36MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:   3%|3         | 8.39MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :   3%|3         | 16.7MB /  533MB,   ???B/s  
+
+
+  ...ssifier\model.safetensors:   9%|9         | 25.1MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:   9%|9         | 25.1MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :   9%|9         | 50.3MB /  533MB,  177MB/s  
+
+
+  ...ssifier\model.safetensors:  19%|#8        | 50.3MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  22%|##2       | 58.7MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  20%|##        |  109MB /  533MB,  235MB/s  
+
+
+  ...ssifier\model.safetensors:  28%|##8       | 75.5MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  28%|##8       | 75.5MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  28%|##8       |  151MB /  533MB,  226MB/s  
+
+
+  ...ssifier\model.safetensors:  38%|###7      |  101MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  38%|###7      |  101MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  38%|###7      |  201MB /  533MB,  231MB/s  
+
+
+  ...ssifier\model.safetensors:  47%|####6     |  126MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  47%|####7     |  126MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  47%|####7     |  252MB /  533MB,  235MB/s  
+
+
+  ...ssifier\model.safetensors:  56%|#####6    |  151MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  60%|######    |  159MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  58%|#####8    |  310MB /  533MB,  244MB/s  
+
+
+  ...ssifier\model.safetensors:  63%|######2   |  168MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  66%|######6   |  176MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  64%|######4   |  344MB /  533MB,  234MB/s  
+
+
+  ...ssifier\model.safetensors:  69%|######8   |  185MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  69%|######9   |  184MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  69%|######9   |  369MB /  533MB,  222MB/s  
+
+
+  ...ssifier\model.safetensors:  78%|#######8  |  210MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  82%|########2 |  218MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  80%|########  |  428MB /  533MB,  229MB/s  
+
+
+  ...ssifier\model.safetensors:  88%|########7 |  235MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  88%|########8 |  235MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  88%|########8 |  470MB /  533MB,  227MB/s  
+
+
+  ...ssifier\model.safetensors:  94%|#########3|  252MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors:  98%|#########7|  260MB /  265MB            [A[A[A
+Processing Files (0 / 2)      :  96%|#########5|  512MB /  533MB,  225MB/s  
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+Processing Files (2 / 2)      : 100%|##########|  533MB /  533MB,  216MB/s  
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            [A[A
+
+
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            [A[A[A
+Processing Files (2 / 2)      : 100%|##########|  533MB /  533MB,  117MB/s  
+
+New Data Upload               : |          |  0.00B /  0.00B,  0.00B/s  
+
+  ...ssifier\model.safetensors: 100%|##########|  268MB /  268MB            
+
+  ...els\ner\model.safetensors: 100%|##########|  265MB /  265MB            
+Upload complete!
+Your backend is now building at: https://huggingface.co/spaces/ritesh19180/ai-helpdesk-api

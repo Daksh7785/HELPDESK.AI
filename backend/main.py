@@ -300,6 +300,32 @@ async def troubleshoot(request: TroubleshootRequest):
     return TroubleshootResponse(**result)
 
 
+class BugReportAnalysisRequest(BaseModel):
+    bug_title: str
+    description: str
+    steps_to_reproduce: str = ""
+    console_errors: list[str] = []
+
+class BugReportAnalysisResponse(BaseModel):
+    probable_cause: str
+
+@app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
+async def analyze_bug(request: BugReportAnalysisRequest):
+    """Analyze a bug report using Gemini to generate a Probable Cause."""
+    if not gemini_service or not gemini_service._initialized:
+        return BugReportAnalysisResponse(
+            probable_cause="AI Diagnostics are currently unavailable."
+        )
+    
+    cause = gemini_service.analyze_bug_report(
+        request.bug_title,
+        request.description,
+        request.steps_to_reproduce,
+        request.console_errors
+    )
+    return BugReportAnalysisResponse(probable_cause=cause)
+
+
 # ---------------------------------------------------------------------------
 # Admin Correction Logging endpoint
 # ---------------------------------------------------------------------------

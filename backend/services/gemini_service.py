@@ -193,3 +193,32 @@ class GeminiService:
                 "options": ["Okay", "Skip to agent"],
                 "is_final": False
             }
+
+    def analyze_bug_report(self, bug_title: str, description: str, steps: str, errors: list) -> str:
+        """
+        Analyze a bug report and captured console errors to generate a Probable Cause.
+        """
+        if not self._initialized:
+            return "AI Diagnostics unavailable (API key missing or disconnected)."
+
+        try:
+            errors_schema = "\n".join([f"- {err}" for err in errors]) if errors else "None captured."
+            prompt = (
+                f"You are a Level 3 Senior System Engineer diagnosing a bug report.\n"
+                f"Title: {bug_title}\n"
+                f"Description: {description}\n"
+                f"Steps to reproduce: {steps}\n"
+                f"Captured Console/Network Errors: \n{errors_schema}\n\n"
+                "Based on this exact telemetry and report, provide a concise 'Probable Root Cause' (1-3 sentences maximum). "
+                "Focus purely on technical inference and what the developer should investigate first. "
+                "Do not include pleasantries. Do not say 'The probable cause is', just state the technical theory."
+            )
+
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=prompt
+            )
+            return response.text.strip()
+        except Exception as e:
+            print(f"[GeminiService] Bug Analysis Error: {e}")
+            return f"Diagnostic analysis failed: {str(e)}"

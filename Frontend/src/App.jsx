@@ -10,7 +10,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
-import FeedbackWidget from "./components/shared/FeedbackWidget";
+import BugReportWidget from "./components/shared/BugReportWidget";
 
 // Auth Components
 import Login from "./pages/Login";
@@ -185,7 +185,7 @@ function App() {
     <BrowserRouter>
       <TitleUpdater />
       <Toaster />
-      <FeedbackWidget />
+      <BugReportWidget />
       <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
