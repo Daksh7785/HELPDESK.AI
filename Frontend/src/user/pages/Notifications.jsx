@@ -2,7 +2,8 @@ import React from 'react';
 import { ArrowLeft, Bell, CheckCircle2, MessageSquare, Ticket, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useTicketStore from "../../store/ticketStore";
-import { Card } from "../../components/ui/card";
+import { Button } from "../../components/ui/button";
+import { formatTicketId } from "../../utils/format";
 
 const NotificationsPage = () => {
     const navigate = useNavigate();
@@ -57,7 +58,7 @@ const NotificationsPage = () => {
                                 </p>
                                 <div className="flex items-center gap-3 mt-4">
                                     <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md uppercase tracking-wider border border-emerald-100">
-                                        Ticket #{notif.ticketId}
+                                        Ticket #{formatTicketId(notif.ticketId)}
                                     </span>
                                     {!notif.read && (
                                         <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>

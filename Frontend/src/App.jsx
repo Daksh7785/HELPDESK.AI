@@ -11,6 +11,7 @@ import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
 import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
+import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
 
 // Auth Components
 import Login from "./pages/Login";
@@ -116,6 +117,9 @@ function TitleUpdater() {
 
 function AppLayout() {
   const { user, profile } = useAuthStore();
+
+  // Initialize Global Realtime Notifications Listener
+  useRealtimeNotifications();
 
   useEffect(() => {
     if (!user) return;

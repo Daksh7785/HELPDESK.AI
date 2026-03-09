@@ -9,6 +9,7 @@ import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
 import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
+import { formatTicketId } from "../../utils/format";
 
 const TicketTracking = () => {
     const navigate = useNavigate();

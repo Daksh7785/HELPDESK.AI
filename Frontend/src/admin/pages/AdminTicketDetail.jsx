@@ -13,6 +13,7 @@ import useToastStore from "../../store/toastStore";
 import { Card, CardContent } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
 import TicketChat from "../../components/shared/TicketChat";
+import { formatTicketId } from "../../utils/format";
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
@@ -192,7 +193,7 @@ const AdminTicketDetail = () => {
                     </button>
                     <div>
                         <div className="flex items-center gap-2">
-                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-tighter italic">Inspection // #{ticket.id}</h2>
+                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-tighter italic">Inspection // #{formatTicketId(ticket.id)}</h2>
                             {isLive && (
                                 <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 rounded-md border border-emerald-100">
                                     <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></div>

@@ -9,9 +9,9 @@ import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../../components/ui/card";
-import TicketStatusBadge from "../components/TicketStatusBadge";
 import TicketTimeline from "../components/TicketTimeline";
 import TicketChat from "../../components/shared/TicketChat";
+import { formatTicketId } from "../../utils/format";
 
 const TicketDetail = () => {
     const { ticket_id } = useParams();
@@ -160,7 +160,7 @@ const TicketDetail = () => {
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <span className="bg-emerald-100 text-emerald-800 font-mono font-bold px-2.5 py-1 rounded-md text-sm border border-emerald-200">
-                                #{ticket.ticket_id}
+                                #{formatTicketId(ticket.ticket_id)}
                             </span>
                             <TicketStatusBadge status={ticket.status} />
                         </div>

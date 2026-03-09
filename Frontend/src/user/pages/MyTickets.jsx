@@ -9,6 +9,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Select } from "../../components/ui/select";
+import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import { format } from 'date-fns';
 import {
@@ -252,7 +253,7 @@ function MyTickets() {
                                             <td className="px-6 py-4">
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
-                                                        <span className="font-mono font-bold text-gray-900 text-sm">#{ticket.id}</span>
+                                                        <span className="font-mono font-bold text-gray-900 text-sm">#{formatTicketId(ticket.id)}</span>
                                                     </TooltipTrigger>
                                                     <TooltipContent
                                                         side="top"

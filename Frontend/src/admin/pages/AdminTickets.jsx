@@ -22,6 +22,7 @@ import {
     RotateCcw,
 } from 'lucide-react';
 import { Select } from "../../components/ui/select";
+import { formatTicketId } from "../../utils/format";
 
 const AdminTickets = () => {
     const navigate = useNavigate();
@@ -285,7 +286,7 @@ const AdminTickets = () => {
                                 <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
                                     {/* Ticket ID */}
                                     <td className="px-6 py-6">
-                                        <span className="font-mono text-xs font-black text-emerald-600">#{ticket.id}</span>
+                                        <span className="font-mono text-xs font-black text-emerald-600">#{formatTicketId(ticket.id)}</span>
                                     </td>
 
                                     {/* User (Joined with Profiles) */}

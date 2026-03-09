@@ -14,67 +14,33 @@ const useTicketStore = create(
             addAutoResolvedTicket: (record) => set((state) => ({
                 autoResolvedTickets: [...state.autoResolvedTickets, record]
             })),
+            addNotification: (notification) => set((state) => ({
+                notifications: [
+                    {
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+                        timestamp: new Date().toISOString(),
+                        read: false,
+                        ...notification
+                    },
+                    ...(state.notifications || [])
+                ]
+            })),
             addTicket: (ticket) => set((state) => {
-                const newNotification = {
-                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                    title: 'New Ticket Submitted',
-                    message: `Ticket #${ticket.ticket_id} (${ticket.category}) requires review.`,
-                    ticketId: ticket.ticket_id,
-                    read: false,
-                    timestamp: new Date().toISOString(),
-                    type: 'new_ticket',
-                    recipientRole: 'admin'  // only admins see new ticket notifications
-                };
-
                 return {
-                    tickets: [...state.tickets, ticket],
-                    notifications: [newNotification, ...(state.notifications || [])]
+                    tickets: [...state.tickets, ticket]
                 };
             }),
             updateTicket: (ticketId, updates) => set((state) => {
                 const existingTicket = state.tickets.find(t => t.ticket_id === ticketId);
-                const isResolving = updates.status &&
-                    updates.status.toLowerCase().includes('resolv') &&
-                    existingTicket?.status !== updates.status;
-
-                const newNotification = isResolving ? {
-                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                    title: 'Ticket Resolved',
-                    message: `Good news! Ticket #${ticketId} has been marked as resolved.`,
-                    ticketId: ticketId,
-                    read: false,
-                    timestamp: new Date().toISOString(),
-                    type: 'resolution',
-                    recipientRole: 'user'  // only the user cares their ticket was resolved
-                } : null;
-
                 const updatedTickets = state.tickets.map(t => t.ticket_id === ticketId ? { ...t, ...updates } : t);
                 const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
 
                 return {
                     tickets: updatedTickets,
-                    activeTicket: shouldUpdateActive ? { ...state.activeTicket, ...updates } : state.activeTicket,
-                    notifications: newNotification
-                        ? [newNotification, ...(state.notifications || [])]
-                        : (state.notifications || [])
+                    activeTicket: shouldUpdateActive ? { ...state.activeTicket, ...updates } : state.activeTicket
                 };
             }),
             appendMessage: (ticketId, message) => set((state) => {
-                const isFromAdmin = message.sender === 'admin';
-                // Notify the OTHER party — admin messages go to user, user messages go to admin
-                const newNotification = {
-                    id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                    title: isFromAdmin ? 'New Response from Support' : 'New Message from User',
-                    message: isFromAdmin
-                        ? `Support replied on Ticket #${ticketId}`
-                        : `User sent a message on Ticket #${ticketId}`,
-                    ticketId: ticketId,
-                    read: false,
-                    timestamp: new Date().toISOString(),
-                    type: 'message',
-                    recipientRole: isFromAdmin ? 'user' : 'admin'  // opposite of sender
-                };
-
                 const updatedTickets = state.tickets.map(t =>
                     t.ticket_id === ticketId
                         ? { ...t, messages: [...(t.messages || []), message] }
@@ -86,10 +52,7 @@ const useTicketStore = create(
                     tickets: updatedTickets,
                     activeTicket: shouldUpdateActive
                         ? { ...state.activeTicket, messages: [...(state.activeTicket?.messages || []), message] }
-                        : state.activeTicket,
-                    notifications: newNotification
-                        ? [newNotification, ...(state.notifications || [])]
-                        : (state.notifications || [])
+                        : state.activeTicket
                 };
             }),
             appendNote: (ticketId, note) => set((state) => {
