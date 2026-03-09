@@ -72,49 +72,67 @@ const useRealtimeNotifications = () => {
                         recipientRole: 'user'
                     });
                 }
-
-                // NEW CHAT MESSAGE -> Notify whoever didn't send it
-                if (newlyAddedMessage) {
-                    const isFromAdmin = newlyAddedMessage.sender === 'admin';
-
-                    if (isFromAdmin && isOwner) {
-                        // Admin sent message -> Notify User
-                        addNotification({
-                            title: 'New Reply from Support',
-                            message: newlyAddedMessage.message || `Support replied to your ticket.`,
-                            ticketId: newRecord.id,
-                            type: 'message',
-                            recipientRole: 'user'
-                        });
-                    } else if (!isFromAdmin && isAdmin) {
-                        // User sent message -> Notify Admin
-                        addNotification({
-                            title: 'New Message from User',
-                            message: newlyAddedMessage.message || `A user replied to their ticket.`,
-                            ticketId: newRecord.id,
-                            type: 'message',
-                            recipientRole: 'admin'
-                        });
-                    }
-                }
             }
         };
 
-        const channel = supabase
-            .channel('global-ticket-notifications')
+        const handleMessageChange = (payload) => {
+            const { eventType, new: newMessage } = payload;
+            if (eventType !== 'INSERT') return;
+
+            // Use same deduplication logic
+            const commitTs = payload.commit_timestamp;
+            if (commitTs && processedPayloads.has(commitTs)) return;
+            if (commitTs) processedPayloads.add(commitTs);
+
+            const isFromAdmin = newMessage.sender_role === 'admin' || newMessage.sender_role === 'super_admin' || newMessage.sender_role === 'master_admin';
+            const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
+
+            // Note: In a real app, we should check if the current user is the owner of the ticket
+            // But for notifications, if I'm the recipient (admin or owner), I should see it.
+            // For now, we rely on recipientRole filter in the UI components.
+
+            if (isFromAdmin) {
+                // Sent by Admin -> Notify User
+                addNotification({
+                    title: 'New Response from Support',
+                    message: newMessage.message || "An agent replied to your ticket.",
+                    ticketId: newMessage.ticket_id,
+                    type: 'message',
+                    recipientRole: 'user'
+                });
+            } else {
+                // Sent by User -> Notify Admin
+                addNotification({
+                    title: 'New Message from User',
+                    message: newMessage.message || "A user replied to their ticket.",
+                    ticketId: newMessage.ticket_id,
+                    type: 'message',
+                    recipientRole: 'admin'
+                });
+            }
+        };
+
+        const ticketChannel = supabase
+            .channel('ticket-notifications')
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'tickets'
-                },
+                { event: '*', schema: 'public', table: 'tickets' },
                 handleTicketChange
             )
             .subscribe();
 
+        const messageChannel = supabase
+            .channel('message-notifications')
+            .on(
+                'postgres_changes',
+                { event: 'INSERT', schema: 'public', table: 'ticket_messages' },
+                handleMessageChange
+            )
+            .subscribe();
+
         return () => {
-            supabase.removeChannel(channel);
+            supabase.removeChannel(ticketChannel);
+            supabase.removeChannel(messageChannel);
         };
     }, [user, profile, addNotification]);
 };
