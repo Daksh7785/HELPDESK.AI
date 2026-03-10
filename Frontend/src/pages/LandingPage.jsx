@@ -1,10 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import {
     Menu, X, Check, Activity,
     MapPin, AlertCircle, Folder, Zap, Bot, ArrowRight,
     Clock, CheckCircle,
-    Star, Twitter, Linkedin, Github, Globe,
+    Star, Twitter, Linkedin, Github, Globe, MessageSquare,
     Mail, Search, Bell, Play, ChevronRight,
     Shield, Lock, Network, HardDrive, Cpu, Copy,
     Users, BarChart3, Inbox, Building2, BrainCircuit
@@ -108,6 +109,72 @@ export default function LandingPage() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [showDemo, setShowDemo] = useState(false);
     const [billingAnnual, setBillingAnnual] = useState(false);
+    const [activeStep, setActiveStep] = useState(0);
+
+    const steps = [
+        {
+            num: '01',
+            title: 'Messy User Input',
+            label: 'The Problem',
+            desc: 'Users describe issues in natural language, often lacking critical details or context.',
+            color: 'blue',
+            icon: MessageSquare,
+            visual: (
+                <div className="space-y-4">
+                    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 max-w-[80%] float-left animate-in slide-in-from-left duration-500">
+                        <p className="text-sm text-blue-200 italic font-medium">"Hey support, the wifi in downstream lab 3 is acting up again. Can't connect. Need fixed ASAP!"</p>
+                    </div>
+                </div>
+            )
+        },
+        {
+            num: '02',
+            title: 'Neural Analysis',
+            label: 'The Brain',
+            desc: 'AI parses intent, extracts entities (Lab 3), and detects urgency (ASAP) in milliseconds.',
+            color: 'emerald',
+            icon: Bot,
+            visual: (
+                <div className="relative flex flex-col items-center justify-center h-full gap-4">
+                    <div className="w-24 h-24 bg-emerald-500/20 rounded-full border border-emerald-500/30 flex items-center justify-center animate-pulse">
+                        <Zap className="w-10 h-10 text-emerald-400" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 w-full">
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded text-[10px] text-emerald-300 font-bold uppercase tracking-widest text-center">Category: Network</div>
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 p-2 rounded text-[10px] text-emerald-300 font-bold uppercase tracking-widest text-center">Priority: High</div>
+                    </div>
+                </div>
+            )
+        },
+        {
+            num: '03',
+            title: 'Smart Resolution',
+            label: 'The Solution',
+            desc: 'AI either resolves the ticket using history or routes it with full context to the right human team.',
+            color: 'purple',
+            icon: CheckCircle,
+            visual: (
+                <div className="space-y-4">
+                    <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-emerald-100">
+                        <div className="bg-emerald-500 px-4 py-2 flex justify-between items-center">
+                            <span className="text-[10px] font-black text-white uppercase tracking-widest">Ticket #4029</span>
+                            <span className="text-[10px] font-bold text-white/80">RESOLVED</span>
+                        </div>
+                        <div className="p-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <div className="w-6 h-6 bg-emerald-100 rounded-full flex items-center justify-center">
+                                    <Bot className="w-3.5 h-3.5 text-emerald-600" />
+                                </div>
+                                <span className="text-xs font-bold text-gray-800 italic">HelpDesk AI Assistant</span>
+                            </div>
+                            <p className="text-[11px] text-gray-600 leading-tight">"Remotely reset the Lab 3 router. Connectivity restored. Total downtime: 143ms."</p>
+                        </div>
+                    </div>
+                    <div className="text-center text-xs text-white/40 font-medium">Auto-closed in 2 seconds</div>
+                </div>
+            )
+        }
+    ];
 
     useEffect(() => {
         if (!loading && user && profile) {
@@ -514,56 +581,84 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== HOW IT WORKS ==================== */}
-            <section className="bg-emerald-900 py-24 text-white overflow-hidden" id="how-it-works">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-5xl font-bold mb-4">Built for Speed & Intelligence</h2>
-                        <p className="text-white/70 text-lg max-w-2xl mx-auto">From messy complaint to resolved ticket in seconds.</p>
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-                        <div className="space-y-12">
-                            {[
-                                { num: '1', title: 'User Reports an Issue', desc: 'User writes: "WiFi not working in lab 3". Can include screenshots or files.' },
-                                { num: '2', title: 'AI Analyzes Instantly', items: ['Detects Category (Network)', 'Sets Priority (High)', 'Extracts Details (Location: Lab 3)'] },
-                                { num: '3', title: 'Smart Resolution', desc: 'Simple issues are fixed by the AI chatbot. Complex ones are routed to the right team with full context.' },
-                            ].map(({ num, title, desc, items }) => (
-                                <div key={num} className="relative pl-8 border-l-2 border-white/20">
-                                    <span className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-emerald-900" />
-                                    <h3 className="text-xl font-bold text-white mb-2">{num}. {title}</h3>
-                                    {desc && <p className="text-white/70">{desc}</p>}
-                                    {items && (
-                                        <ul className="space-y-2 mt-2 text-white/70">
-                                            {items.map(item => (
-                                                <li key={item} className="flex items-center gap-2">
-                                                    <CheckCircle className="w-4 h-4 text-emerald-400" /> {item}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
-                        <div className="bg-white/10 rounded-2xl p-8 border border-white/20 backdrop-blur-sm relative">
-                            <div className="absolute top-4 right-4 bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded">LIVE DEMO</div>
-                            <div className="font-mono text-sm text-emerald-100/80 space-y-4">
-                                <div>
-                                    <span className="text-purple-300">const</span> <span className="text-blue-300">input</span> = <span className="text-yellow-300">"wifi broken in lab 3"</span>;
-                                </div>
-                                <div>
-                                    <span className="text-purple-300">const</span> <span className="text-blue-300">analysis</span> = <span className="text-yellow-300">await</span> AI.analyze(input);
-                                </div>
-                                <div className="pl-4 border-l border-white/10">
-                                    <span className="text-gray-400">// Output</span><br />
-                                    {`{`}
-                                    <div className="pl-4">
-                                        category: <span className="text-green-300">"Network"</span>,<br />
-                                        priority: <span className="text-red-300">"High"</span>,<br />
-                                        location: <span className="text-blue-300">"Lab 3"</span>,<br />
-                                        action: <span className="text-orange-300">"Route to NetOps"</span>
-                                    </div>
-                                    {`}`}
-                                </div>
+            <section className="bg-emerald-950 py-32 text-white relative overflow-hidden" id="how-it-works">
+                {/* Background Decorations */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                    <div className="flex flex-col lg:flex-row gap-16 lg:items-center">
+                        {/* Left: Content */}
+                        <div className="w-full lg:w-1/2">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold uppercase tracking-widest border border-emerald-500/20 mb-6">
+                                The Journey
                             </div>
+                            <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[0.9] mb-12 italic uppercase">
+                                From Chaos <br />
+                                to <span className="text-emerald-500">Clarity.</span>
+                            </h2>
+
+                            <div className="space-y-4">
+                                {steps.map((step, idx) => (
+                                    <div
+                                        key={idx}
+                                        onMouseEnter={() => setActiveStep(idx)}
+                                        onClick={() => setActiveStep(idx)}
+                                        className={`group cursor-pointer p-6 rounded-3xl transition-all duration-500 border ${activeStep === idx
+                                            ? 'bg-white/10 border-white/20 shadow-2xl shadow-black/20'
+                                            : 'bg-transparent border-transparent hover:bg-white/5 opacity-40 hover:opacity-100'
+                                            }`}
+                                    >
+                                        <div className="flex items-start gap-6">
+                                            <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl italic transition-all duration-500 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 scale-110' : 'bg-white/10 text-white/40'}`}>
+                                                {step.num}
+                                            </div>
+                                            <div>
+                                                <h3 className={`text-xl font-black italic uppercase transition-colors duration-500 ${activeStep === idx ? 'text-white' : 'text-white/60'}`}>
+                                                    {step.title}
+                                                </h3>
+                                                {activeStep === idx && (
+                                                    <motion.p
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                        className="text-white/60 text-sm mt-3 leading-relaxed max-w-sm"
+                                                    >
+                                                        {step.desc}
+                                                    </motion.p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Right: Visual Display */}
+                        <div className="w-full lg:w-1/2 h-[500px] relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-12 flex items-center justify-center">
+                                <AnimatePresence mode="wait">
+                                    <motion.div
+                                        key={activeStep}
+                                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        exit={{ opacity: 0, scale: 1.1, y: -20 }}
+                                        transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+                                        className="w-full h-full flex flex-col items-center justify-center"
+                                    >
+                                        <div className="mb-6 inline-flex items-center gap-2 px-4 py-1.5 bg-white/5 text-white/50 rounded-full text-[10px] font-black uppercase tracking-[0.2em]">
+                                            <div className={`w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse`} />
+                                            {steps[activeStep].label}
+                                        </div>
+                                        <div className="w-full max-w-sm">
+                                            {steps[activeStep].visual}
+                                        </div>
+                                    </motion.div>
+                                </AnimatePresence>
+                            </div>
+
+                            {/* Decorative Floating Elements */}
+                            <div className="absolute -top-6 -right-6 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl animate-pulse" />
+                            <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl animate-pulse delay-700" />
                         </div>
                     </div>
                 </div>
