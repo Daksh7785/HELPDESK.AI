@@ -502,7 +502,7 @@ const CreateTicket = () => {
                                     </Button>
                                     <div className="flex items-center justify-center gap-2 text-xs text-gray-400 font-medium">
                                         <BrainCircuit size={14} />
-                                        Powered by Emerald AI Routing
+                                        Powered by HelpDesk.ai Routing
                                     </div>
                                 </form>
                             </CardContent>

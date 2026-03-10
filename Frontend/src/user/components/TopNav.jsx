@@ -22,10 +22,10 @@ const TopNav = () => {
             <div className="max-w-[1100px] mx-auto px-6 h-16 flex items-center justify-between">
                 {/* Left: Logo */}
                 <div className="flex items-center gap-3">
-                    <div className="size-8 text-emerald-600 flex items-center justify-center">
-                        <Box className="w-6 h-6" />
+                    <div className="flex items-center justify-center overflow-hidden">
+                        <img src="/favicon.png" alt="HELPDESK.AI Logo" className="w-7 h-7 object-contain" />
                     </div>
-                    <h1 className="text-lg font-bold tracking-tight text-gray-900">Emerald Prime</h1>
+                    <h1 className="text-xl font-black tracking-tighter text-gray-900 italic">HELPDESK.AI</h1>
                 </div>
 
                 {/* Center: Navigation Links */}

@@ -46,11 +46,11 @@ const AdminSidebar = ({ isMobile, onClose }) => {
             {/* Logo Section */}
             <div className="p-6 lg:p-8 border-b border-slate-800/50 flex justify-center lg:justify-start">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white font-black shadow-lg shadow-emerald-500/20 shrink-0">
-                        <ShieldCheck size={24} />
+                    <div className="w-10 h-10 flex items-center justify-center shrink-0">
+                        <img src="/favicon.png" alt="Logo" className="w-9 h-9 object-contain" />
                     </div>
                     <div className="hidden lg:block animate-in fade-in duration-500">
-                        <h1 className="text-white font-black tracking-tighter leading-none text-xl italic">PRIME.</h1>
+                        <h1 className="text-white font-black tracking-tighter leading-none text-xl italic">HELPDESK.AI</h1>
                         <p className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1">Admin Console</p>
                     </div>
                 </div>

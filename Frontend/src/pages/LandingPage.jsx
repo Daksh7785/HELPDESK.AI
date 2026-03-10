@@ -80,10 +80,10 @@ export default function LandingPage() {
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-                            <div className="bg-emerald-900 p-1.5 rounded-lg">
-                                <BrainCircuit className="w-5 h-5 text-white" />
+                            <div className="flex items-center justify-center p-1">
+                                <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
                             </div>
-                            <span className="font-bold text-xl tracking-tight text-emerald-900">HelpDesk.ai</span>
+                            <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
                         </div>
 
                         {/* Desktop Menu */}
