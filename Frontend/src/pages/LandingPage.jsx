@@ -75,7 +75,7 @@ function DemoModal({ onClose }) {
                 <div className="aspect-video w-full bg-black flex items-center justify-center relative">
                     <iframe
                         className="w-full h-full"
-                        src="https://www.youtube.com/embed/YOUR_VIDEO_ID_HERE?autoplay=1&rel=0"
+                        src="https://www.youtube.com/embed/Bj00LzeMylM?autoplay=1&rel=0"
                         title="HelpDesk.ai Platform Demo"
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
