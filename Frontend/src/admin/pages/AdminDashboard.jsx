@@ -173,10 +173,14 @@ const AdminDashboard = () => {
 
                 {/* 4. AI System Health (4 cols) */}
                 <div className="lg:col-span-4 space-y-6">
-                    <div className="px-2">
+                    <div className="px-2 flex items-center justify-between">
                         <h2 className="text-xl font-black text-slate-900 tracking-tight italic uppercase flex items-center gap-3">
                             <Cpu size={24} className="text-emerald-600" /> AI System Health
                         </h2>
+                        <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Sync</span>
+                        </div>
                     </div>
                     <Card className="border-none shadow-2xl shadow-slate-200/50 bg-white rounded-[2rem] overflow-hidden">
                         <CardContent className="p-8 space-y-6">
@@ -188,20 +192,26 @@ const AdminDashboard = () => {
                                         </div>
                                         <div>
                                             <p className="text-sm font-black text-slate-800 tracking-tight uppercase italic">{sub.name}</p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-1">Latency: {sub.latency}</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-1">Status: {sub.latency}</p>
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm">
-                                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
-                                        <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">{sub.status}</span>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${sub.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
+                                        <span className={`text-[9px] font-black uppercase tracking-widest ${sub.status === 'Active' ? 'text-emerald-600' : 'text-slate-400'}`}>{sub.status}</span>
                                     </div>
                                 </div>
                             ))}
 
-                            <div className="pt-4 mt-6 border-t border-slate-100">
+                            <div className="pt-4 mt-6 border-t border-slate-100 flex flex-col items-center gap-2">
                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] italic text-center">
                                     All AI Nodes Synchronized
                                 </p>
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
+                                    <Activity size={10} className="text-slate-400" />
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                        Last Telemetry Sync: {new Date().toLocaleTimeString()}
+                                    </span>
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
