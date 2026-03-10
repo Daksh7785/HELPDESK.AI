@@ -5,6 +5,7 @@ import urllib.request
 import re
 import cv2
 import numpy as np
+import fitz  # PyMuPDF
 
 # We'll use OpenCV's built-in Haar Cascade for face detection as it's lightweight and usually pre-installed with opencv-python
 def download_image(url, output_path):
@@ -24,8 +25,26 @@ def download_image(url, output_path):
     return False
 
 def smart_crop_face(image_path, output_path, target_size=(400, 400)):
-    # Load image
-    img = cv2.imread(image_path)
+    # Check if this is a PDF
+    try:
+        if image_path.lower().endswith('.pdf'):
+            doc = fitz.open(image_path)
+            for page in doc:
+                pix = page.get_pixmap()
+                img = np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w, pix.n)
+                if pix.n == 4:
+                    img = cv2.cvtColor(img, cv2.COLOR_RGBA2BGR)
+                elif pix.n == 1:
+                    img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
+                else:
+                    img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
+                break # Just get first page image
+        else:
+            img = cv2.imread(image_path)
+    except Exception as e:
+        print(f"Error loading image or PDF {image_path}: {e}")
+        return False
+        
     if img is None:
         print(f"Could not read image {image_path}")
         return False
@@ -145,17 +164,34 @@ def main():
             filename = filename + ".jpg"
             
             output_file = os.path.join(target_dir, filename)
+            
+            # Since download might be a PDF, check the headers or just try downloading and inspecting
             temp_file = os.path.join(target_dir, f"temp_{filename}")
             
             print(f"Processing {name}...")
             
             if download_image(img_url, temp_file):
-                if smart_crop_face(temp_file, output_file):
+                # Try to detect if it's a PDF by reading the first few bytes
+                is_pdf = False
+                with open(temp_file, 'rb') as tf:
+                    header = tf.read(4)
+                    if header == b'%PDF':
+                        is_pdf = True
+                
+                # Rename temp file if it's a PDF so PyMuPDF knows how to parse it
+                proc_file = temp_file
+                if is_pdf:
+                    proc_file = temp_file + ".pdf"
+                    os.rename(temp_file, proc_file)
+
+                if smart_crop_face(proc_file, output_file):
                     print(f"  -> Saved smart cropped image to {output_file}")
                 else:
                     print(f"  -> Failed to process image")
                 
                 # Cleanup temp file
+                if os.path.exists(proc_file):
+                    os.remove(proc_file)
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
             else:
