@@ -13,7 +13,9 @@ import {
     Mic,
     MicOff,
     Loader2,
-    Volume2
+    Volume2,
+    Globe,
+    ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "../../components/ui/button";
@@ -41,6 +43,19 @@ const CreateTicket = () => {
     const supportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
     const [selectedLanguage, setSelectedLanguage] = useState('en');
     const [isTranslating, setIsTranslating] = useState(false);
+    const [isLangOpen, setIsLangOpen] = useState(false);
+    const langRef = useRef(null);
+
+    // Close language dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (langRef.current && !langRef.current.contains(event.target)) {
+                setIsLangOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Clean up preview URL on unmount
     useEffect(() => {
@@ -254,27 +269,67 @@ const CreateTicket = () => {
                                             </span>
                                         </div>
 
-                                        {/* Language Selector */}
+                                        {/* Premium Language Selector */}
                                         <div className="flex items-center gap-2">
                                             <label className="text-xs font-bold text-gray-500 uppercase tracking-wider shrink-0">Language:</label>
-                                            <div className="relative flex-1">
-                                                <select
-                                                    value={selectedLanguage}
-                                                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                                                    className="w-full appearance-none bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all pr-8 cursor-pointer"
+                                            <div className="relative flex-1" ref={langRef}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsLangOpen(!isLangOpen)}
+                                                    className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 flex items-center justify-between hover:bg-white hover:border-emerald-200 transition-all shadow-sm group"
                                                 >
-                                                    {SUPPORTED_LANGUAGES.map(lang => (
-                                                        <option key={lang.code} value={lang.code}>{lang.label}</option>
-                                                    ))}
-                                                </select>
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
-                                                </div>
+                                                    <span className="flex items-center gap-2">
+                                                        <Globe size={14} className="text-emerald-500" />
+                                                        {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.label}
+                                                    </span>
+                                                    <motion.div
+                                                        animate={{ rotate: isLangOpen ? 180 : 0 }}
+                                                        className="text-gray-400 group-hover:text-emerald-500 transition-colors"
+                                                    >
+                                                        <ChevronDown size={16} />
+                                                    </motion.div>
+                                                </button>
+
+                                                <AnimatePresence>
+                                                    {isLangOpen && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                            animate={{ opacity: 1, y: 5, scale: 1 }}
+                                                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                            className="absolute z-50 top-full left-0 right-0 bg-white border border-gray-100 rounded-2xl shadow-2xl shadow-emerald-900/10 p-2 overflow-hidden"
+                                                        >
+                                                            <div className="max-h-[220px] overflow-y-auto custom-scrollbar space-y-1">
+                                                                {SUPPORTED_LANGUAGES.map(lang => (
+                                                                    <button
+                                                                        key={lang.code}
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setSelectedLanguage(lang.code);
+                                                                            setIsLangOpen(false);
+                                                                        }}
+                                                                        className={`w-full text-left px-4 py-2.5 rounded-xl text-sm font-bold transition-all flex items-center justify-between
+                                                                            ${selectedLanguage === lang.code
+                                                                                ? 'bg-emerald-50 text-emerald-700'
+                                                                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                                                            }`}
+                                                                    >
+                                                                        {lang.label}
+                                                                        {selectedLanguage === lang.code && <CheckCircle2 size={14} className="text-emerald-500" />}
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
                                             </div>
                                             {selectedLanguage !== 'en' && (
-                                                <span className="text-xs bg-amber-50 text-amber-700 border border-amber-100 px-2 py-1 rounded-lg font-semibold whitespace-nowrap">
-                                                    Will translate to English
-                                                </span>
+                                                <motion.span
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    className="text-[10px] bg-emerald-500 text-white px-2.5 py-1 rounded-full font-black uppercase tracking-widest shadow-lg shadow-emerald-200"
+                                                >
+                                                    Translating
+                                                </motion.span>
                                             )}
                                         </div>
                                         <div className="relative flex-grow flex flex-col">
