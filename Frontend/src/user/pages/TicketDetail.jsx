@@ -13,6 +13,7 @@ import TicketStatusBadge from "../components/TicketStatusBadge";
 import TicketTimeline from "../components/TicketTimeline";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
+import CSATModal from "../components/CSATModal";
 
 const TicketDetail = () => {
     const { ticket_id } = useParams();
@@ -21,6 +22,7 @@ const TicketDetail = () => {
     const [ticket, setTicket] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isReopening, setIsReopening] = useState(false);
+    const [showCsat, setShowCsat] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -80,6 +82,14 @@ const TicketDetail = () => {
             supabase.removeChannel(channel);
         };
     }, [ticket_id]);
+
+    // Show CSAT modal if ticket is resolved and not yet rated
+    useEffect(() => {
+        if (ticket?.status?.toLowerCase()?.includes('resolv') && !ticket.csat_rating) {
+            const timer = setTimeout(() => setShowCsat(true), 1200);
+            return () => clearTimeout(timer);
+        }
+    }, [ticket?.status, ticket?.csat_rating]);
 
     if (loading) {
         return (
@@ -362,6 +372,18 @@ const TicketDetail = () => {
 
                 </div>
             </div>
+
+            {/* CSAT Modal */}
+            {showCsat && (
+                <CSATModal
+                    ticketId={ticket.ticket_id}
+                    onSubmit={() => {
+                        setShowCsat(false);
+                        setTicket(prev => ({ ...prev, csat_rating: 1 })); // dummy, prevents re-showing
+                    }}
+                    onDismiss={() => setShowCsat(false)}
+                />
+            )}
         </main>
     );
 };

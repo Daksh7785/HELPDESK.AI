@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 import { supabase } from "../lib/supabaseClient";
-import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, CheckCircle2, ChevronDown, Search, Building2 } from "lucide-react";
+import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, CheckCircle2, ChevronDown, Search, Building2, ArrowLeft } from "lucide-react";
 
 function Signup() {
   const [email, setEmail] = useState("");
@@ -205,6 +205,15 @@ function Signup() {
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-teal-400 rounded-full blur-[120px] opacity-10 pointer-events-none"></div>
 
       <div className="w-full max-w-md relative z-10">
+        {/* Back Button */}
+        <Link
+          to="/"
+          className="absolute -top-12 left-0 flex items-center gap-2 text-emerald-100/70 hover:text-white font-semibold transition-all group"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span>Back to Home</span>
+        </Link>
+
         {/* Logo Header */}
         <div className="flex justify-center mb-8">
           <Link to="/" className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition hover:bg-white/20">

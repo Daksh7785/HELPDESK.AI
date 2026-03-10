@@ -22,6 +22,7 @@ import { Textarea } from "../../components/ui/textarea";
 import useTicketStore from "../../store/ticketStore";
 import axios from 'axios';
 import Tesseract from 'tesseract.js';
+import { translateText, SUPPORTED_LANGUAGES } from '../../services/translationService';
 
 const CreateTicket = () => {
     const [issue, setIssue] = useState('');
@@ -38,6 +39,8 @@ const CreateTicket = () => {
     const addTicket = useTicketStore((state) => state.addTicket);
     const MAX_CHARS = 1000;
     const supportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
+    const [selectedLanguage, setSelectedLanguage] = useState('en');
+    const [isTranslating, setIsTranslating] = useState(false);
 
     // Clean up preview URL on unmount
     useEffect(() => {
@@ -175,6 +178,15 @@ const CreateTicket = () => {
         setError('');
 
         try {
+            let textToSubmit = issue;
+
+            // Translate to English if a different language is selected
+            if (selectedLanguage !== 'en') {
+                setIsTranslating(true);
+                textToSubmit = await translateText(issue, selectedLanguage, 'en');
+                setIsTranslating(false);
+            }
+
             let imageBase64 = "";
             let extractedOCRText = extractedOCR;
             if (file) {
@@ -190,7 +202,9 @@ const CreateTicket = () => {
             // Navigate to AI Processing workflow where the API will be called
             navigate('/ai-processing', {
                 state: {
-                    text: issue,
+                    text: textToSubmit,
+                    original_text: issue,
+                    original_language: selectedLanguage,
                     image_base64: imageBase64,
                     image_text: extractedOCRText
                 }
@@ -238,6 +252,30 @@ const CreateTicket = () => {
                                             <span className={`text-xs font-semibold ${issue.length >= MAX_CHARS ? 'text-red-500' : 'text-gray-400'}`}>
                                                 {issue.length} / {MAX_CHARS}
                                             </span>
+                                        </div>
+
+                                        {/* Language Selector */}
+                                        <div className="flex items-center gap-2">
+                                            <label className="text-xs font-bold text-gray-500 uppercase tracking-wider shrink-0">Language:</label>
+                                            <div className="relative flex-1">
+                                                <select
+                                                    value={selectedLanguage}
+                                                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                                                    className="w-full appearance-none bg-gray-50 border border-gray-100 rounded-xl px-3 py-2 text-sm font-semibold text-gray-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400 transition-all pr-8 cursor-pointer"
+                                                >
+                                                    {SUPPORTED_LANGUAGES.map(lang => (
+                                                        <option key={lang.code} value={lang.code}>{lang.label}</option>
+                                                    ))}
+                                                </select>
+                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                                </div>
+                                            </div>
+                                            {selectedLanguage !== 'en' && (
+                                                <span className="text-xs bg-amber-50 text-amber-700 border border-amber-100 px-2 py-1 rounded-lg font-semibold whitespace-nowrap">
+                                                    Will translate to English
+                                                </span>
+                                            )}
                                         </div>
                                         <div className="relative flex-grow flex flex-col">
                                             <Textarea
@@ -392,13 +430,13 @@ const CreateTicket = () => {
                                     {/* Primary Submit Button */}
                                     <Button
                                         type="submit"
-                                        disabled={isLoading || isOcrLoading || !issue.trim()}
+                                        disabled={isLoading || isOcrLoading || isTranslating || !issue.trim()}
                                         className="w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg rounded-2xl flex items-center justify-center gap-2 transition-all border-none shadow-emerald-200/50 shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-50"
                                     >
-                                        {isLoading ? (
+                                        {(isLoading || isTranslating) ? (
                                             <>
                                                 <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                                                Submitting issue...
+                                                {isTranslating ? 'Translating...' : 'Submitting issue...'}
                                             </>
                                         ) : (
                                             <>

@@ -5,7 +5,7 @@ import {
     Activity, ShieldCheck, Briefcase, Globe, BarChart3,
     ImageIcon, CornerUpLeft, CheckSquare, XCircle,
     ArrowUpRight, Cpu, Binary, Eye, MessageSquare,
-    ChevronDown, Save, Eraser, MoveRight, Loader2
+    ChevronDown, Save, Eraser, MoveRight, Loader2, Star
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
@@ -14,6 +14,7 @@ import { Card, CardContent } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
+import SLABadge from "../components/SLABadge";
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
@@ -201,7 +202,10 @@ const AdminTicketDetail = () => {
                                 </div>
                             )}
                         </div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{displayStatus || 'Routing...'}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{displayStatus || 'Routing...'}</p>
+                            <SLABadge priority={displayPriority} createdAt={ticket.created_at} status={displayStatus} compact />
+                        </div>
                     </div>
                 </div>
 
@@ -364,6 +368,39 @@ const AdminTicketDetail = () => {
                             )}
                         </div>
                     </Card>
+
+                    {/* CSAT Rating Card */}
+                    {ticket.csat_rating && (
+                        <Card className="border-none shadow-2xl shadow-slate-200/50 bg-white rounded-[2rem] overflow-hidden">
+                            <div className="px-8 py-6 bg-emerald-900 text-white flex items-center justify-between">
+                                <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-2">
+                                    <Star size={18} className="text-yellow-300 fill-yellow-300" /> Customer Satisfaction
+                                </h3>
+                            </div>
+                            <div className="p-8 space-y-4">
+                                <div className="flex gap-1">
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                        <Star
+                                            key={star}
+                                            className={`w-7 h-7 ${star <= ticket.csat_rating
+                                                    ? 'text-yellow-400 fill-yellow-400'
+                                                    : 'text-slate-200 fill-slate-200'
+                                                }`}
+                                        />
+                                    ))}
+                                </div>
+                                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                    {['', 'Very Dissatisfied', 'Dissatisfied', 'Neutral', 'Satisfied', 'Very Satisfied'][ticket.csat_rating]}
+                                </p>
+                                {ticket.csat_comment && (
+                                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">User Comment</p>
+                                        <p className="text-sm text-slate-700 leading-relaxed italic">"{ticket.csat_comment}"</p>
+                                    </div>
+                                )}
+                            </div>
+                        </Card>
+                    )}
                 </div>
             </div>
 

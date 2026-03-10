@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
-import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2 } from "lucide-react";
+import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 
 function Login() {
   const [email, setEmail] = useState("");
@@ -102,9 +102,19 @@ function Login() {
         </div>
       </div>
 
-      {/* Right Side Login */}
-      <div className="flex w-full lg:w-1/2 items-center justify-center bg-gray-50 p-6">
-        <div className="bg-white shadow-xl shadow-gray-200/50 rounded-3xl p-8 md:p-12 w-full max-w-md border border-gray-100">
+      <div className="flex w-full lg:w-1/2 items-center justify-center bg-gray-50 p-6 relative">
+        {/* Back Button */}
+        <Link
+          to="/"
+          className="absolute top-8 left-8 flex items-center gap-2 text-gray-500 hover:text-emerald-900 font-semibold transition-all group"
+        >
+          <div className="p-2 rounded-full bg-white border border-gray-100 shadow-sm group-hover:border-emerald-100 group-hover:shadow-md transition-all">
+            <ArrowLeft className="w-4 h-4" />
+          </div>
+          <span>Back to Home</span>
+        </Link>
+
+        <div className="bg-white shadow-xl shadow-gray-200/50 rounded-3xl p-8 md:p-12 w-full max-w-md border border-gray-100 mt-8 lg:mt-0">
           <div className="text-center mb-10">
             <h2 className="text-3xl font-bold text-gray-900 mb-3">Welcome Back</h2>
             <p className="text-gray-500">Please sign in to continue</p>

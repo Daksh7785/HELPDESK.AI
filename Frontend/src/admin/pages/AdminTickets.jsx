@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
+import SLABadge from "../components/SLABadge";
 
 const AdminTickets = () => {
     const navigate = useNavigate();
@@ -278,6 +279,7 @@ const AdminTickets = () => {
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority</th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Assignee Team</th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
+                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">SLA</th>
                                 <th className="px-6 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
                             </tr>
                         </thead>
@@ -345,6 +347,15 @@ const AdminTickets = () => {
                                                 options={statuses.filter(s => s !== 'All').map(s => ({ value: s.toLowerCase(), label: s }))}
                                             />
                                         </div>
+                                    </td>
+
+                                    {/* SLA Badge */}
+                                    <td className="px-6 py-6">
+                                        <SLABadge
+                                            priority={ticket.priority}
+                                            createdAt={ticket.created_at}
+                                            status={ticket.status}
+                                        />
                                     </td>
 
                                     {/* Action: Open Ticket */}
