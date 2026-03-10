@@ -114,17 +114,21 @@ const AdminUsers = () => {
             // 2. Fetch PENDING entities
             let allPending = [];
             if (activeCompanyId) {
-                const { data: reqData, error: reqError } = await supabase
-                    .from('user_requests')
-                    .select(`
-                        id, user_id, company_id, status, created_at,
-                        user:profiles!user_id (id, full_name, email, company, profile_picture, status)
-                    `)
-                    .eq('company_id', activeCompanyId)
-                    .eq('status', 'pending')
-                    .order('created_at', { ascending: false });
+                try {
+                    const { data: reqData, error: reqError } = await supabase
+                        .from('user_requests')
+                        .select(`
+                            id, user_id, company_id, status, created_at,
+                            user:profiles!user_id (id, full_name, email, company, profile_picture, status)
+                        `)
+                        .eq('company_id', activeCompanyId)
+                        .eq('status', 'pending')
+                        .order('created_at', { ascending: false });
 
-                if (!reqError && reqData) allPending = [...reqData];
+                    if (!reqError && reqData) allPending = [...reqData];
+                } catch (_) {
+                    // user_requests table may not exist — profile-based fallback below handles pending users
+                }
             }
 
             // Path B: Direct profile lookup (Ensure Anjali is visible even if request row failed)

@@ -78,9 +78,9 @@ const AdminProfile = () => {
             try {
                 const { data, error } = await supabase
                     .from('tickets')
-                    .select('id, subject, status, created_at, updated_at')
+                    .select('id, subject, status, created_at')
                     .eq('company', adminProfile.company)
-                    .order('updated_at', { ascending: false })
+                    .order('created_at', { ascending: false })
                     .limit(5);
 
                 if (error) throw error;
@@ -89,7 +89,7 @@ const AdminProfile = () => {
                     id: t.id,
                     action: `Ticket ${t.status?.toUpperCase() || 'UPDATED'}`,
                     target: `#TKT-${t.id.slice(0, 4)}`,
-                    timestamp: new Date(t.updated_at || t.created_at).toLocaleString(),
+                    timestamp: new Date(t.created_at).toLocaleString(),
                     status: "Success"
                 }));
                 setActivityLog(formatted);
