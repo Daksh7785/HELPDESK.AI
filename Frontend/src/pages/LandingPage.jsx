@@ -583,56 +583,6 @@ export default function LandingPage() {
                 </div>
             </section>
 
-            {/* ----------------- TESTIMONIALS ----------------- */}
-            <section className="py-24 bg-gray-50">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
-                            Join over <span className="text-emerald-900">10K+</span> happy IT professionals
-                        </h2>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-                        {/* Card 1 */}
-                        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                            <div className="flex gap-1 mb-5">
-                                {[...Array(5)].map((_, i) => (
-                                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                                ))}
-                            </div>
-                            <p className="text-gray-700 leading-relaxed mb-6 text-[15px]">
-                                "AutoDesk AI completely transformed how we handle incoming issues. What used to take my team 3 hours of manual triage every morning now happens automatically before we even open our laptops. It's a genuine game-changer."
-                            </p>
-                            <div className="flex items-center gap-3">
-                                <img src="https://i.pravatar.cc/150?u=a" alt="User" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
-                                <div>
-                                    <div className="font-semibold text-gray-900 text-sm">Marcus Kim</div>
-                                    <div className="text-xs text-gray-500">Head of IT, Apex Systems</div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Card 2 */}
-                        <div className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-                            <div className="flex gap-1 mb-5">
-                                {[...Array(5)].map((_, i) => (
-                                    <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
-                                ))}
-                            </div>
-                            <p className="text-gray-700 leading-relaxed mb-6 text-[15px]">
-                                "Our MTTR dropped by 60% in the first month. The AI's ability to correctly classify Network vs Hardware tickets on the first attempt — with zero training from our side — is remarkable. The Slack integration sealed the deal."
-                            </p>
-                            <div className="flex items-center gap-3">
-                                <img src="https://i.pravatar.cc/150?u=b" alt="User" className="w-10 h-10 rounded-full border-2 border-white shadow-sm" />
-                                <div>
-                                    <div className="font-semibold text-gray-900 text-sm">Sakshi Rao</div>
-                                    <div className="text-xs text-gray-500">IT Operations Lead, NovaCorp</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </section>
 
             {/* ----------------- TEAM SECTION ----------------- */}
             <TeamSection />
