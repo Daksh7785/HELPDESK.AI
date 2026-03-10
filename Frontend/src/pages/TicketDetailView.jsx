@@ -88,7 +88,7 @@ function TicketDetailView() {
     };
 
     return (
-        <main className="flex-1 w-full max-w-[1100px] mx-auto px-6 py-10 flex flex-col gap-8">
+        <main className="flex-1 w-full max-w-[1100px] mx-auto px-4 md:px-6 py-6 md:py-10 flex flex-col gap-6 md:gap-8">
             <div className="w-full">
                 <button
                     onClick={() => navigate('/my-tickets')}
@@ -145,7 +145,7 @@ function TicketDetailView() {
                             <CardContent className="p-8 space-y-6">
                                 <div>
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Ticket ID</label>
-                                    <p className="text-2xl font-mono font-black text-emerald-900 tracking-wider">#{ticket.ticket_id}</p>
+                                    <p className="text-xl md:text-2xl font-mono font-black text-emerald-900 tracking-wider">#{ticket.ticket_id}</p>
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">Summary</label>

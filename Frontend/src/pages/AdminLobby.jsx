@@ -95,7 +95,7 @@ function AdminLobby() {
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none" />
             <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none"></div>
 
-            <div className="w-full max-w-lg bg-white/[0.03] border border-white/[0.08] rounded-3xl p-8 md:p-12 shadow-2xl backdrop-blur-xl relative z-10 text-center">
+            <div className="w-full max-w-lg bg-white/[0.03] border border-white/[0.08] rounded-3xl p-6 sm:p-10 md:p-12 shadow-2xl backdrop-blur-xl relative z-10 text-center">
 
                 {isTransitioning ? (
                     <div className="py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

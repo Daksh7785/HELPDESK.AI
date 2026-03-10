@@ -83,7 +83,7 @@ function UserLobby() {
             {/* Ambient glow - Emerald theme */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-emerald-600/5 rounded-full blur-[120px] pointer-events-none" />
 
-            <div className="w-full max-w-lg bg-white border border-gray-100 rounded-3xl p-8 md:p-12 shadow-2xl relative z-10 text-center">
+            <div className="w-full max-w-lg bg-white border border-gray-100 rounded-3xl p-6 sm:p-10 md:p-12 shadow-2xl relative z-10 text-center">
                 {isTransitioning ? (
                     <div className="py-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                         <div className="w-20 h-20 rounded-full bg-emerald-50 border-2 border-emerald-500 flex items-center justify-center mx-auto mb-6 shadow-sm">

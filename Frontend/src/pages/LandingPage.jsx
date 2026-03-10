@@ -325,8 +325,8 @@ export default function LandingPage() {
             </nav>
 
             {/* ==================== HERO ==================== */}
-            <section className="relative pt-20 pb-32 overflow-hidden">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10" />
+            <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10" />
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative z-10">
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-bold uppercase tracking-wider mb-8">
@@ -334,7 +334,7 @@ export default function LandingPage() {
                         <span>AI-Powered Helpdesk Automation · Made in India 🇮🇳</span>
                     </div>
 
-                    <h1 className="text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
                         Your IT Helpdesk,<br />
                         <span className="text-emerald-700">Fully Automated.</span>
                     </h1>
@@ -613,19 +613,19 @@ export default function LandingPage() {
             </section>
 
             {/* ==================== HOW IT WORKS ==================== */}
-            <section className="bg-emerald-950 py-32 text-white relative overflow-hidden" id="how-it-works">
+            <section className="bg-emerald-950 py-16 md:py-32 text-white relative overflow-hidden" id="how-it-works">
                 {/* Background Decorations */}
                 <div className="absolute top-0 right-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                 <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 blur-[120px] rounded-full translate-y-1/2 -translate-x-1/2 pointer-events-none" />
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-                    <div className="flex flex-col lg:flex-row gap-16 lg:items-center">
+                    <div className="flex flex-col lg:flex-row gap-8 lg:gap-16 lg:items-center">
                         {/* Left: Content */}
                         <div className="w-full lg:w-1/2">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-xs font-bold uppercase tracking-widest border border-emerald-500/20 mb-6">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest border border-emerald-500/20 mb-4 md:mb-6">
                                 The Journey
                             </div>
-                            <h2 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[0.9] mb-12 italic uppercase">
+                            <h2 className="text-3xl sm:text-4xl md:text-6xl font-black text-white tracking-tight leading-[0.9] mb-8 md:mb-12 italic uppercase">
                                 From Chaos <br />
                                 to <span className="text-emerald-500">Clarity.</span>
                             </h2>
@@ -641,8 +641,8 @@ export default function LandingPage() {
                                             : 'bg-transparent border-transparent hover:bg-white/5 opacity-40 hover:opacity-100'
                                             }`}
                                     >
-                                        <div className="flex items-start gap-6">
-                                            <div className={`shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl italic transition-all duration-500 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 scale-110' : 'bg-white/10 text-white/40'}`}>
+                                        <div className="flex items-start gap-4 md:gap-6">
+                                            <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-lg md:text-xl italic transition-all duration-500 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 scale-110' : 'bg-white/10 text-white/40'}`}>
                                                 {step.num}
                                             </div>
                                             <div>
@@ -666,8 +666,8 @@ export default function LandingPage() {
                         </div>
 
                         {/* Right: Visual Display */}
-                        <div className="w-full lg:w-1/2 h-[500px] relative">
-                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-12 flex items-center justify-center">
+                        <div className="w-full lg:w-1/2 h-[350px] md:h-[500px] relative">
+                            <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent rounded-[32px] md:rounded-[40px] border border-white/5 backdrop-blur-3xl overflow-hidden p-6 md:p-12 flex items-center justify-center">
                                 <AnimatePresence mode="wait">
                                     <motion.div
                                         key={activeStep}
