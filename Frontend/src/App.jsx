@@ -123,6 +123,15 @@ function TitleUpdater() {
   return null;
 }
 
+// Scrolls to top on every route change
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [pathname]);
+  return null;
+}
+
 function AppLayout() {
   const { user, profile } = useAuthStore();
 
@@ -142,50 +151,54 @@ function AppLayout() {
   // ProtectedRoute handles the redirect to /login if user is not present
   // but we still need to handle role-based navigation here
   return (
-    <Routes>
-      <Route path="/knowledge-check" element={<DuplicateDetection />} />
-      <Route path="/auto-resolve" element={<AutoResolveChat />} />
-      <Route path="/resolved" element={<Resolved />} />
+    <>
+      <ScrollToTop />
+      <Routes>
+        <Route path="/knowledge-check" element={<DuplicateDetection />} />
+        <Route path="/auto-resolve" element={<AutoResolveChat />} />
+        <Route path="/resolved" element={<Resolved />} />
 
-      {/* --- User Portal --- */}
-      <Route element={
-        profile?.role === 'master_admin' ? <Navigate to="/master-admin/dashboard" replace /> :
-          (profile?.role === 'admin' || profile?.role === 'super_admin') ? <Navigate to="/admin/dashboard" replace /> :
-            profile?.status === 'pending_approval' ? <Navigate to="/user-lobby" replace /> :
-              profile?.status === 'rejected' ? <Navigate to="/not-approved" replace /> :
-                <UserLayout />
-      }>
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/create-ticket" element={<CreateTicket />} />
-        <Route path="/my-tickets" element={<MyTickets />} />
-        <Route path="/ticket/:ticket_id" element={<TicketDetail />} />
-        <Route path="/ai-processing" element={<AIProcessing />} />
-        <Route path="/ai-understanding" element={<AIUnderstanding />} />
-        <Route path="/ticket-tracking" element={<TicketTracking />} />
-        <Route path="/ticket-result" element={<TicketResult />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/help" element={<Help />} />
-        <Route path="/notifications" element={<Notifications />} />
-      </Route>
-
-      {/* --- Admin Portal (Protected) --- */}
-      <Route element={<AdminProtectedRoute />}>
-        <Route element={<AdminLayout />}>
-          <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          <Route path="/admin/tickets" element={<AdminTickets />} />
-          <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/analytics" element={<AdminAnalytics />} />
-          <Route path="/admin/profile" element={<AdminProfile />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
+        {/* --- User Portal --- */}
+        <Route element={
+          profile?.role === 'master_admin' ? <Navigate to="/master-admin/dashboard" replace /> :
+            (profile?.role === 'admin' || profile?.role === 'super_admin') ? <Navigate to="/admin/dashboard" replace /> :
+              profile?.status === 'pending_approval' ? <Navigate to="/user-lobby" replace /> :
+                profile?.status === 'rejected' ? <Navigate to="/not-approved" replace /> :
+                  <UserLayout />
+        }>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/create-ticket" element={<CreateTicket />} />
+          <Route path="/my-tickets" element={<MyTickets />} />
+          <Route path="/ticket/:ticket_id" element={<TicketDetail />} />
+          <Route path="/ai-processing" element={<AIProcessing />} />
+          <Route path="/ai-understanding" element={<AIUnderstanding />} />
+          <Route path="/ticket-tracking" element={<TicketTracking />} />
+          <Route path="/ticket-result" element={<TicketResult />} />
+          <Route path="/profile" element={<Profile />} />
+          <Route path="/help" element={<Help />} />
+          <Route path="/notifications" element={<Notifications />} />
         </Route>
-      </Route>
 
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        {/* --- Admin Portal (Protected) --- */}
+        <Route element={<AdminProtectedRoute />}>
+          <Route element={<AdminLayout />}>
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+            <Route path="/admin/dashboard" element={<AdminDashboard />} />
+            <Route path="/admin/tickets" element={<AdminTickets />} />
+            <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/analytics" element={<AdminAnalytics />} />
+            <Route path="/admin/profile" element={<AdminProfile />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+          </Route>
+        </Route>
+
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </>
   );
 }
+
 
 function App() {
   const { initialize } = useAuthStore();
@@ -221,7 +234,7 @@ function App() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/security" element={<Security />} />
 
-        {/* ── Master Admin Portal (hidden, standalone) ── */}
+        {/* Master Admin Portal */}
         <Route path="/master-admin-login" element={<MasterAdminLogin />} />
 
         <Route element={<MasterAdminProtectedRoute />}>
@@ -244,3 +257,4 @@ function App() {
 }
 
 export default App;
+

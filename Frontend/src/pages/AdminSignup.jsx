@@ -637,6 +637,12 @@ function AdminSignup() {
                     <p className="text-center text-xs text-gray-400 mt-12">
                         Secure enterprise registration portal. Your data is protected by 256-bit encryption.
                     </p>
+                    <p className="text-center text-xs text-gray-500 mt-4">
+                        Are you an employee?{' '}
+                        <Link to="/signup" className="text-emerald-700 font-bold hover:underline">
+                            Join your team here →
+                        </Link>
+                    </p>
                 </div>
             </div>
         </div>
