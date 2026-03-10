@@ -153,14 +153,15 @@ const AdminAnalytics = () => {
         return { accuracyRate, resolutionSplit, misclassifiedCategories, avgCsatScore };
     }, [tickets]);
 
+    // ✅ Hook must be declared before ANY early returns
+    const [activeTab, setActiveTab] = useState('overview');
+
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[400px]">
             <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
             <p className="text-slate-400 font-black uppercase tracking-widest italic text-center">Crunching mission data analytics...</p>
         </div>
     );
-
-    const [activeTab, setActiveTab] = useState('overview');
 
     return (
         <div className="space-y-10 pb-20 animate-in fade-in duration-700">
@@ -182,8 +183,8 @@ const AdminAnalytics = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id
-                                    ? 'bg-white text-slate-900 shadow-sm'
-                                    : 'text-slate-400 hover:text-slate-600'
+                                ? 'bg-white text-slate-900 shadow-sm'
+                                : 'text-slate-400 hover:text-slate-600'
                                 }`}
                         >
                             <tab.icon size={14} />
