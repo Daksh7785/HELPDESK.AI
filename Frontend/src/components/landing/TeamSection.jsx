@@ -1,15 +1,6 @@
 import React from 'react';
 import { Github, Linkedin } from 'lucide-react';
 
-// Helper to convert Google Drive view links to direct image links
-const getDirectImageUrl = (url) => {
-    if (!url) return '';
-    const match = url.match(/id=([a-zA-Z0-9_-]+)/);
-    if (match && match[1]) {
-        return `https://lh3.googleusercontent.com/d/${match[1]}`;
-    }
-    return url;
-};
 
 const TEAM_MEMBERS = [
     // --- COORDINATION TEAM ---
@@ -17,7 +8,7 @@ const TEAM_MEMBERS = [
         name: "Duniya Vasa",
         role: "Group Lead & Coordination Team Lead",
         team: "Coordination",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1Q9gxRFdNT6RAVRXPD2dYrc07OHYzHIxP"),
+        image: "/team/duniya_vasa.jpg",
         linkedin: "https://www.linkedin.com/in/duniyavasa/",
         github: "https://github.com/Duniya-24"
     },
@@ -25,7 +16,7 @@ const TEAM_MEMBERS = [
         name: "Sowjanya N",
         role: "Coordination Team Member",
         team: "Coordination",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1hQ4DWiurWnMJ-w-KroOiwnQaiZouFCEW"),
+        image: "/team/sowjanya_n.jpg",
         linkedin: "https://www.linkedin.com/in/sowjanya-n-962319354",
         github: "https://github.com/Sowji0118/"
     },
@@ -35,7 +26,7 @@ const TEAM_MEMBERS = [
         name: "Asna Abdul Kareem",
         role: "Lead",
         team: "Model",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1eG-gSwzDJLttym0NSMvG9buItwhBt2WB"),
+        image: "/team/asna_abdul_kareem.jpg",
         linkedin: "https://in.linkedin.com/in/asna-abdul-kareem-6774a6292",
         github: "https://github.com/Asnaabdul"
     },
@@ -43,7 +34,7 @@ const TEAM_MEMBERS = [
         name: "Vinitha Giri",
         role: "Member",
         team: "Model",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1vnpYlemu5oz0ZcxwLL-9pIyoOjCkF7bA"),
+        image: "/team/vinitha_giri.jpg",
         linkedin: "https://www.linkedin.com/in/vinitha-giri/",
         github: "https://github.com/vinitha-giri"
     },
@@ -51,7 +42,7 @@ const TEAM_MEMBERS = [
         name: "Ippili Raju",
         role: "Member",
         team: "Model",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1k1CBjv4vJWNVuqVg6-gs2Z8Hom34zqP-"),
+        image: "/team/ippili_raju.jpg",
         linkedin: "https://www.linkedin.com/in/raju-ippili-419051308/",
         github: "https://github.com/raju-ippili"
     },
@@ -59,7 +50,7 @@ const TEAM_MEMBERS = [
         name: "Pragati Tiwari",
         role: "Member",
         team: "Model",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1G7i8nxddC1TO50m6carSwvoKgkELeO2M"),
+        image: "/team/pragati_tiwari.jpg",
         linkedin: "https://linkedin.com/in/pragati-tiwari-608b043b5",
         github: "https://github.com/pTIWARI-20"
     },
@@ -67,7 +58,7 @@ const TEAM_MEMBERS = [
         name: "Shaik Eshak",
         role: "Member",
         team: "Model",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1-VxqotzSoXqu9xo7Mn8FvsOn52lcxlS-"),
+        image: "/team/shaik_eshak.jpg",
         linkedin: "https://www.linkedin.com/in/eshak-s-16738626a/",
         github: "https://github.com/Eshakshai"
     },
@@ -75,7 +66,7 @@ const TEAM_MEMBERS = [
         name: "Ritesh Bonthalakoti",
         role: "Member",
         team: "Model",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1pqJyn9w_mWV4nY4v9rSw0H1BdxxKhr4g"),
+        image: "/team/ritesh_bonthalakoti.jpg",
         linkedin: "https://www.linkedin.com/in/ritesh1908",
         github: "https://github.com/ritesh-1918"
     },
@@ -85,7 +76,7 @@ const TEAM_MEMBERS = [
         name: "Asmeet Kaur Makkad",
         role: "Lead",
         team: "Backend",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1w8aoWQ46P_trcrfa61xiMG74RmxqiGPu"),
+        image: "/team/asmeet_kaur_makkad.jpg",
         linkedin: "https://www.linkedin.com/in/asmeet-kaur-makkad-911bb3304",
         github: "https://github.com/AsmeetKaurMakkad"
     },
@@ -93,7 +84,7 @@ const TEAM_MEMBERS = [
         name: "Vijayalakshmi S R",
         role: "Member",
         team: "Backend",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1x7F86fkUQFsJu7k0hq4sC06gBGCZTisf"),
+        image: "/team/vijayalakshmi_s_r.jpg",
         linkedin: "https://www.linkedin.com/in/vijayalakshmi-s-r-6a260228a/",
         github: "https://github.com/Vijayalakshmi1412"
     },
@@ -101,7 +92,7 @@ const TEAM_MEMBERS = [
         name: "Dinesh Reddy Vasampelli",
         role: "Member",
         team: "Backend",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1rksSBwXI0CV86KNA1dw2hZJZ-wlQBuuX"),
+        image: "/team/dinesh_reddy_vasampelli.jpg",
         linkedin: "https://www.linkedin.com/in/dineshreddy-vasampelli-b11046296/",
         github: "https://github.com/vasampellidineshreddy18-bot"
     },
@@ -109,7 +100,7 @@ const TEAM_MEMBERS = [
         name: "Manya Sahasra",
         role: "Member",
         team: "Backend",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1jroorPy__oC4jRtS7EoK6nAxrRY5xpEt"),
+        image: "/team/manya_sahasra.jpg",
         linkedin: "www.linkedin.com/in/manya2929",
         github: "https://github.com/ManyaSaaha9"
     },
@@ -119,7 +110,7 @@ const TEAM_MEMBERS = [
         name: "Satla Prayukthika",
         role: "Lead",
         team: "Frontend",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1kDcPMlnnuzsUAGI1SI9lrwOIUaquUNqP"),
+        image: "/team/satla_prayukthika.jpg",
         linkedin: "https://www.linkedin.com/in/satla-prayukthika-328114291/",
         github: "https://github.com/prayukthika03"
     },
@@ -127,7 +118,7 @@ const TEAM_MEMBERS = [
         name: "Bandi Keerthi Krishna",
         role: "Member",
         team: "Frontend",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1xiRmBxxi43IKFeLG92W5qxmCARhNd6mf"),
+        image: "/team/bandi_keerthi_krishna.jpg",
         linkedin: "https://www.linkedin.com/in/bandikeerthikrishna",
         github: "https://github.com/bKeerthi-1205"
     },
@@ -135,7 +126,7 @@ const TEAM_MEMBERS = [
         name: "Shubha G D",
         role: "Member",
         team: "Frontend",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1LTkUcd1YkfzP2kqK53z2IM3WYG4HPG1w"),
+        image: "/team/shubha_g_d.jpg",
         linkedin: "https://www.linkedin.com/in/shubha-g-d-a879003b5",
         github: "https://github.com/gdshubha148"
     },
@@ -143,7 +134,7 @@ const TEAM_MEMBERS = [
         name: "Phani Kotha",
         role: "Member",
         team: "Frontend",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1DnW5wdbWIMAjwbSbeDAWb8ZZDUMXwSJP"),
+        image: "/team/kpvvssmphara.jpg",
         linkedin: "https://www.linkedin.com/in/phani",
         github: "https://github.com/phanikotha18-sudo"
     },
@@ -153,7 +144,7 @@ const TEAM_MEMBERS = [
         name: "Praneetha Baru",
         role: "Lead",
         team: "Data",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1Rxin3LyOIBYiANH02dBS0DxTDBXr1feI"),
+        image: "/team/praneetha_baru.jpg",
         linkedin: "https://www.linkedin.com/in/praneetha-baru-0846b0295",
         github: "https://github.com/Praneetha7305"
     },
@@ -161,7 +152,7 @@ const TEAM_MEMBERS = [
         name: "Kavin Sarvesh",
         role: "Member",
         team: "Data",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1nIbvrpmhBCOWhRxqaVgdD-ZRpod8xd7c"),
+        image: "/team/kavin_sarvesh.jpg",
         linkedin: "https://www.linkedin.com/in/kavin-sarvesh-813437360",
         github: "https://github.com/Kavinsarvesh2006"
     },
@@ -169,7 +160,7 @@ const TEAM_MEMBERS = [
         name: "Utukuri Naga Sri Hari Chandana",
         role: "Member",
         team: "Data",
-        image: getDirectImageUrl("https://drive.google.com/open?id=18L-elaSfEEhGt7B37QTkzBhu3vikLbJh"),
+        image: "/team/utukuri_naga_sri_hari_chandana.jpg",
         linkedin: "https://www.linkedin.com/in/naga-sri-hari-chandana-utukuri-541b072a3",
         github: "https://github.com/2300031149-chandana"
     },
@@ -177,7 +168,7 @@ const TEAM_MEMBERS = [
         name: "Akash Kumar Paswan",
         role: "Member",
         team: "Data",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1KnnAgBq6lfQETyqoJU9Ql2Vk40bU9wxf"),
+        image: "/team/akash_kumar_paswan.jpg",
         linkedin: "https://www.linkedin.com/in/akash-kumar-paswan-951a13361",
         github: "https://github.com/Akashpaswan302"
     },
@@ -185,7 +176,7 @@ const TEAM_MEMBERS = [
         name: "Ganesh Goud Tekmul",
         role: "Member",
         team: "Data",
-        image: getDirectImageUrl("https://drive.google.com/open?id=1Leq-efX_T_Q4Z-c5vLZzrZ2SVCioKFNH"),
+        image: "/team/ganesh_goud_tekmul.jpg",
         linkedin: "https://www.linkedin.com/in/ganesh-goud-a55a8b373/",
         github: "https://github.com/ganeshgoud96"
     }
