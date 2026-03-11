@@ -264,6 +264,8 @@ export default function LandingPage() {
                     navigate('/admin-signup');
                 }, 1000);
             }
+        } else if (planName === 'Enterprise') {
+            navigate('/contact-sales');
         } else {
             navigate('/admin-signup');
         }

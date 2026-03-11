@@ -22,6 +22,7 @@ import AdminSignup from "./pages/AdminSignup";
 import AdminLobby from "./pages/AdminLobby";
 import UserLobby from "./pages/UserLobby";
 import LandingPage from "./pages/LandingPage";
+import ContactSales from "./pages/ContactSales";
 
 // Legacy components
 import DuplicateDetection from "./user/pages/DuplicateDetection";
@@ -223,6 +224,7 @@ function App() {
         <Route path="/admin-lobby" element={<AdminLobby />} />
         <Route path="/user-lobby" element={<UserLobby />} />
         <Route path="/not-approved" element={<NotApproved />} />
+        <Route path="/contact-sales" element={<ContactSales />} />
 
         {/* Feature Pages */}
         <Route path="/features/categorization" element={<AutoCategorizationFeature />} />
