@@ -12,8 +12,8 @@ const Help = () => {
     React.useEffect(() => {
         const fetchVideos = async () => {
             setIsLoading(true);
-            const cacheKey = `youtube_videos_${activeTab}`;
-            const cacheTimeKey = `youtube_videos_time_${activeTab}`;
+            const cacheKey = `yt_videos_v2_${activeTab}`;
+            const cacheTimeKey = `yt_videos_time_v2_${activeTab}`;
             
             try {
                 const cachedData = localStorage.getItem(cacheKey);
@@ -188,7 +188,11 @@ const Help = () => {
                                         </div>
                                     ))
                                 ) : (
-                                    videos.map((video) => (
+                                    videos.filter(video => 
+                                        video.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                                        video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        video.category.toLowerCase().includes(searchQuery.toLowerCase())
+                                    ).map((video) => (
                                         <a 
                                             key={video.id} 
                                             href={video.url} 
