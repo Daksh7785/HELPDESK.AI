@@ -155,7 +155,10 @@ const TicketTimeline = ({ ticketId, ticket: passedTicket, className = '', forceS
 
     const getTimestamp = (idx, state) => {
         if (state === 'pending') return null;
-        if (state === 'active') return 'In progress';
+        if (state === 'active') {
+            if (idx === STEPS.length - 1) return formatDate(ticket.resolved_at) || formatDate(ticket.updated_at) || 'Completed';
+            return 'In progress';
+        }
         if (idx === 0) return formatDate(ticket.created_at) || formatDate(ticket.timestamp) || 'Just now';
         return formatDate(ticket.updated_at) || formatDate(ticket.resolved_at) || 'Completed';
     };

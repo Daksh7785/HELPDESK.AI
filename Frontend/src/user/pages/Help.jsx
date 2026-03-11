@@ -1,7 +1,29 @@
 import React, { useState } from 'react';
-import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, Video, PlayCircle, Filter, Search, LifeBuoy } from 'lucide-react';
+import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, ChevronDown, Video, PlayCircle, Filter, Search, LifeBuoy } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
+
+const FAQItem = ({ faq }) => {
+    const [isOpen, setIsOpen] = useState(false);
+    return (
+        <div 
+            className="space-y-3 cursor-pointer group rounded-xl p-4 hover:bg-gray-50/50 transition-colors border border-transparent hover:border-gray-100"
+            onClick={() => setIsOpen(!isOpen)}
+        >
+            <div className="flex justify-between items-start gap-4">
+                <h4 className="font-bold text-gray-900 text-lg leading-snug group-hover:text-emerald-700 transition-colors">{faq.q}</h4>
+                <div className="text-gray-400 group-hover:text-emerald-500 transition-colors mt-1 shrink-0">
+                    {isOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
+                </div>
+            </div>
+            {isOpen && (
+                <div className="pt-2 animate-in slide-in-from-top-1 fade-in duration-200">
+                    <p className="text-gray-600 leading-relaxed">{faq.a}</p>
+                </div>
+            )}
+        </div>
+    );
+};
 
 const Help = () => {
     const [activeTab, setActiveTab] = useState('All');
@@ -239,12 +261,9 @@ const Help = () => {
                             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3 mb-8">
                                 <Book className="w-6 h-6 text-indigo-500" /> Frequently Asked Questions
                             </h2>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
                                 {faqs.map((faq, index) => (
-                                    <div key={index} className="space-y-3">
-                                        <h4 className="font-bold text-gray-900 text-lg">{faq.q}</h4>
-                                        <p className="text-gray-600 leading-relaxed">{faq.a}</p>
-                                    </div>
+                                    <FAQItem key={index} faq={faq} />
                                 ))}
                             </div>
                         </div>
@@ -259,20 +278,7 @@ const Help = () => {
                             <p className="text-gray-400 text-sm mb-6">Our dedicated support teams are ready to assist you.</p>
                             
                             <div className="space-y-3">
-                                <button className="w-full group flex items-center justify-between bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 transition-all focus:outline-none focus:ring-2 focus:ring-white/50">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                                            <MessageSquare size={20} />
-                                        </div>
-                                        <div className="text-left">
-                                            <div className="font-bold text-sm">Live Chat</div>
-                                            <div className="text-xs text-gray-400">Avg. wait: 2 mins</div>
-                                        </div>
-                                    </div>
-                                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-                                </button>
-
-                                <button className="w-full group flex items-center justify-between bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 transition-all focus:outline-none focus:ring-2 focus:ring-white/50">
+                                <a href="mailto:bonthalamadhavi1@gmail.com?subject=Support%20Request" className="w-full group flex items-center justify-between bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 transition-all focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer block">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors">
                                             <Mail size={20} />
@@ -283,7 +289,7 @@ const Help = () => {
                                         </div>
                                     </div>
                                     <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-                                </button>
+                                </a>
                             </div>
                         </div>
 
