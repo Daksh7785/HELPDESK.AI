@@ -3,109 +3,121 @@
 # `H E L P D E S K . A I`
 **The Intelligent Standard for Enterprise IT Service Management**
 
-[![Vercel Deployment](https://img.shields.io/badge/Project-Live_Deployment-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://helpdeskaiv1.vercel.app/)
-[![Backend Engine](https://img.shields.io/badge/Backend-AI_Inference-FF8C00?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/spaces/ritesh19180/ai-helpdesk-api)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Vercel Deployment](https://img.shields.io/badge/Production-Live-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://helpdeskaiv1.vercel.app/)
+[![AI Backend](https://img.shields.io/badge/AI_Engine-Hugging_Face-FF8C00?style=for-the-badge&logo=huggingface&logoColor=black)](https://huggingface.co/spaces/ritesh19180/ai-helpdesk-api)
 
 ---
 
-### ⚡ Professional IT Support, Reimagined by AI.
-*Helpdesk.ai eliminates manual triage by instantly categorizing, prioritizing, and routing tickets using deep-learning neural networks.*
+### ⚡ Eliminating the Manual Triage Bottleneck.
+*Helpdesk.ai uses deep-learning neural networks and 3-layer enterprise architecture to categorize, prioritize, and resolve IT issues in milliseconds.*
 
-[View the Demo](https://helpdeskaiv1.vercel.app/) • [Enterprise Hub](https://helpdeskaiv1.vercel.app/contact-sales) • [API Documentation](https://ritesh19180-ai-helpdesk-api.hf.space/docs)
+[Launch Application](https://helpdeskaiv1.vercel.app/) • [Contact Enterprise](https://helpdeskaiv1.vercel.app/contact-sales) • [API Documentation](https://ritesh19180-ai-helpdesk-api.hf.space/docs)
 
 </div>
 
 <br/>
 
-## 💎 The Enterprise Edge
+## 💎 The Enterprise Evolution
 
-Most IT desks suffer from "Manual Bottleneck"—the slow process of a human reading and routing every single ticket. **Helpdesk.ai** replaces that delay with millisecond-precision AI analysis.
+Helpdesk.ai isn't just a ticketing tool; it's a **Neural IT Orchestrator**. Built to handle the complex requirements of modern organizations, it scales support without scaling headcount.
 
-### 🧠 Neural Core Features
-- **Smart Triage Architecture**: Driven by a fine-tuned **DistilBERT** model that predicts category and priority level with context-aware sentiment analysis.
-- **Entity Extraction (NER)**: Automatically pulls software names, server IDs, and locations directly from "messy" user descriptions.
-- **Semantic Duel-Check**: Real-time duplicate detection prevents ticket floods during known system outages by grouping similar reported issues.
-- **Enterprise Hub**: A dedicated lead-capture pipeline for organizations requiring dedicated infra, SLAM, and custom model weights.
+### 🏛️ 3-Layer Permission Matrix
+Our architecture is meticulously designed for multi-tenant, zero-trust security.
+
+| Layer | Audience | Primary Capabilities |
+| :--- | :--- | :--- |
+| **👑 Master Admin** | Global Overseers | Tenant Registration, Company Onboarding, Global Health Monitoring, Bug Oversight. |
+| **🏢 Company Admin** | IT Management | Org-specific Dashboard, User Auditing, Sentiment Analytics, SLA Performance Tracking. |
+| **👤 Standard User** | Employees | AI-Powered Ticket Creation, Semantic Search, Real-time Status tracking, Auto-Resolution. |
 
 ---
 
-## 🏗️ System Architecture
+## 🧠 The AI Neural Pipeline
 
-Our stack is built for high-concurrency production environments, leveraging a decoupled microservices architecture.
+Under the hood, Helpdesk.ai leverages a custom-orchestrated suite of transformer models and heuristics.
 
-```mermaid
-graph TD
-    User([End User]) -- "Natural Language" --> FE[React 19 / Vite]
-    FE -- "Secure API" --> BE[FastAPI / Python]
-    BE -- "Tokenize" --> AI{AI Inference Engine}
-    AI -- "DistilBERT" --> Cat[Categorization]
-    AI -- "Spacy/HF" --> NER[Entity Extraction]
-    AI -- "Similarity" --> Dup[Duplicate Detection]
-    Cat & NER & Dup --> DB[(Supabase / Postgres)]
-    DB -- "Websockets" --> Adm([Admin Portal])
-```
+### 1. High-Precision Classification
+Driven by **DistilBERT v3**, our classifier doesn't just predict categories—it understands technical context and user sentiment to assign accurate **Impact Scores** and **Priority Levels** (`Low`, `Medium`, `High`, `Critical`).
 
-<br/>
+### 2. NER Metadata Harvesting
+Our **Named Entity Recognition (NER)** engine automatically extracts vital technical identifiers:
+- **Assets**: Hostnames, Serial Numbers, IP Addresses.
+- **Environment**: Software versions, Browser types, OS identifiers.
+- **Physicality**: Office locations, Lab IDs, Workstations.
 
-## 🛠️ The Tech Ecosystem
+### 3. Proactive Duplicate Prevention
+Using `sentence-transformers` and **Cosine Similarity**, the system prevents "Ticket Floods" during incidents. If two users report the same outage, the AI semantically links them in real-world time.
 
-We use only the most modern, industry-standard tools to ensure reliability and scalability.
+### 4. Visionary OCR & Reasoning
+- **Intelligent OCR**: Built-in screenshot analysis to pull error codes from user-uploaded images.
+- **Gemini Reasoning**: Advanced LLM integration for generating human-like auto-resolutions and knowledge base summaries.
 
-| Layer | Tools |
+---
+
+## ✨ Exhaustive Feature Roadmap
+
+### 🌓 User Experience
+- **Chaos-to-Clarity UI**: A premium, responsive interface that guides users through ticket creation.
+- **AI Processing Simulator**: Visual feedback showcasing the neural network's analysis in real-time.
+- **Auto-Resolve Chat**: An interactive interface where the AI attempts to fix issues before they reach a human.
+- **Smart Knowledge Check**: Proactive suggestion of relevant documentation during the "Help" journey.
+
+### 📊 Administrative Suite
+- **Insight Analytics**: Real-time ticket trends, team performance metrics, and sentiment heatmaps.
+- **Identity Orchestration**: Role-based access control (RBAC) with secure invite-only onboarding.
+- **Audit Logging**: Full traceability for security compliance.
+- **Shadow IT Monitoring**: Analytics to identify recurring non-standard software issues.
+
+### ⚡ Technical Infrastructure
+- **Stripe Subscriptions**: Seamless transition between `Starter` and `Growth` tiers with custom loading redirections.
+- **Enterprise Leads Hub**: Dedicated B2B capture system for custom infra and SLA configurations.
+- **Supabase Integrity**: Row-Level Security (RLS) ensures data isolation across hundreds of companies.
+
+---
+
+## 🛠️ Technology Ecosystem
+
+| Category | Premium Stack |
 | :--- | :--- |
-| **Frontend** | ![React](https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react) ![Vite](https://img.shields.io/badge/Vite-B73BFE?style=flat-square&logo=vite) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css) ![Framer Motion](https://img.shields.io/badge/Framer_Motion-0055FF?style=flat-square&logo=framer) |
-| **Backend** | ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi) ![Python](https://img.shields.io/badge/Python_3.12-3776AB?style=flat-square&logo=python) ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch) |
-| **Infrastructure** | ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase) ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel) ![Stripe](https://img.shields.io/badge/Stripe-008CDD?style=flat-square&logo=stripe) |
+| **Core** | ![React](https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react) ![Vite](https://img.shields.io/badge/Vite-B73BFE?style=flat-square&logo=vite) ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css) |
+| **Intelligence** | ![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat-square&logo=fastapi) ![Python](https://img.shields.io/badge/Python_3.12-3776AB?style=flat-square&logo=python) ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=flat-square&logo=pytorch) |
+| **Logic** | ![HuggingFace](https://img.shields.io/badge/Hugging_Face-FFD21E?style=flat-square&logo=huggingface) ![Gemini](https://img.shields.io/badge/Gemini_AI-1E88E5?style=flat-square&logo=google-gemini) |
+| **Security** | ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat-square&logo=supabase) ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat-square&logo=postgresql) |
+| **Ops** | ![Vercel](https://img.shields.io/badge/Vercel-000000?style=flat-square&logo=vercel) ![Stripe](https://img.shields.io/badge/Stripe-008CDD?style=flat-square&logo=stripe) ![Git](https://img.shields.io/badge/Git-F05032?style=flat-square&logo=git) |
 
 ---
 
-## 💼 New Features
+## 🚀 Deployment & Local Orchestration
 
-### 💳 Stripe Subscription Flow
-We've integrated a seamless checkout experience for Growth teams. 
-- **Redirect Engine**: A custom loading UI protects the transition from local state to secure Stripe Payment Links.
-- **Tier Management**: Instant switching between Starter and Growth tiers.
-
-### 🏢 Enterprise Lead Hub
-A bespoke portal designed for B2B engagement. 
-- **Secure Persistence**: Leads are captured directly into an RLS-protected Supabase table.
-- **Custom Architect Consults**: Integrated form for high-volume organizations to request dedicated infra and compliance VAPT reports.
-
----
-
-## 🚀 Deployment & Local Setup
-
-### 1. Prerequisites
-- Node.js v18.x+
-- Python 3.10+
-- Supabase Project
-
-### 2. Environment Configuration
-Create a `.env` in the `Frontend/` directory:
+### 1. Environment Configuration
+Create a `.env` file in the `/Frontend` directory:
 ```bash
 VITE_SUPABASE_URL=your_project_url
 VITE_SUPABASE_ANON_KEY=your_key
-VITE_STRIPE_GROWTH_LINK=https://buy.stripe.com/test_...
+VITE_STRIPE_GROWTH_LINK=your_stripe_link
 VITE_BACKEND_URL=http://localhost:8000
 ```
 
-### 3. Installation
+### 2. Local Installation
 ```bash
-# Clone and install
+# Clone the repository
 git clone https://github.com/ritesh-1918/HELPDESK.AI.git
+
+# Initialize Frontend
 cd HELPDESK.AI/Frontend
 npm install
-
-# Start Development
 npm run dev
 ```
+
+### 3. Backend Setup
+Navigate to `/backend` and refer to internal documentation for Python environment (`venv`) activation and `uvicorn` startup.
 
 ---
 
 <div align="center">
 
-Built with ❤️ by the **HELPDESK.AI** Team  
-*Empowering IT Teams with Artificial Intelligence.*
+Built with ❤️ by the **HELPDESK.AI Professional** Team  
+*Driving the future of Intelligent Enterprise Support.*
 
 </div>
