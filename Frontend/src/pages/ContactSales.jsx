@@ -194,19 +194,27 @@ export default function ContactSales() {
                                         />
                                     </div>
                                 </div>
-                                <div className="space-y-1.5">
+                                <div className="space-y-1.5 relative">
                                     <label className="text-sm font-semibold text-gray-700 ml-1">Company Size</label>
-                                    <select 
-                                        name="company_size"
-                                        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium text-gray-900 appearance-none"
-                                        value={formData.company_size}
-                                        onChange={handleChange}
-                                    >
-                                        <option value="1-50">1 - 50 employees</option>
-                                        <option value="50-200">50 - 200 employees</option>
-                                        <option value="200-1000">200 - 1,000 employees</option>
-                                        <option value="1000+">1000+ employees</option>
-                                    </select>
+                                    <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                                            <Building2 className="h-5 w-5 text-gray-400" />
+                                        </div>
+                                        <select 
+                                            name="company_size"
+                                            className="w-full pl-11 pr-10 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all font-medium text-gray-900 appearance-none cursor-pointer"
+                                            value={formData.company_size}
+                                            onChange={handleChange}
+                                        >
+                                            <option value="1-50">1 - 50 employees</option>
+                                            <option value="50-200">50 - 200 employees</option>
+                                            <option value="200-1000">200 - 1,000 employees</option>
+                                            <option value="1000+">1000+ employees</option>
+                                        </select>
+                                        <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none">
+                                            <ArrowRight className="h-4 w-4 text-gray-400 rotate-90" />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
