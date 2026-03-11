@@ -10,7 +10,7 @@
 ---
 
 ### ⚡ Eliminating the Manual Triage Bottleneck.
-*Helpdesk.ai uses deep-learning neural networks and 3-layer enterprise architecture to categorize, prioritize, and resolve IT issues in milliseconds.*
+*Helpdesk.ai uses deep-learning neural networks and 4-layer enterprise architecture to categorize, prioritize, and resolve IT issues in milliseconds.*
 
 [Launch Application](https://helpdeskaiv1.vercel.app/) • [Contact Enterprise](https://helpdeskaiv1.vercel.app/contact-sales) • [API Documentation](https://ritesh19180-ai-helpdesk-api.hf.space/docs)
 
@@ -22,14 +22,36 @@
 
 Helpdesk.ai isn't just a ticketing tool; it's a **Neural IT Orchestrator**. Built to handle the complex requirements of modern organizations, it scales support without scaling headcount.
 
-### 🏛️ 3-Layer Permission Matrix
-Our architecture is meticulously designed for multi-tenant, zero-trust security.
+### 🏛️ 4-Layer Permission Matrix
+Our architecture is meticulously designed for multi-tenant, zero-trust security. 
+> [Explore the full 30+ Page Map in [docs/pages.md](./docs/pages.md)]
 
 | Layer | Audience | Primary Capabilities |
 | :--- | :--- | :--- |
 | **👑 Master Admin** | Global Overseers | Tenant Registration, Company Onboarding, Global Health Monitoring, Bug Oversight. |
 | **🏢 Company Admin** | IT Management | Org-specific Dashboard, User Auditing, Sentiment Analytics, SLA Performance Tracking. |
 | **👤 Standard User** | Employees | AI-Powered Ticket Creation, Semantic Search, Real-time Status tracking, Auto-Resolution. |
+| **🌐 Public Layer** | Prospects | Premium "Chaos to Clarity" journey, Sales Engineering contact, Live Pricing tiers. |
+
+---
+
+## 🏗️ System Architecture
+
+Helpdesk.ai utilizes a clean, decoupled architecture built for production SaaS environments. 
+
+```mermaid
+graph LR
+    A["User (Frontend)"] -->|"Submits Issue"| B("FastAPI Backend")
+    B -->|"Text Processing"| C{"AI Inference Engine"}
+    C -->|"DistilBERT v3"| D["Categorization & Routing"]
+    C -->|"NER Engine"| E["Entity Extraction"]
+    C -->|"Cosine Similarity"| F["Duplicate Detection"]
+    D --> G[("Supabase DB")]
+    E --> G
+    F --> G
+    G -->|"Real-time Sync"| A
+    G -->|"Dashboard Data"| H["Admin/Agent Portal"]
+```
 
 ---
 
@@ -50,12 +72,15 @@ Our **Named Entity Recognition (NER)** engine automatically extracts vital techn
 Using `sentence-transformers` and **Cosine Similarity**, the system prevents "Ticket Floods" during incidents. If two users report the same outage, the AI semantically links them in real-world time.
 
 ### 4. Visionary OCR & Reasoning
-- **Intelligent OCR**: Built-in screenshot analysis to pull error codes from user-uploaded images.
+- **Intelligent OCR**: Built-in screenshot analysis to pull error codes from user-uploaded images via Tesseract.
 - **Gemini Reasoning**: Advanced LLM integration for generating human-like auto-resolutions and knowledge base summaries.
 
 ---
 
-## ✨ Exhaustive Feature Roadmap
+## ✨ Feature Ecosystem
+
+The Helpdesk.ai platform is composed of 30+ specialized page-modules for a complete enterprise experience.
+> [Read the full Feature Deep-Dive Document here](./docs/pages.md)
 
 ### 🌓 User Experience
 - **Chaos-to-Clarity UI**: A premium, responsive interface that guides users through ticket creation.
@@ -65,7 +90,7 @@ Using `sentence-transformers` and **Cosine Similarity**, the system prevents "Ti
 
 ### 📊 Administrative Suite
 - **Insight Analytics**: Real-time ticket trends, team performance metrics, and sentiment heatmaps.
-- **Identity Orchestration**: Role-based access control (RBAC) with secure invite-only onboarding.
+- **Identity Orchestration**: Role-based access control (RBAC) with secure invite-only onboarding for whole companies.
 - **Audit Logging**: Full traceability for security compliance.
 - **Shadow IT Monitoring**: Analytics to identify recurring non-standard software issues.
 
