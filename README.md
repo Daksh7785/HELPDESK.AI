@@ -24,7 +24,7 @@ Helpdesk.ai isn't just a ticketing tool; it's a **Neural IT Orchestrator**. Buil
 
 ### 🏛️ 4-Layer Permission Matrix
 Our architecture is meticulously designed for multi-tenant, zero-trust security. 
-> [Explore the full 30+ Page Map in [docs/pages.md](./docs/pages.md)]
+> [Explore the full 30+ Page Map in [PLATFORM_MAP.md](./PLATFORM_MAP.md)]
 
 | Layer | Audience | Primary Capabilities |
 | :--- | :--- | :--- |
@@ -40,7 +40,7 @@ Our architecture is meticulously designed for multi-tenant, zero-trust security.
 Helpdesk.ai utilizes a clean, decoupled architecture built for production SaaS environments. 
 
 ```mermaid
-graph LR
+graph TD
     A["User (Frontend)"] -->|"Submits Issue"| B("FastAPI Backend")
     B -->|"Text Processing"| C{"AI Inference Engine"}
     C -->|"DistilBERT v3"| D["Categorization & Routing"]
@@ -80,7 +80,7 @@ Using `sentence-transformers` and **Cosine Similarity**, the system prevents "Ti
 ## ✨ Feature Ecosystem
 
 The Helpdesk.ai platform is composed of 30+ specialized page-modules for a complete enterprise experience.
-> [Read the full Feature Deep-Dive Document here](./docs/pages.md)
+> [Read the full Feature Deep-Dive Document here](./PLATFORM_MAP.md)
 
 ### 🌓 User Experience
 - **Chaos-to-Clarity UI**: A premium, responsive interface that guides users through ticket creation.
