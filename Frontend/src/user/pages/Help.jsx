@@ -1,8 +1,11 @@
-import React from 'react';
-import { HelpCircle, Mail, MessageSquare, Book, ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, Video, PlayCircle, Filter } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
+import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
 
 const Help = () => {
+    const [activeTab, setActiveTab] = useState('All');
+
     const faqs = [
         {
             q: "How does the AI categorization work?",
@@ -75,6 +78,70 @@ const Help = () => {
                                 <p className="text-gray-600 text-sm leading-relaxed">{faq.a}</p>
                             </div>
                         ))}
+                    </CardContent>
+                </Card>
+
+                {/* Video Tutorials Section */}
+                <Card className="rounded-2xl border border-gray-100 shadow-sm bg-white overflow-hidden">
+                    <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <Video className="w-5 h-5 text-gray-400" /> Video Tutorials
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                        
+                        {/* Tabs */}
+                        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-4 scrollbar-hide">
+                            <Filter className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
+                            {VIDEO_CATEGORIES.map((category) => (
+                                <button
+                                    key={category}
+                                    onClick={() => setActiveTab(category)}
+                                    className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                                        activeTab === category 
+                                        ? 'bg-emerald-600 text-white shadow-sm' 
+                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    {category}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Video Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {(activeTab === 'All' ? YOUTUBE_RESOURCES : YOUTUBE_RESOURCES.filter(v => v.category === activeTab)).map((video) => (
+                                <a 
+                                    key={video.id} 
+                                    href={video.url} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="group flex flex-col rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all hover:-translate-y-1 bg-white cursor-pointer"
+                                >
+                                    <div className="relative aspect-video w-full bg-gray-100 overflow-hidden border-b border-gray-100">
+                                        <img 
+                                            src={video.thumbnail_url} 
+                                            alt={video.title}
+                                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                        />
+                                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                                            <PlayCircle className="w-12 h-12 text-white opacity-90 group-hover:scale-110 transition-transform shadow-sm rounded-full" />
+                                        </div>
+                                        <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2 py-1 rounded">
+                                            {video.category}
+                                        </div>
+                                    </div>
+                                    <div className="p-4 flex-1 flex flex-col">
+                                        <h4 className="font-bold text-gray-900 line-clamp-2 leading-snug group-hover:text-emerald-700 transition-colors">
+                                            {video.title}
+                                        </h4>
+                                        <p className="text-xs text-gray-500 mt-2 line-clamp-2 mt-auto">
+                                            {video.description}
+                                        </p>
+                                    </div>
+                                </a>
+                            ))}
+                        </div>
                     </CardContent>
                 </Card>
 
