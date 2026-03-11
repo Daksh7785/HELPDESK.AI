@@ -63,8 +63,24 @@ const Help = () => {
                 setVideos(fetchedVideos);
             } catch (error) {
                 console.warn("YouTube API fallback:", error);
-                const fallback = activeTab === 'All' ? YOUTUBE_RESOURCES : YOUTUBE_RESOURCES.filter(v => v.category === activeTab);
-                setVideos(fallback);
+                // When API fails, use the static resources but format them to match the new API structure
+                const fallbackList = activeTab === 'All' ? YOUTUBE_RESOURCES : YOUTUBE_RESOURCES.filter(v => v.category === activeTab);
+                
+                // Map the static resources to match the structure expected by the modern UI cards
+                const formattedFallback = fallbackList.map(item => {
+                    // Extract video ID from the static URL to construct the identical structure
+                    const videoId = item.url.split('v=')[1];
+                    return {
+                        id: videoId || item.id,
+                        title: item.title,
+                        description: item.description,
+                        category: item.category,
+                        url: item.url,
+                        thumbnail_url: item.thumbnail_url
+                    };
+                });
+                
+                setVideos(formattedFallback);
             } finally {
                 setIsLoading(false);
             }
