@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, Video, PlayCircle, Filter } from 'lucide-react';
+import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, Video, PlayCircle, Filter, Search, LifeBuoy } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
 
@@ -7,6 +7,7 @@ const Help = () => {
     const [activeTab, setActiveTab] = useState('All');
     const [videos, setVideos] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
 
     React.useEffect(() => {
         const fetchVideos = async () => {
@@ -75,148 +76,201 @@ const Help = () => {
     const faqs = [
         {
             q: "How does the AI categorization work?",
-            a: "When you submit a ticket, our AI analyzes the text and any uploaded screenshots to identify the core issue, categorize it, and assign it to the correct support team automatically."
+            a: "When you submit a ticket, our DistilBERT model analyzes the text and metadata to instantly route it to the correct support team, bypassing manual triage."
         },
         {
             q: "Can I reopen a resolved ticket?",
-            a: "Yes. If an issue reoccurs or the provided solution didn't fully resolve your problem, you can click 'Reopen Ticket' on the ticket detail page."
+            a: "Yes. If an issue reoccurs within 7 days, you can click 'Reopen Ticket' directly from your dashboard to alert the assigned agent."
         },
         {
-            q: "How do I check the status of my ticket?",
-            a: "Navigate to the 'My Tickets' page from the top navigation. You can filter by status, priority, or search for specific tickets."
+            q: "Where do I track my active requests?",
+            a: "Navigate to the 'My Tickets' page from the top navigation. You can filter by status, priority, or search the resolution logs directly."
         }
     ];
 
     return (
-        <div className="min-h-screen bg-[#f6f8f7] pb-20">
-            <main className="pt-10 px-6 max-w-4xl mx-auto space-y-8">
-
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-                        <HelpCircle className="text-emerald-600 w-8 h-8" /> Help & Support
+        <div className="min-h-screen bg-gray-50/50 pb-20">
+            {/* Premium Hero Banner */}
+            <div className="bg-emerald-900 border-b border-emerald-950/20 relative overflow-hidden">
+                {/* Decorative background flare */}
+                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-emerald-500/20 blur-[120px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2" />
+                
+                <div className="max-w-7xl mx-auto px-6 py-16 lg:py-24 relative z-10 flex flex-col items-center text-center">
+                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-800/50 text-emerald-200 text-sm font-medium mb-6 border border-emerald-700/50">
+                        <LifeBuoy className="w-4 h-4" /> 24/7 Support Center
+                    </span>
+                    <h1 className="text-4xl lg:text-5xl font-black text-white tracking-tight mb-4 drop-shadow-sm">
+                        How can we help you today?
                     </h1>
-                    <p className="text-gray-500 font-medium mt-2">
-                        Find answers to common questions or get in touch with our team.
+                    <p className="text-lg text-emerald-100 max-w-2xl mx-auto font-medium opacity-90 mb-10">
+                        Search our knowledge base, watch curated IT tutorials, or connect with a support agent instantly.
                     </p>
+
+                    {/* Faux Search Bar representing the Hub */}
+                    <div className="relative w-full max-w-3xl group">
+                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
+                            <Search className="h-6 w-6 text-emerald-700/50 group-focus-within:text-emerald-600 transition-colors" />
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search tutorials, FAQs, and documentation..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full text-lg py-5 pl-14 pr-6 rounded-2xl border-0 shadow-2xl bg-white/95 backdrop-blur-xl focus:bg-white text-gray-900 placeholder:text-gray-400 focus:ring-4 focus:ring-emerald-500/20 transition-all outline-none"
+                        />
+                    </div>
                 </div>
+            </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Contact Cards */}
-                    <Card className="rounded-2xl border border-emerald-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-white group">
-                        <CardContent className="p-6 flex items-start gap-4">
-                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform">
-                                <MessageSquare size={24} />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-gray-900">Live Chat</h3>
-                                <p className="text-sm text-gray-500 mt-1">Chat with our support bot or request a human agent.</p>
-                            </div>
-                            <ChevronRight className="text-gray-300 group-hover:text-emerald-500 transition-colors" />
-                        </CardContent>
-                    </Card>
-
-                    <Card className="rounded-2xl border border-blue-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-white group">
-                        <CardContent className="p-6 flex items-start gap-4">
-                            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
-                                <Mail size={24} />
-                            </div>
-                            <div className="flex-1">
-                                <h3 className="font-bold text-gray-900">Email Support</h3>
-                                <p className="text-sm text-gray-500 mt-1">Send us a detailed message at support@helpdesk.ai.</p>
-                            </div>
-                            <ChevronRight className="text-gray-300 group-hover:text-blue-500 transition-colors" />
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* FAQ Section */}
-                <Card className="rounded-2xl border border-gray-100 shadow-sm bg-white overflow-hidden">
-                    <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <Book className="w-5 h-5 text-gray-400" /> Frequently Asked Questions
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6 space-y-6">
-                        {faqs.map((faq, index) => (
-                            <div key={index} className="space-y-2">
-                                <h4 className="font-bold text-gray-900">{faq.q}</h4>
-                                <p className="text-gray-600 text-sm leading-relaxed">{faq.a}</p>
-                            </div>
-                        ))}
-                    </CardContent>
-                </Card>
-
-                {/* Video Tutorials Section */}
-                <Card className="rounded-2xl border border-gray-100 shadow-sm bg-white overflow-hidden">
-                    <CardHeader className="bg-gray-50/50 border-b border-gray-100 pb-4">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <Video className="w-5 h-5 text-gray-400" /> Video Tutorials
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="p-6">
+            {/* Main Content Hub */}
+            <main className="max-w-7xl mx-auto px-6 pt-12">
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    
+                    {/* Left Column: Resources (Takes 3 columns) */}
+                    <div className="lg:col-span-3 space-y-8">
                         
-                        {/* Tabs */}
-                        <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-4 scrollbar-hide">
-                            <Filter className="w-4 h-4 text-gray-400 mr-2 shrink-0" />
-                            {VIDEO_CATEGORIES.map((category) => (
-                                <button
-                                    key={category}
-                                    onClick={() => setActiveTab(category)}
-                                    className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                                        activeTab === category 
-                                        ? 'bg-emerald-600 text-white shadow-sm' 
-                                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                                    }`}
-                                >
-                                    {category}
-                                </button>
-                            ))}
+                        {/* Interactive UI: Video Hub */}
+                        <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-sm border border-gray-100">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                                        <Video className="w-6 h-6 text-emerald-600" /> Curated Video Tutorials
+                                    </h2>
+                                    <p className="text-gray-500 mt-1">Resolve common issues instantly with expert guides.</p>
+                                </div>
+
+                                {/* Modern Tab Filter */}
+                                <div className="flex items-center p-1 bg-gray-100 rounded-xl overflow-x-auto scrollbar-hide">
+                                    {VIDEO_CATEGORIES.map((category) => (
+                                        <button
+                                            key={category}
+                                            onClick={() => setActiveTab(category)}
+                                            className={`px-5 py-2 rounded-lg text-sm font-bold whitespace-nowrap transition-all ${
+                                                activeTab === category 
+                                                ? 'bg-white text-emerald-700 shadow-sm ring-1 ring-gray-900/5' 
+                                                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'
+                                            }`}
+                                        >
+                                            {category}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Resource Library Grid */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {isLoading ? (
+                                    /* Premium Skeleton Loaders */
+                                    Array(6).fill(0).map((_, i) => (
+                                        <div key={i} className="rounded-2xl border border-gray-100 bg-white overflow-hidden animate-pulse">
+                                            <div className="aspect-video bg-gray-200 w-full" />
+                                            <div className="p-5 space-y-3">
+                                                <div className="h-5 bg-gray-200 rounded-md w-3/4" />
+                                                <div className="h-4 bg-gray-100 rounded-md w-full" />
+                                                <div className="h-4 bg-gray-100 rounded-md w-5/6" />
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    videos.map((video) => (
+                                        <a 
+                                            key={video.id} 
+                                            href={video.url} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="group flex flex-col rounded-2xl overflow-hidden border border-gray-100 hover:border-emerald-200 hover:shadow-xl hover:shadow-emerald-900/5 transition-all duration-300 hover:-translate-y-1 bg-white cursor-pointer"
+                                        >
+                                            <div className="relative aspect-video w-full bg-gray-100 overflow-hidden">
+                                                <img 
+                                                    src={video.thumbnail_url} 
+                                                    alt={video.title}
+                                                    className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500 ease-out"
+                                                />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-gray-900/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                                                    <PlayCircle className="w-14 h-14 text-white opacity-0 group-hover:opacity-100 transform scale-75 group-hover:scale-100 transition-all duration-300 drop-shadow-lg" />
+                                                </div>
+                                                <div className="absolute top-4 left-4 bg-emerald-600/90 backdrop-blur-md text-white text-xs font-bold tracking-wide px-3 py-1.5 rounded-full shadow-sm">
+                                                    {video.category}
+                                                </div>
+                                            </div>
+                                            <div className="p-5 flex flex-col flex-1">
+                                                <h4 className="font-bold text-gray-900 text-base leading-snug group-hover:text-emerald-700 transition-colors line-clamp-2">
+                                                    {video.title}
+                                                </h4>
+                                                <p className="text-sm text-gray-500 mt-3 line-clamp-2 mt-auto leading-relaxed">
+                                                    {video.description}
+                                                </p>
+                                            </div>
+                                        </a>
+                                    ))
+                                )}
+                            </div>
                         </div>
 
-                        {/* Video Grid */}
-                        {isLoading ? (
-                            <div className="flex justify-center items-center py-12">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {videos.map((video) => (
-                                    <a 
-                                        key={video.id} 
-                                        href={video.url} 
-                                        target="_blank" 
-                                        rel="noopener noreferrer"
-                                        className="group flex flex-col rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg transition-all hover:-translate-y-1 bg-white cursor-pointer"
-                                    >
-                                        <div className="relative aspect-video w-full bg-gray-100 overflow-hidden border-b border-gray-100">
-                                            <img 
-                                                src={video.thumbnail_url} 
-                                                alt={video.title}
-                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                            />
-                                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                                                <PlayCircle className="w-12 h-12 text-white opacity-90 group-hover:scale-110 transition-transform shadow-sm rounded-full" />
-                                            </div>
-                                            <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white text-xs font-semibold px-2 py-1 rounded">
-                                                {video.category}
-                                            </div>
-                                        </div>
-                                        <div className="p-4 flex-1 flex flex-col">
-                                            <h4 className="font-bold text-gray-900 line-clamp-2 leading-snug group-hover:text-emerald-700 transition-colors">
-                                                {video.title}
-                                            </h4>
-                                            <p className="text-xs text-gray-500 mt-2 line-clamp-2 mt-auto">
-                                                {video.description}
-                                            </p>
-                                        </div>
-                                    </a>
+                        {/* Top FAQ Section inside Hub */}
+                        <div className="bg-white rounded-3xl p-6 lg:p-8 shadow-sm border border-gray-100 mt-8">
+                            <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3 mb-8">
+                                <Book className="w-6 h-6 text-indigo-500" /> Frequently Asked Questions
+                            </h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
+                                {faqs.map((faq, index) => (
+                                    <div key={index} className="space-y-3">
+                                        <h4 className="font-bold text-gray-900 text-lg">{faq.q}</h4>
+                                        <p className="text-gray-600 leading-relaxed">{faq.a}</p>
+                                    </div>
                                 ))}
                             </div>
-                        )}
-                    </CardContent>
-                </Card>
+                        </div>
 
+                    </div>
+
+                    {/* Right Column: Contact Sidebar (Takes 1 column) */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-gradient-to-b from-gray-900 to-gray-800 rounded-3xl p-6 text-white shadow-xl relative overflow-hidden">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                            <h3 className="text-xl font-bold mb-2">Still Need Help?</h3>
+                            <p className="text-gray-400 text-sm mb-6">Our dedicated support teams are ready to assist you.</p>
+                            
+                            <div className="space-y-3">
+                                <button className="w-full group flex items-center justify-between bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 transition-all focus:outline-none focus:ring-2 focus:ring-white/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                                            <MessageSquare size={20} />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="font-bold text-sm">Live Chat</div>
+                                            <div className="text-xs text-gray-400">Avg. wait: 2 mins</div>
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
+                                </button>
+
+                                <button className="w-full group flex items-center justify-between bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 transition-all focus:outline-none focus:ring-2 focus:ring-white/50">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                                            <Mail size={20} />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="font-bold text-sm">Email Support</div>
+                                            <div className="text-xs text-gray-400">Response in 24h</div>
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* System Status Sidebar Entry */}
+                        <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center justify-between">
+                            <div>
+                                <h4 className="font-bold text-gray-900">System Status</h4>
+                                <p className="text-sm text-gray-500 mt-1">All services operational</p>
+                            </div>
+                            <div className="h-3 w-3 bg-emerald-500 rounded-full animate-pulse ring-4 ring-emerald-50" />
+                        </div>
+                    </div>
+
+                </div>
             </main>
         </div>
     );
