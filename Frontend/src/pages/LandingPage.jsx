@@ -142,6 +142,7 @@ export default function LandingPage() {
     const [showDemo, setShowDemo] = useState(false);
     const [billingAnnual, setBillingAnnual] = useState(false);
     const [activeStep, setActiveStep] = useState(0);
+    const [isRedirecting, setIsRedirecting] = useState(false);
 
     const steps = [
         {
@@ -248,6 +249,25 @@ export default function LandingPage() {
             popular: false,
         },
     ];
+
+    const handlePricingClick = (planName) => {
+        if (planName === 'Growth') {
+            setIsRedirecting(true);
+            // Redirect to Stripe Payment Link
+            const stripeUrl = import.meta.env.VITE_STRIPE_GROWTH_LINK;
+            if (stripeUrl) {
+                window.location.href = stripeUrl;
+            } else {
+                console.warn("Stripe link not configured in .env");
+                setTimeout(() => {
+                    setIsRedirecting(false);
+                    navigate('/admin-signup');
+                }, 1000);
+            }
+        } else {
+            navigate('/admin-signup');
+        }
+    };
 
     return (
         <div className="min-h-screen bg-white font-sans text-slate-800">
@@ -737,10 +757,18 @@ export default function LandingPage() {
                                 </div>
                                 <p className="text-sm text-gray-500 mb-6">{desc}</p>
                                 <button
-                                    onClick={() => navigate(name === 'Enterprise' ? '/admin-signup' : '/admin-signup')}
-                                    className={`w-full py-3 rounded-xl font-semibold transition-all mb-8 text-sm ${ctaStyle}`}
+                                    onClick={() => handlePricingClick(name)}
+                                    disabled={isRedirecting && name === 'Growth'}
+                                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl font-semibold transition-all mb-8 text-sm ${ctaStyle} ${isRedirecting && name === 'Growth' ? 'opacity-80 cursor-not-allowed' : ''}`}
                                 >
-                                    {cta}
+                                    {isRedirecting && name === 'Growth' ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                            Redirecting to Secure Checkout...
+                                        </>
+                                    ) : (
+                                        cta
+                                    )}
                                 </button>
                                 <ul className="space-y-3">
                                     {features.map(feat => (
