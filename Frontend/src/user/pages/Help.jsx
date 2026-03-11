@@ -8,12 +8,21 @@ const Help = () => {
     const [videos, setVideos] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    // Debounce the search query to avoid hammering the YouTube API quota on every keystroke
+    React.useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 800);
+        return () => clearTimeout(handler);
+    }, [searchQuery]);
 
     React.useEffect(() => {
         const fetchVideos = async () => {
             setIsLoading(true);
-            const cacheKey = `yt_videos_v2_${activeTab}`;
-            const cacheTimeKey = `yt_videos_time_v2_${activeTab}`;
+            const cacheKey = `yt_videos_v3_${activeTab}_${debouncedSearch}`;
+            const cacheTimeKey = `yt_videos_time_v3_${activeTab}_${debouncedSearch}`;
             
             try {
                 const cachedData = localStorage.getItem(cacheKey);
@@ -31,9 +40,11 @@ const Help = () => {
                     throw new Error("No API Key");
                 }
 
-                const query = activeTab === 'All' 
-                    ? 'IT helpdesk troubleshooting' 
-                    : `IT helpdesk ${activeTab.toLowerCase()} troubleshooting`;
+                const query = debouncedSearch
+                    ? `IT helpdesk troubleshooting ${debouncedSearch}`
+                    : activeTab === 'All' 
+                        ? 'IT helpdesk troubleshooting' 
+                        : `IT helpdesk ${activeTab.toLowerCase()} troubleshooting`;
 
                 const response = await fetch(
                     `https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=12&q=${encodeURIComponent(query)}&type=video&key=${API_KEY}`
@@ -87,7 +98,7 @@ const Help = () => {
         };
 
         fetchVideos();
-    }, [activeTab]);
+    }, [activeTab, debouncedSearch]);
 
     const faqs = [
         {
@@ -188,11 +199,7 @@ const Help = () => {
                                         </div>
                                     ))
                                 ) : (
-                                    videos.filter(video => 
-                                        video.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                                        video.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        video.category.toLowerCase().includes(searchQuery.toLowerCase())
-                                    ).map((video) => (
+                                    videos.map((video) => (
                                         <a 
                                             key={video.id} 
                                             href={video.url} 
