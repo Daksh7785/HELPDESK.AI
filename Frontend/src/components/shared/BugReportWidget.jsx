@@ -278,8 +278,10 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
             return;
         }
 
-        if (!formData.bug_title || !formData.description) {
-            addToast("Please fill out the Title and Description fields.", "error");
+        const actualTitle = advanced ? formData.bug_title : (formData.description ? formData.description.slice(0, 40) + "..." : "");
+
+        if (!actualTitle || !formData.description) {
+            addToast(advanced ? "Please fill out the Title and Description fields." : "Please describe what happened.", "error");
             return;
         }
 
@@ -314,7 +316,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
             // 2. Prepare payload
             const payload = {
                 user_id: user ? user.id : null,
-                bug_title: formData.bug_title,
+                bug_title: actualTitle,
                 description: formData.description,
                 steps_to_reproduce: formData.steps_to_reproduce,
                 expected_result: formData.expected_result,
@@ -446,22 +448,23 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                 </div>
 
                                 <form id="bugReportForm" onSubmit={handleSubmit} className="space-y-5">
-                                    {/* Bug Title */}
-                                    <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="bug_title">
-                                            Bug Title <span className="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            id="bug_title"
-                                            name="bug_title"
-                                            required
-                                            value={formData.bug_title}
-                                            onChange={handleChange}
-                                            placeholder="e.g., Evaluation fails to save after clicking submit"
-                                            className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white"
-                                        />
-                                    </div>
+                                    {advanced && (
+                                        <div>
+                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="bug_title">
+                                                Bug Title <span className="text-red-500">*</span>
+                                            </label>
+                                            <input
+                                                type="text"
+                                                id="bug_title"
+                                                name="bug_title"
+                                                required={advanced}
+                                                value={formData.bug_title}
+                                                onChange={handleChange}
+                                                placeholder="e.g., Evaluation fails to save after clicking submit"
+                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white"
+                                            />
+                                        </div>
+                                    )}
 
                                     {/* What happened? */}
                                     <div>
@@ -561,32 +564,36 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                         </>
                                     )}
 
-                                    {/* Permission */}
-                                    <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors mt-2">
-                                        <input
-                                            type="checkbox"
-                                            name="contact_permission"
-                                            checked={formData.contact_permission}
-                                            onChange={handleChange}
-                                            className="w-4 h-4 text-[#13ec80] rounded border-slate-300 focus:ring-[#13ec80]"
-                                        />
-                                        <span className="text-sm font-medium text-slate-700">You can contact me for more information about this bug</span>
-                                    </label>
+                                    {advanced && (
+                                        <>
+                                            {/* Permission */}
+                                            <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors mt-2">
+                                                <input
+                                                    type="checkbox"
+                                                    name="contact_permission"
+                                                    checked={formData.contact_permission}
+                                                    onChange={handleChange}
+                                                    className="w-4 h-4 text-[#13ec80] rounded border-slate-300 focus:ring-[#13ec80]"
+                                                />
+                                                <span className="text-sm font-medium text-slate-700">You can contact me for more information about this bug</span>
+                                            </label>
 
-                                    {/* Diagnostics Read-Only View */}
-                                    <div className="mt-8 border border-slate-100 rounded-xl overflow-hidden text-xs">
-                                        <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-100 flex items-center gap-2">
-                                            <ShieldAlert className="w-4 h-4 text-slate-500" />
-                                            <span className="font-semibold text-slate-600 tracking-wide uppercase">Captured Diagnostics</span>
-                                        </div>
-                                        <div className="p-4 bg-white/50 space-y-2 font-mono text-slate-500">
-                                            <div className="flex"><span className="w-24 shrink-0 text-slate-400">Path:</span> <span className="truncate">{diagnostics.url.split(window.location.host)[1] || diagnostics.url}</span></div>
-                                            <div className="flex"><span className="w-24 shrink-0 text-slate-400">Browser:</span> <span className="truncate" title={diagnostics.browser}>{diagnostics.browser.split(' ')[0]} {diagnostics.browser.split(' ')[diagnostics.browser.split(' ').length - 1]}</span></div>
-                                            <div className="flex"><span className="w-24 shrink-0 text-slate-400">Screen:</span> <span>{diagnostics.screen}</span></div>
-                                            <div className="flex"><span className="w-24 shrink-0 text-slate-400">Errors:</span> <span className={diagnostics.consoleErrors.length > 0 ? "text-amber-500 font-bold" : ""}>{diagnostics.consoleErrors.length}</span></div>
-                                            <div className="flex"><span className="w-24 shrink-0 text-slate-400">Telemetry:</span> <span className="text-emerald-500">Active</span></div>
-                                        </div>
-                                    </div>
+                                            {/* Diagnostics Read-Only View */}
+                                            <div className="mt-8 border border-slate-100 rounded-xl overflow-hidden text-xs">
+                                                <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-100 flex items-center gap-2">
+                                                    <ShieldAlert className="w-4 h-4 text-slate-500" />
+                                                    <span className="font-semibold text-slate-600 tracking-wide uppercase">Captured Diagnostics</span>
+                                                </div>
+                                                <div className="p-4 bg-white/50 space-y-2 font-mono text-slate-500">
+                                                    <div className="flex"><span className="w-24 shrink-0 text-slate-400">Path:</span> <span className="truncate">{diagnostics.url.split(window.location.host)[1] || diagnostics.url}</span></div>
+                                                    <div className="flex"><span className="w-24 shrink-0 text-slate-400">Browser:</span> <span className="truncate" title={diagnostics.browser}>{diagnostics.browser.split(' ')[0]} {diagnostics.browser.split(' ')[diagnostics.browser.split(' ').length - 1]}</span></div>
+                                                    <div className="flex"><span className="w-24 shrink-0 text-slate-400">Screen:</span> <span>{diagnostics.screen}</span></div>
+                                                    <div className="flex"><span className="w-24 shrink-0 text-slate-400">Errors:</span> <span className={diagnostics.consoleErrors.length > 0 ? "text-amber-500 font-bold" : ""}>{diagnostics.consoleErrors.length}</span></div>
+                                                    <div className="flex"><span className="w-24 shrink-0 text-slate-400">Telemetry:</span> <span className="text-emerald-500">Active</span></div>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
 
                                     {/* Action Attachments: Screenshot */}
                                     {advanced && (
