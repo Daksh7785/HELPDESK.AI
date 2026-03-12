@@ -124,7 +124,7 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
 };
 
 
-const BugReportWidget = () => {
+const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
     const [isOpen, setIsOpen] = useState(false);
     const { user } = useAuthStore();
     const { showToast: addToast } = useToastStore();
@@ -147,6 +147,7 @@ const BugReportWidget = () => {
         category: 'Functionality Broken',
         contact_permission: false
     });
+
 
     const handleOpen = () => {
         if (!isOpen) {
@@ -370,8 +371,9 @@ const BugReportWidget = () => {
     return (
         <>
             {/* Floating Trigger Button */}
+            {/* Trigger Button */}
             <AnimatePresence>
-                {!isOpen && (
+                {!isOpen && !customTrigger && (
                     <motion.button
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
@@ -387,6 +389,12 @@ const BugReportWidget = () => {
                     </motion.button>
                 )}
             </AnimatePresence>
+
+            {customTrigger && !isOpen && (
+                <div onClick={handleOpen} className="inline-block cursor-pointer">
+                    {customTrigger}
+                </div>
+            )}
 
             {/* Modal Dialog */}
             <AnimatePresence>
@@ -472,82 +480,86 @@ const BugReportWidget = () => {
                                         ></textarea>
                                     </div>
 
-                                    {/* Steps to Reproduce */}
-                                    <div>
-                                        <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="steps_to_reproduce">
-                                            How can we reproduce this? <span className="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
-                                        </label>
-                                        <textarea
-                                            id="steps_to_reproduce"
-                                            name="steps_to_reproduce"
-                                            value={formData.steps_to_reproduce}
-                                            onChange={handleChange}
-                                            rows="2"
-                                            placeholder="1. Go to...&#10;2. Click on...&#10;3. See error..."
-                                            className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-y"
-                                        ></textarea>
-                                    </div>
+                                    {advanced && (
+                                        <>
+                                            {/* Steps to Reproduce */}
+                                            <div>
+                                                <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="steps_to_reproduce">
+                                                    How can we reproduce this? <span className="text-slate-400 font-normal text-xs ml-1">(Optional)</span>
+                                                </label>
+                                                <textarea
+                                                    id="steps_to_reproduce"
+                                                    name="steps_to_reproduce"
+                                                    value={formData.steps_to_reproduce}
+                                                    onChange={handleChange}
+                                                    rows="2"
+                                                    placeholder="1. Go to...&#10;2. Click on...&#10;3. See error..."
+                                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-y"
+                                                ></textarea>
+                                            </div>
 
-                                    {/* Expected vs Actual */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="expected_result">
-                                                What should happen?
-                                            </label>
-                                            <textarea
-                                                id="expected_result"
-                                                name="expected_result"
-                                                value={formData.expected_result}
-                                                onChange={handleChange}
-                                                rows="2"
-                                                placeholder="Expected result..."
-                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-none"
-                                            ></textarea>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="actual_result">
-                                                What actually happened?
-                                            </label>
-                                            <textarea
-                                                id="actual_result"
-                                                name="actual_result"
-                                                value={formData.actual_result}
-                                                onChange={handleChange}
-                                                rows="2"
-                                                placeholder="Actual result..."
-                                                className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-none"
-                                            ></textarea>
-                                        </div>
-                                    </div>
+                                            {/* Expected vs Actual */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="expected_result">
+                                                        What should happen?
+                                                    </label>
+                                                    <textarea
+                                                        id="expected_result"
+                                                        name="expected_result"
+                                                        value={formData.expected_result}
+                                                        onChange={handleChange}
+                                                        rows="2"
+                                                        placeholder="Expected result..."
+                                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-none"
+                                                    ></textarea>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-sm font-semibold text-slate-700 mb-1.5" htmlFor="actual_result">
+                                                        What actually happened?
+                                                    </label>
+                                                    <textarea
+                                                        id="actual_result"
+                                                        name="actual_result"
+                                                        value={formData.actual_result}
+                                                        onChange={handleChange}
+                                                        rows="2"
+                                                        placeholder="Actual result..."
+                                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-none"
+                                                    ></textarea>
+                                                </div>
+                                            </div>
 
-                                    {/* Dropdowns */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                        <CustomSelect
-                                            label="Severity"
-                                            name="severity"
-                                            value={formData.severity}
-                                            onChange={handleChange}
-                                            options={[
-                                                { value: 'Low', label: 'Low - Cosmetic/Minor' },
-                                                { value: 'Medium', label: 'Medium - Affects functionality' },
-                                                { value: 'High', label: 'High - Major blocker' },
-                                                { value: 'Critical', label: 'Critical - System crash/Data loss' }
-                                            ]}
-                                        />
-                                        <CustomSelect
-                                            label="Bug Category"
-                                            name="category"
-                                            value={formData.category}
-                                            onChange={handleChange}
-                                            options={[
-                                                { value: 'UI Issue', label: 'UI Issue' },
-                                                { value: 'Functionality Broken', label: 'Functionality Broken' },
-                                                { value: 'Performance', label: 'Performance' },
-                                                { value: 'Security Issue', label: 'Security Issue' },
-                                                { value: 'Other', label: 'Other' }
-                                            ]}
-                                        />
-                                    </div>
+                                            {/* Dropdowns */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <CustomSelect
+                                                    label="Severity"
+                                                    name="severity"
+                                                    value={formData.severity}
+                                                    onChange={handleChange}
+                                                    options={[
+                                                        { value: 'Low', label: 'Low - Cosmetic/Minor' },
+                                                        { value: 'Medium', label: 'Medium - Affects functionality' },
+                                                        { value: 'High', label: 'High - Major blocker' },
+                                                        { value: 'Critical', label: 'Critical - System crash/Data loss' }
+                                                    ]}
+                                                />
+                                                <CustomSelect
+                                                    label="Bug Category"
+                                                    name="category"
+                                                    value={formData.category}
+                                                    onChange={handleChange}
+                                                    options={[
+                                                        { value: 'UI Issue', label: 'UI Issue' },
+                                                        { value: 'Functionality Broken', label: 'Functionality Broken' },
+                                                        { value: 'Performance', label: 'Performance' },
+                                                        { value: 'Security Issue', label: 'Security Issue' },
+                                                        { value: 'Other', label: 'Other' }
+                                                    ]}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
 
                                     {/* Permission */}
                                     <label className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors mt-2">
@@ -577,51 +589,53 @@ const BugReportWidget = () => {
                                     </div>
 
                                     {/* Action Attachments: Screenshot */}
-                                    <div className="mt-6 border border-slate-200 rounded-xl p-4 bg-slate-50">
-                                        <div className="flex items-center justify-between mb-3">
-                                            <div>
-                                                <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                                                    <Camera className="w-4 h-4 text-[#13ec80]" />
-                                                    Advanced Attachments
-                                                </h3>
-                                                <p className="text-xs text-slate-500 mt-1">Capture your screen to show exactly what's wrong.</p>
+                                    {advanced && (
+                                        <div className="mt-6 border border-slate-200 rounded-xl p-4 bg-slate-50">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div>
+                                                    <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+                                                        <Camera className="w-4 h-4 text-[#13ec80]" />
+                                                        Advanced Attachments
+                                                    </h3>
+                                                    <p className="text-xs text-slate-500 mt-1">Capture your screen to show exactly what's wrong.</p>
+                                                </div>
+                                                {!screenshotData && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCaptureScreenshot}
+                                                        disabled={isSubmitting}
+                                                        className="px-3 py-1.5 text-xs font-semibold text-[#111814] bg-[#13ec80] hover:bg-[#0fd472] transition-colors rounded-lg flex items-center gap-1.5 border border-[#13ec80]/20 shadow-sm"
+                                                    >
+                                                        <Crop className="w-3.5 h-3.5" />
+                                                        Select Region & Snap
+                                                    </button>
+                                                )}
                                             </div>
-                                            {!screenshotData && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleCaptureScreenshot}
-                                                    disabled={isSubmitting}
-                                                    className="px-3 py-1.5 text-xs font-semibold text-[#111814] bg-[#13ec80] hover:bg-[#0fd472] transition-colors rounded-lg flex items-center gap-1.5 border border-[#13ec80]/20 shadow-sm"
-                                                >
-                                                    <Crop className="w-3.5 h-3.5" />
-                                                    Select Region & Snap
-                                                </button>
-                                            )}
-                                        </div>
 
-                                        <AnimatePresence>
-                                            {screenshotData && (
-                                                <motion.div
-                                                    initial={{ opacity: 0, height: 0 }}
-                                                    animate={{ opacity: 1, height: 'auto' }}
-                                                    exit={{ opacity: 0, height: 0 }}
-                                                    className="relative mt-3 group rounded-lg overflow-hidden border border-slate-200"
-                                                >
-                                                    <img src={screenshotData} alt="Captured screen" className="w-full h-auto max-h-48 object-cover rounded-lg" />
-                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                        <button
-                                                            type="button"
-                                                            onClick={handleClearScreenshot}
-                                                            className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 hover:bg-red-600 transition-colors shadow-lg"
-                                                        >
-                                                            <Trash2 className="w-3.5 h-3.5" />
-                                                            Remove
-                                                        </button>
-                                                    </div>
-                                                </motion.div>
-                                            )}
-                                        </AnimatePresence>
-                                    </div>
+                                            <AnimatePresence>
+                                                {screenshotData && (
+                                                    <motion.div
+                                                        initial={{ opacity: 0, height: 0 }}
+                                                        animate={{ opacity: 1, height: 'auto' }}
+                                                        exit={{ opacity: 0, height: 0 }}
+                                                        className="relative mt-3 group rounded-lg overflow-hidden border border-slate-200"
+                                                    >
+                                                        <img src={screenshotData} alt="Captured screen" className="w-full h-auto max-h-48 object-cover rounded-lg" />
+                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleClearScreenshot}
+                                                                className="px-3 py-1.5 bg-red-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 hover:bg-red-600 transition-colors shadow-lg"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                                Remove
+                                                            </button>
+                                                        </div>
+                                                    </motion.div>
+                                                )}
+                                            </AnimatePresence>
+                                        </div>
+                                    )}
 
                                 </form>
                             </div>

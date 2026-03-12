@@ -26,6 +26,7 @@ import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from '../../store/authStore';
 import useToastStore from '../../store/toastStore';
 import { supabase } from "../../lib/supabaseClient";
+import BugReportWidget from "../../components/shared/BugReportWidget";
 
 /**
  * AdminProfile Page
@@ -367,6 +368,22 @@ const AdminProfile = () => {
                                     >
                                         <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-500 shadow-md ${isAdmin2FAEnabled ? 'right-1' : 'left-1'}`}></div>
                                     </button>
+                                </div>
+
+                                {/* Bug Report Integration */}
+                                <div className="p-6 bg-red-50/50 rounded-3xl border border-red-100/50 space-y-4">
+                                    <h4 className="text-xs font-black text-red-900 uppercase tracking-widest flex items-center gap-2">
+                                        <AlertCircle size={16} className="text-red-600" /> Advanced Bug Report
+                                    </h4>
+                                    <p className="text-xs text-red-700/60 font-medium">Submit detailed system bug reports with attachments.</p>
+                                    <BugReportWidget
+                                        advanced={true}
+                                        customTrigger={
+                                            <button className="w-full py-4 bg-white border-2 border-red-200 text-red-900 font-black rounded-2xl hover:bg-red-600 hover:text-white hover:border-red-600 transition-all text-xs uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">
+                                                <AlertCircle size={16} /> Report Bug
+                                            </button>
+                                        }
+                                    />
                                 </div>
                             </div>
 
