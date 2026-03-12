@@ -23,8 +23,16 @@ const TEAM_MEMBERS = [
 
     // --- MODEL TEAM ---
     {
-        name: "Asna Abdul Kareem",
+        name: "Pragati Tiwari",
         role: "Lead",
+        team: "Model",
+        image: "/team/pragati_tiwari.jpg",
+        linkedin: "https://linkedin.com/in/pragati-tiwari-608b043b5",
+        github: "https://github.com/pTIWARI-20"
+    },
+    {
+        name: "Asna Abdul Kareem",
+        role: "Ex-Lead",
         team: "Model",
         image: "/team/asna_abdul_kareem.jpg",
         linkedin: "https://in.linkedin.com/in/asna-abdul-kareem-6774a6292",
@@ -45,14 +53,6 @@ const TEAM_MEMBERS = [
         image: "/team/ippili_raju.jpg",
         linkedin: "https://www.linkedin.com/in/raju-ippili-419051308/",
         github: "https://github.com/raju-ippili"
-    },
-    {
-        name: "Pragati Tiwari",
-        role: "Member",
-        team: "Model",
-        image: "/team/pragati_tiwari.jpg",
-        linkedin: "https://linkedin.com/in/pragati-tiwari-608b043b5",
-        github: "https://github.com/pTIWARI-20"
     },
     {
         name: "Shaik Eshak",
