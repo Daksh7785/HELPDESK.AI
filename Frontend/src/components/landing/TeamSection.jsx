@@ -31,14 +31,6 @@ const TEAM_MEMBERS = [
         github: "https://github.com/pTIWARI-20"
     },
     {
-        name: "Asna Abdul Kareem",
-        role: "Ex-Lead",
-        team: "Model",
-        image: "/team/asna_abdul_kareem.jpg",
-        linkedin: "https://in.linkedin.com/in/asna-abdul-kareem-6774a6292",
-        github: "https://github.com/Asnaabdul"
-    },
-    {
         name: "Vinitha Giri",
         role: "Member",
         team: "Model",
@@ -61,6 +53,14 @@ const TEAM_MEMBERS = [
         image: "/team/shaik_eshak.jpg",
         linkedin: "https://www.linkedin.com/in/eshak-s-16738626a/",
         github: "https://github.com/Eshakshai"
+    },
+    {
+        name: "Asna Abdul Kareem",
+        role: "Member",
+        team: "Model",
+        image: "/team/asna_abdul_kareem.jpg",
+        linkedin: "https://in.linkedin.com/in/asna-abdul-kareem-6774a6292",
+        github: "https://github.com/Asnaabdul"
     },
     {
         name: "Ritesh Bonthalakoti",
