@@ -20,7 +20,8 @@ import {
     Pencil,
     Phone,
     Briefcase,
-    Loader2
+    Loader2,
+    AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
