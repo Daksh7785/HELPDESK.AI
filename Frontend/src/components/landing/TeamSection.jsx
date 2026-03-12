@@ -31,12 +31,12 @@ const TEAM_MEMBERS = [
         github: "https://github.com/pTIWARI-20"
     },
     {
-        name: "Vinitha Giri",
+        name: "Shaik Eshak",
         role: "Member",
         team: "Model",
-        image: "/team/vinitha_giri.jpg",
-        linkedin: "https://www.linkedin.com/in/vinitha-giri/",
-        github: "https://github.com/vinitha-giri"
+        image: "/team/shaik_eshak.jpg",
+        linkedin: "https://www.linkedin.com/in/eshak-s-16738626a/",
+        github: "https://github.com/Eshakshai"
     },
     {
         name: "Ippili Raju",
@@ -47,12 +47,12 @@ const TEAM_MEMBERS = [
         github: "https://github.com/raju-ippili"
     },
     {
-        name: "Shaik Eshak",
+        name: "Vinitha Giri",
         role: "Member",
         team: "Model",
-        image: "/team/shaik_eshak.jpg",
-        linkedin: "https://www.linkedin.com/in/eshak-s-16738626a/",
-        github: "https://github.com/Eshakshai"
+        image: "/team/vinitha_giri.jpg",
+        linkedin: "https://www.linkedin.com/in/vinitha-giri/",
+        github: "https://github.com/vinitha-giri"
     },
     {
         name: "Asna Abdul Kareem",
