@@ -3,6 +3,8 @@ import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, ChevronDown, Video
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
 
+import useAuthStore from "../../store/authStore";
+
 const FAQItem = ({ faq }) => {
     const [isOpen, setIsOpen] = useState(false);
     return (
@@ -26,11 +28,28 @@ const FAQItem = ({ faq }) => {
 };
 
 const Help = () => {
+    const { profile } = useAuthStore();
     const [activeTab, setActiveTab] = useState('All');
     const [videos, setVideos] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    const generateMailto = () => {
+        const email = "bonthalamadhavi1@gmail.com";
+        const subject = encodeURIComponent("Support Request: [Issue Summary]");
+        const fullName = profile?.full_name || "User";
+        
+        const bodyTemplate = `Hi HelpDesk.AI Support Team,
+
+I am writing to report an issue regarding:
+[ENTER YOUR ISSUE HERE]
+
+Regards,
+${fullName}`;
+
+        return `mailto:${email}?subject=${subject}&body=${encodeURIComponent(bodyTemplate)}`;
+    };
 
     // Debounce the search query to avoid hammering the YouTube API quota on every keystroke
     React.useEffect(() => {
@@ -278,7 +297,7 @@ const Help = () => {
                             <p className="text-gray-400 text-sm mb-6">Our dedicated support teams are ready to assist you.</p>
                             
                             <div className="space-y-3">
-                                <a href="mailto:bonthalamadhavi1@gmail.com?subject=Support%20Request" className="w-full group flex items-center justify-between bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 transition-all focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer block">
+                                <a href={generateMailto()} className="w-full group flex items-center justify-between bg-white/10 hover:bg-white/20 border border-white/10 rounded-xl p-4 transition-all focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer block">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-blue-500/20 text-blue-400 rounded-lg group-hover:bg-blue-500 group-hover:text-white transition-colors">
                                             <Mail size={20} />
