@@ -272,7 +272,7 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="min-h-screen pt-16 bg-white font-sans text-slate-800">
+        <div className="min-h-screen bg-white font-sans text-slate-800">
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
@@ -380,6 +380,7 @@ export default function LandingPage() {
                         </button>
                     </div>
 
+            
                     {/* BENTO VISUAL */}
                     <div className="relative max-w-6xl mx-auto">
                         <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl opacity-60 -z-10 rounded-full" />
@@ -719,7 +720,7 @@ export default function LandingPage() {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 mb-4">Simple, Transparent Pricing</h2>
-                        <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹). GST applicable</p>
+                        <p className="text-gray-500 mb-8">All plans in Indian Rupees (₹) · GST applicable</p>
 
                         {/* Billing Toggle */}
                         <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm">
@@ -779,6 +780,8 @@ export default function LandingPage() {
                             </div>
                         ))}
                     </div>
+
+
                 </div>
             </section>
 
@@ -793,7 +796,7 @@ export default function LandingPage() {
                         The Smartest IT Helpdesk for Indian Businesses
                     </h2>
                     <p className="text-white/70 text-lg mb-10 max-w-xl mx-auto">
-                        Start automating ticket triage today
+                        Start automating ticket triage today. No credit card required.
                     </p>
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
                         <button
@@ -831,12 +834,10 @@ export default function LandingPage() {
                             <p className="text-white/50 text-sm leading-relaxed mb-4">
                                 AI-powered IT helpdesk automation for modern Indian enterprises.
                             </p>
-                            <p className="text-xs text-white/70 mb-5">Made with ❤️ in India 🇮🇳</p>
+                            <p className="text-xs text-white/30 mb-5">Made with ❤️ in India 🇮🇳</p>
                             <div className="flex gap-3">
                                 <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors">
-                                    <svg viewBox="0 0 24 24" className="w-4 h-4 fill-white">
-                                        <path d="M18.244 2H21l-6.5 7.43L22 22h-6.828l-5.35-7.01L3.5 22H1l7.02-8.02L2 2h6.92l4.84 6.38L18.244 2z"/>
-                                    </svg>
+                                    <Twitter className="w-4 h-4" />
                                 </a>
                                 <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="w-9 h-9 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors">
                                     <Linkedin className="w-4 h-4" />
