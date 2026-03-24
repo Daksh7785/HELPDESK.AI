@@ -142,7 +142,7 @@ Navigate to `/backend` and refer to internal documentation for Python environmen
 
 <div align="center">
 
-Built with ❤️ by the **HELPDESK.AI Professional** Team  
+Built with ❤️ by the **HELPDESK.AI Professional** Team. 
 *Driving the future of Intelligent Enterprise Support.*
 
 </div>
