@@ -177,6 +177,8 @@ const AdminTicketDetail = () => {
 
     const confidence = ticket.metadata?.confidence || 0.85;
     const entities = ticket.metadata?.entities || ticket.entities || [];
+    const displayStatus = ticket.status || 'Pending';
+    const displayPriority = ticket.priority || 'Medium';
     const displaySummary = ticket.summary || ticket.subject || 'No Summary';
     const displayText = ticket.description || ticket.text || displaySummary;
 
