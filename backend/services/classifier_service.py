@@ -122,17 +122,23 @@ class ClassifierService:
         # Derive auto_resolve
         auto_resolve = subcategory in AUTO_RESOLVE_SUBS
 
-        # Apply confidence threshold
-        CONFIDENCE_THRESHOLD = 0.20
-        if confidence < CONFIDENCE_THRESHOLD:
-            return {
-                "category": "General",
-                "subcategory": "Incomplete Information",
-                "priority": "Low",
-                "auto_resolve": False,
-                "assigned_team": "General Support",
-                "confidence": confidence,
-            }
+        # --- Regex Override Layer (Boost for Technical Keywords) ---
+        tech_keywords = {
+            "Network": ["IP address", "hostname", "connection", "network", "bandwidth", "DNS", "firewall", "VPN"],
+            "Software": ["crash", "load", "website", "application", "error", "bug", "failing", "software"],
+            "Access": ["login", "password", "access", "authentication", "account", "permission"]
+        }
+        
+        lower_text = text.lower()
+        for cat, keywords in tech_keywords.items():
+            if any(k.lower() in lower_text for k in keywords):
+                # If current prediction is generic, override it
+                if category == "General" or confidence < 0.6:
+                    category = cat
+                    assigned_team = TEAM_MAP.get(cat, "General Support")
+                    # If we found a keyword, we're more confident
+                    confidence = max(confidence, 0.85) 
+                    break
 
         return {
             "category": category,

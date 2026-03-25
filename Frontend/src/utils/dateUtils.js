@@ -1,49 +1,47 @@
 /**
  * Unified Date Utility for HELPDESK.AI
- * Follows IST by default but adapts to user's local timezone.
+ * Fixes timezone shift issues by explicitly forcing local display.
  */
 
-/**
- * Formats a date string into a readable format.
- * Defaults to the user's local timezone but ensures consistency.
- */
 export const formatTimelineDate = (dateStr) => {
     if (!dateStr) return null;
-    const date = new Date(dateStr);
     
-    // User's locale and timezone
-    const userLocale = navigator.language || 'en-IN';
-    const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    // Ensure the date string is interpreted as UTC if it's an ISO string from DB
+    let date;
+    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
+        // If it's a raw string without TZ, assume it was intended as UTC from our backend
+        date = new Date(dateStr + 'Z');
+    } else {
+        date = new Date(dateStr);
+    }
 
-    return new Intl.DateTimeFormat(userLocale, {
-        timeZone: userTimeZone,
+    if (isNaN(date.getTime())) return 'Invalid Date';
+
+    // Using the browser's default locale and timeZone (which is the user's local)
+    return date.toLocaleString(undefined, {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
-    }).format(date);
+    });
 };
 
-/**
- * Returns the timezone abbreviation (e.g., "IST", "EST")
- */
 export const getTimeZoneAbbr = () => {
-    return new Intl.DateTimeFormat('en-US', {
-        timeZoneName: 'short',
-        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    })
-    .formatToParts(new Date())
-    .find(part => part.type === 'timeZoneName')?.value || 'UTC';
+    try {
+        return new Intl.DateTimeFormat('en-US', {
+            timeZoneName: 'short'
+        })
+        .formatToParts(new Date())
+        .find(part => part.type === 'timeZoneName')?.value || 'IST';
+    } catch (e) {
+        return 'IST';
+    }
 };
 
-/**
- * Combines date and timezone for a clear UI display.
- * Example: "Mar 25, 2026, 01:30 PM (IST)"
- */
 export const formatFullTimestamp = (dateStr) => {
     const formatted = formatTimelineDate(dateStr);
-    if (!formatted) return 'Pending...';
+    if (!formatted) return 'Processing...';
     return `${formatted} (${getTimeZoneAbbr()})`;
 };

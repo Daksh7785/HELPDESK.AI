@@ -92,23 +92,28 @@ const useRealtimeNotifications = () => {
             // For now, we rely on recipientRole filter in the UI components.
 
             if (isFromAdmin) {
-                // Sent by Admin -> Notify User
-                addNotification({
-                    title: 'New Response from Support',
-                    message: newMessage.message || "An agent replied to your ticket.",
-                    ticketId: newMessage.ticket_id,
-                    type: 'message',
-                    recipientRole: 'user'
-                });
+                // Sent by Admin -> Notify User (only if it's their ticket)
+                // Note: ideally we'd check isOwner here, but for now we filter by role
+                if (profile.role === 'user') {
+                    addNotification({
+                        title: 'New Response from Support',
+                        message: newMessage.message?.length > 120 ? newMessage.message.substring(0, 120) + "..." : (newMessage.message || "An agent replied to your ticket."),
+                        ticketId: newMessage.ticket_id,
+                        type: 'message',
+                        recipientRole: 'user'
+                    });
+                }
             } else {
                 // Sent by User -> Notify Admin
-                addNotification({
-                    title: 'New Message from User',
-                    message: newMessage.message || "A user replied to their ticket.",
-                    ticketId: newMessage.ticket_id,
-                    type: 'message',
-                    recipientRole: 'admin'
-                });
+                if (isAdmin) {
+                    addNotification({
+                        title: 'New Message from User',
+                        message: newMessage.message || "A user replied to their ticket.",
+                        ticketId: newMessage.ticket_id,
+                        type: 'message',
+                        recipientRole: 'admin'
+                    });
+                }
             }
         };
 
