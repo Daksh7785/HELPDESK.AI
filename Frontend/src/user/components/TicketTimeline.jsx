@@ -1,7 +1,7 @@
 import React from 'react';
 import {
     CheckCircle2, Clock,
-    Hash, Flag, FolderOpen, Users, BrainCircuit, ScanSearch, Layers, Network, Zap, CheckCircle2
+    Hash, Flag, FolderOpen, Users, BrainCircuit, ScanSearch, Layers, Network, Zap
 } from 'lucide-react';
 import { formatFullTimestamp } from '../../utils/dateUtils';
 import { motion, AnimatePresence } from 'framer-motion';
