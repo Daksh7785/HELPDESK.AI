@@ -604,8 +604,15 @@ async def analyze_ticket(request: TicketRequest):
     except Exception:
         pass
 
+    # Generate a concise 1-2 line summary for the UI
+    summary = text[:100] + "..." if len(text) > 100 else text
+    if gemini_analysis["image_description"]:
+        summary = f"Image Report: {summary}"
+    
     return TicketResponse(
+        ticket_id=ticket_id,
         summary=summary,
+        text=text,
         category=classification["category"],
         subcategory=classification["subcategory"],
         priority=classification["priority"],
