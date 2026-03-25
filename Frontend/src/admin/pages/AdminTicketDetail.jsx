@@ -377,7 +377,7 @@ const AdminTicketDetail = () => {
                                 </div>
                             )}
 
-                            {/* Technical Environment Byte */}
+                             {/* Technical Environment Byte */}
                             <div className="pt-6 border-t border-slate-100 space-y-4">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic flex items-center gap-2">
                                     <Globe size={12} className="text-emerald-400" /> Technical Environment

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import useAuthStore from "../store/authStore";
-import { Clock, LogOut, ShieldAlert, CheckCircle2 } from "lucide-react";
+import { Clock, LogOut, ShieldAlert, CheckCircle2, MessageSquare } from "lucide-react";
 
 /**
  * UserLobby — Waiting room for verified users pending company admin approval.
@@ -78,6 +78,11 @@ function UserLobby() {
         navigate("/login");
     };
 
+    const isRiteshPrivateLtd = profile?.company === "Ritesh Private Limited";
+    const adminPhone = "918464931322";
+    const waMessage = `Hey Ritesh, I just verified my email and I want you to approve this email address. I registered to ${profile?.company || "my company"}. My email is: ${profile?.email}`;
+    const whatsappUrl = `https://wa.me/${adminPhone}?text=${encodeURIComponent(waMessage)}`;
+
     return (
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6 font-sans relative overflow-hidden">
             {/* Ambient glow - Emerald theme */}
@@ -113,10 +118,21 @@ function UserLobby() {
                             <Clock className="w-8 h-8 text-amber-500" />
                         </div>
 
-                        <h1 className="text-2xl font-bold text-gray-900 mb-2">Email Verified!</h1>
+                        <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                            {isRiteshPrivateLtd ? "Email Verified" : "Email Verified!"}
+                        </h1>
+
                         <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-                            Your account is verified. We've notified your company administrators at <span className="font-semibold text-gray-800">{profile?.company || "your company"}</span>.
-                            You will receive an email once your account is approved.
+                            {isRiteshPrivateLtd ? (
+                                <>
+                                    You are now waiting for approval from the <span className="font-bold text-slate-800">Ritesh Private Limited</span> admin.
+                                </>
+                            ) : (
+                                <>
+                                    Your account is verified. We've notified your company administrators at <span className="font-semibold text-gray-800">{profile?.company || "your company"}</span>.
+                                    You will receive an email once your account is approved.
+                                </>
+                            )}
                         </p>
 
                         <div className="bg-gray-50 border border-gray-100 rounded-2xl p-4 mb-8">
@@ -133,9 +149,24 @@ function UserLobby() {
                             </div>
                         </div>
 
+                        <div className="mb-6">
+                            <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="flex items-center justify-center gap-3 w-full px-4 py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-2xl shadow-lg shadow-green-500/20 transition-all font-bold text-base group"
+                            >
+                                <MessageSquare className="w-5 h-5 fill-current" />
+                                <span>Request Approval via WhatsApp</span>
+                            </a>
+                            <p className="mt-3 text-[11px] text-gray-400 font-medium">
+                                Clicking above will open a direct chat with the admin.
+                            </p>
+                        </div>
+
                         <button
                             onClick={handleLogout}
-                            className="flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border border-gray-200 shadow-sm rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all text-sm font-semibold"
+                            className={`flex items-center justify-center gap-2 w-full px-4 py-3 bg-white border border-gray-200 shadow-sm rounded-xl text-gray-600 hover:text-gray-900 hover:bg-gray-50 transition-all text-sm font-semibold ${isRiteshPrivateLtd ? 'mt-4' : ''}`}
                         >
                             <LogOut className="w-4 h-4" />
                             Sign Out
