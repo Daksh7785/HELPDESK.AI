@@ -19,6 +19,7 @@ import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
 import { Card, CardContent } from "../../components/ui/card";
+import { formatTimelineDate } from "../../utils/dateUtils";
 
 /**
  * AdminDashboard Page
@@ -209,7 +210,7 @@ const AdminDashboard = () => {
                                 <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
                                     <Activity size={10} className="text-slate-400" />
                                     <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                                        Last Telemetry Sync: {new Date().toLocaleTimeString()}
+                                        Last Telemetry Sync: {formatTimelineDate(new Date())}
                                     </span>
                                 </div>
                             </div>

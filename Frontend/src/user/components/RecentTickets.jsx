@@ -122,9 +122,9 @@ const RecentTickets = () => {
                                             </span>
                                         </td>
                                         <td className="py-4 pr-4">
-                                            <p className="text-sm font-semibold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
-                                                {ticket.subject || ticket.description || "No description provided"}
-                                            </p>
+                                             <p className="text-sm font-semibold text-gray-900 line-clamp-1 group-hover:text-emerald-600 transition-colors">
+                                                 {ticket.summary || ticket.subject || ticket.description || "No description provided"}
+                                             </p>
                                         </td>
                                         <td className="py-4">
                                             {getStatusBadge(ticket.status)}

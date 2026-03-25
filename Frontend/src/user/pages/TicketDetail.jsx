@@ -180,7 +180,7 @@ const TicketDetail = () => {
                             </span>
                         </div>
                         <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight leading-[1.15] max-w-3xl">
-                            {ticket.text?.length > 120 ? ticket.text.substring(0, 120) + "..." : (ticket.text || ticket.summary || "No description provided")}
+                            {ticket.summary || ticket.subject || (ticket.text?.length > 120 ? ticket.text.substring(0, 120) + "..." : (ticket.text || "No description provided"))}
                         </h1>
                     </div>
                 </div>

@@ -170,6 +170,7 @@ const AdminTickets = () => {
         return tickets.filter(t =>
             String(t.id).includes(q) ||
             (t.subject || '').toLowerCase().includes(q) ||
+            (t.summary || '').toLowerCase().includes(q) ||
             (t.description || '').toLowerCase().includes(q) ||
             (t.profiles?.full_name || '').toLowerCase().includes(q)
         );

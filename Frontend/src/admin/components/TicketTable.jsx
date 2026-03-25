@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, ShieldCheck, Clock, User, ArrowRight, ExternalLink } from 'lucide-react';
+import { formatTimelineDate } from '../../utils/dateUtils';
 
 const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
     const navigate = useNavigate();
@@ -89,7 +90,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                         </div>
                                         <span className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1.5 italic tracking-wide">
                                             <Clock size={10} className="text-slate-300" />
-                                            {new Date(ticket.created_at || ticket.createdAt || ticket.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            {formatTimelineDate(ticket.created_at || ticket.createdAt || ticket.timestamp)}
                                         </span>
                                     </div>
                                 </td>

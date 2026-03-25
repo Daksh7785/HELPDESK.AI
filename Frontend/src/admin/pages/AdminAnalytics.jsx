@@ -12,6 +12,7 @@ import { supabase } from "../../lib/supabaseClient";
 import StatCard from '../components/StatCard';
 import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from "../../store/authStore";
+import { formatTimelineDate } from "../../utils/dateUtils";
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#ec4899'];
 
@@ -60,7 +61,7 @@ const AdminAnalytics = () => {
         const timeMap = {};
         tickets.forEach(t => {
             if (t.created_at) {
-                const date = new Date(t.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' });
+                const date = formatTimelineDate(t.created_at).split(',')[0]; // Extract just the date part for the axis
                 timeMap[date] = (timeMap[date] || 0) + 1;
             }
         });
@@ -96,10 +97,10 @@ const AdminAnalytics = () => {
         // 5. Live Activity Feed (Latest 10)
         const liveFeed = tickets.slice(0, 10).map(t => ({
             ticket_id: t.id,
-            user: t.user_id ? `User ${t.user_id.slice(0, 5)}` : 'System',
+            user: t.user_id ? `User ${t.user_id.slice(0, 5)}` : (t.profiles?.full_name || 'Anonymous'),
             action: `Ticket ${t.status || 'Updated'}`,
             type: t.status === 'open' ? 'create' : t.status === 'resolved' ? 'resolve' : 'assign',
-            timeFormatted: new Date(t.created_at).toLocaleString(),
+            timeFormatted: formatTimelineDate(t.created_at),
             time: new Date(t.created_at).getTime()
         }));
 

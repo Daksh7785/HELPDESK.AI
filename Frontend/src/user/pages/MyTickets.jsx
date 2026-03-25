@@ -11,7 +11,7 @@ import { Badge } from "../../components/ui/badge";
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
-import { format } from 'date-fns';
+import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
 import {
     Tooltip,
     TooltipContent,
@@ -96,6 +96,7 @@ function MyTickets() {
                 const searchLower = searchQuery.toLowerCase();
                 const matchesSearch =
                     (ticket.subject || '').toLowerCase().includes(searchLower) ||
+                    (ticket.summary || '').toLowerCase().includes(searchLower) ||
                     (ticket.description || '').toLowerCase().includes(searchLower) ||
                     String(ticket.id).includes(searchLower);
 
@@ -262,8 +263,8 @@ function MyTickets() {
                                                     >
                                                         <div className="space-y-3">
                                                             <div>
-                                                                <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Issue Overview</p>
-                                                                <p className="text-sm font-medium leading-relaxed overflow-hidden text-ellipsis whitespace-nowrap">{ticket.description || "No description provided"}</p>
+                                                                 <p className="text-[10px] uppercase font-bold text-gray-400 tracking-wider mb-1">Issue Overview</p>
+                                                                 <p className="text-sm font-medium leading-relaxed overflow-hidden text-ellipsis whitespace-nowrap">{ticket.summary || ticket.description || "No description provided"}</p>
                                                             </div>
                                                             <div className="grid grid-cols-2 gap-3">
                                                                 <div>
@@ -284,9 +285,9 @@ function MyTickets() {
                                                 </Tooltip>
                                             </td>
                                             <td className="px-6 py-4 w-1/3 max-w-[300px]">
-                                                <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
-                                                    {ticket.subject || ticket.description || "No subject"}
-                                                </p>
+                                                 <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
+                                                     {ticket.summary || ticket.subject || ticket.description || "No subject"}
+                                                 </p>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">
@@ -301,16 +302,16 @@ function MyTickets() {
                                                     {ticket.priority || 'medium'}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-semibold text-gray-700">
-                                                        {format(new Date(ticket.created_at), 'MMM d, yyyy')}
-                                                    </span>
-                                                    <span className="text-xs text-gray-400 font-medium">
-                                                        {format(new Date(ticket.created_at), 'hh:mm a')}
-                                                    </span>
-                                                </div>
-                                            </td>
+                                             <td className="px-6 py-4">
+                                                 <div className="flex flex-col">
+                                                     <span className="text-sm font-semibold text-gray-700">
+                                                         {formatTimelineDate(ticket.created_at)}
+                                                     </span>
+                                                     <span className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-0.5">
+                                                         {getTimeZoneAbbr()} Node
+                                                     </span>
+                                                 </div>
+                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
