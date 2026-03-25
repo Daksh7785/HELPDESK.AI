@@ -77,6 +77,7 @@ class TicketResponse(BaseModel):
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
+    version: str = "2.1.0-Neural-Diagnostic"
 
 
 # --- Persistence Models ---
@@ -580,7 +581,11 @@ async def analyze_ticket(request_body: TicketRequest, http_request: Request):
         print(f'[CRITICAL LOW CONFIDENCE] Confidence: {classification["confidence"]:.2f}')
     else:
         # Respect the model's assigned team if above 20%
-        # FIX: Ensure if it's Software/Network/Access it doesn't default to Human Queue regardless of threshold
+        # FIX: Force Network/Software/Access to their teams if confidence is > 20%
+        TECHNICAL_TEAMS = ["Network Support", "Application Support", "IAM Team", "Hardware Support"]
+        if classification["assigned_team"] in TECHNICAL_TEAMS:
+            needs_review = False # Trust the model for technical categories
+        
         if classification["assigned_team"] == "General Support" and classification["confidence"] < 0.40:
              classification["assigned_team"] = "Human Review Queue"
              needs_review = True
@@ -649,7 +654,8 @@ async def analyze_ticket(request_body: TicketRequest, http_request: Request):
         ocr_text=gemini_analysis["ocr_text"],
         highlights=highlights,
         timeline=timeline,
-        env_metadata=env_metadata
+        env_metadata=env_metadata,
+        version="2.1.0-Neural-Diagnostic"
     )
 
 @app.post("/ai/analyze-v2")
