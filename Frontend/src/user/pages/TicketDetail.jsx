@@ -3,8 +3,9 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, Clock, Bot, UserCog,
     ShieldCheck, Calendar, Zap, Image as ImageIcon, MessageSquare,
-    RotateCcw, Loader2, CheckCircle2
+    RotateCcw, Loader2, CheckCircle2, History
 } from 'lucide-react';
+import { formatFullTimestamp } from '../../utils/dateUtils';
 import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
@@ -168,14 +169,17 @@ const TicketDetail = () => {
                     <ArrowLeft size={16} /> Back to Tickets
                 </button>
                 <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                    <div>
-                        <div className="flex items-center gap-3 mb-2">
-                            <span className="bg-emerald-100 text-emerald-800 font-mono font-bold px-2.5 py-1 rounded-md text-sm border border-emerald-200">
+                    <div className="flex-1">
+                        <div className="flex flex-wrap items-center gap-3 mb-3">
+                            <span className="bg-emerald-50 text-emerald-700 font-mono font-bold px-3 py-1 rounded-lg text-sm border border-emerald-100 shadow-sm">
                                 #{formatTicketId(ticket.ticket_id)}
                             </span>
                             <TicketStatusBadge status={ticket.status} />
+                            <span className="hidden sm:flex items-center gap-1.5 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
+                                <History size={12} className="text-gray-300" /> Unified Timeline Active
+                            </span>
                         </div>
-                        <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight leading-tight">
+                        <h1 className="text-3xl sm:text-4xl font-black text-gray-900 tracking-tight leading-[1.15] max-w-3xl">
                             {ticket.text || ticket.summary || "No description provided"}
                         </h1>
                     </div>
@@ -277,6 +281,12 @@ const TicketDetail = () => {
                     </Card>
 
                     {/* Card 4: Screenshot */}
+                        <div className="p-6 bg-emerald-900 rounded-2xl border border-emerald-800 text-center shadow-xl">
+                            <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2">Registration Timestamp</p>
+                            <p className="text-sm font-bold text-white leading-relaxed">
+                                {formatFullTimestamp(ticket.created_at)}
+                            </p>
+                        </div>
                     <Card className="p-6 rounded-2xl border border-gray-100 shadow-sm bg-white">
                         <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4 flex items-center gap-2">
                             <ImageIcon className="w-4 h-4 text-gray-400" /> Attached Media

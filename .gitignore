@@ -20,3 +20,14 @@ user_feedback_rows.csv
 # Git
 .git/
 .github/
+
+# Frontend
+node_modules/
+dist/
+.vercel
+*.local
+
+# Docs / Artifacts
+docs/helpdesk*.pdf
+docs/logs/
+*.log

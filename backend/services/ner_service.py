@@ -13,6 +13,15 @@ SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "model
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MAX_LEN = 128
 
+import re
+
+# Regex patterns for high-fidelity extraction
+REGEX_PATTERNS = {
+    "IP_ADDRESS": r"\b(?:\d{1,3}\.){3}\d{1,3}\b",
+    "HOSTNAME": r"\b(?:srv|db|app|web|dev|prod)-[\w\d-]+\b", # Common conventions
+    "VLAN": r"\bVLAN\s?\d+\b"
+}
+
 
 class NERService:
     def __init__(self):
@@ -157,5 +166,18 @@ class NERService:
                 "label": current_label,
                 "confidence": round(sum(current_confs) / len(current_confs), 4),
             })
+
+        # --- Regex Fallback Layer ---
+        for label, pattern in REGEX_PATTERNS.items():
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                # Add to entities, avoiding duplicates (check if text already extracted)
+                match_text = match.group()
+                if not any(e["text"].lower() == match_text.lower() for e in entities):
+                    entities.append({
+                        "text": match_text,
+                        "label": label,
+                        "confidence": 0.99 # High confidence for regex matches
+                    })
 
         return entities

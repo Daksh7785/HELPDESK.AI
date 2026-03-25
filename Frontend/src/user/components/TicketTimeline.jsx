@@ -1,9 +1,9 @@
 import React from 'react';
 import {
     CheckCircle2, Clock,
-    TicketCheck, BrainCircuit, SearchCheck, Zap, UserCog, ShieldCheck,
-    Hash, Flag, FolderOpen, Users
+    Hash, Flag, FolderOpen, Users, BrainCircuit, ScanSearch, Layers, Network, Zap, CheckCircle2
 } from 'lucide-react';
+import { formatFullTimestamp } from '../../utils/dateUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import useTicketStore from '../../store/ticketStore';
 
@@ -11,34 +11,41 @@ import useTicketStore from '../../store/ticketStore';
 
 const STEPS = [
     {
-        Icon: TicketCheck,
-        title: 'Ticket Submitted',
-        description: 'Issue received and logged in the system.',
+        Icon: ScanSearch,
+        title: '1. Ingestion',
+        description: 'Ticket received and OCR text extracted.',
+        timelineKey: 'created'
     },
     {
         Icon: BrainCircuit,
-        title: 'AI Analysis',
-        description: 'AI classifying the issue and extracting entities.',
+        title: '2. AI Analysis',
+        description: 'Context understood by LLM Engine.',
+        timelineKey: 'ai_analyzed'
     },
     {
-        Icon: SearchCheck,
-        title: 'Duplicate Check',
-        description: 'Searching the knowledge base for matching issues.',
+        Icon: Layers,
+        title: '3. Neural Triage',
+        description: 'Category & Priority identified.',
+        timelineKey: 'triaged'
+    },
+    {
+        Icon: ScanSearch,
+        title: '4. Metadata Harvesting',
+        description: 'IPs, Hostnames & Errors extracted.',
+        timelineKey: 'metadata_harvested'
+    },
+    {
+        Icon: Network,
+        title: '5. Intelligent Routing',
+        description: 'Routed to optimal support team.',
+        timelineKey: 'routed'
     },
     {
         Icon: Zap,
-        title: 'Auto Resolve',
-        description: 'AI guiding the user through a resolution plan.',
-    },
-    {
-        Icon: UserCog,
-        title: 'Human Support',
-        description: 'Ticket routed to a specialist agent.',
-    },
-    {
-        Icon: ShieldCheck,
-        title: 'Resolved',
-        description: 'Issue confirmed resolved and ticket closed.',
+        title: '6. Resolution Phase',
+        description: 'Solving / Auto-resolution in progress.',
+        timelineKey: 'resolution_started',
+        finalKey: 'resolved_at'
     },
 ];
 
@@ -148,19 +155,26 @@ const TicketTimeline = ({ ticketId, ticket: passedTicket, className = '', forceS
     const completedCount = activeStep;
     const progressPct = Math.round((completedCount / (STEPS.length - 1)) * 100);
 
-    const formatDate = (d) => {
-        if (!d) return null;
-        return new Date(d).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-    };
-
     const getTimestamp = (idx, state) => {
         if (state === 'pending') return null;
-        if (state === 'active') {
-            if (idx === STEPS.length - 1) return formatDate(ticket.resolved_at) || formatDate(ticket.updated_at) || 'Completed';
-            return 'In progress';
+        
+        const step = STEPS[idx];
+        const timeline = ticket.timeline || {};
+        
+        // Use specific timeline key if it exists
+        if (timeline[step.timelineKey]) {
+            return formatFullTimestamp(timeline[step.timelineKey]);
         }
-        if (idx === 0) return formatDate(ticket.created_at) || formatDate(ticket.timestamp) || 'Just now';
-        return formatDate(ticket.updated_at) || formatDate(ticket.resolved_at) || 'Completed';
+
+        // Fallback or Final Resolution Handle
+        if (idx === STEPS.length - 1 && (ticket.resolved_at || ticket.status === 'resolved')) {
+            return formatFullTimestamp(ticket.resolved_at || ticket.updated_at);
+        }
+
+        // Final Fallback for ingestion
+        if (idx === 0) return formatFullTimestamp(ticket.created_at || ticket.timestamp);
+        
+        return state === 'active' ? 'In progress' : 'Completed';
     };
 
     return (

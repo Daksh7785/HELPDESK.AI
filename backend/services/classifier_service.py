@@ -123,7 +123,7 @@ class ClassifierService:
         auto_resolve = subcategory in AUTO_RESOLVE_SUBS
 
         # Apply confidence threshold
-        CONFIDENCE_THRESHOLD = 0.5
+        CONFIDENCE_THRESHOLD = 0.20
         if confidence < CONFIDENCE_THRESHOLD:
             return {
                 "category": "General",

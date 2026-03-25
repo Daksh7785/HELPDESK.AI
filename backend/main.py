@@ -43,7 +43,7 @@ class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
-    confidence_threshold: float = 0.80
+    confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
 
@@ -75,6 +75,7 @@ class TicketResponse(BaseModel):
     image_description: str = ""
     ocr_text: str = ""
     highlights: list[str] = []
+    timeline: dict = {} # Map of step_name: timestamp
 
 
 # --- Persistence Models ---
@@ -98,6 +99,7 @@ class TicketRecord(BaseModel):
     last_user_viewed_at: str | None = None
     messages: list[Message] = []
     metadata: dict = {}
+    timeline: dict = {} # Milestones: created, analyzed, triaged, routed, in_progress, resolved
 
 
 # --- In-Memory Database (to be replaced with SQL later) ---
@@ -457,6 +459,15 @@ async def analyze_ticket(request: TicketRequest):
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
+    # Initalize Timeline
+    import datetime
+    def get_now_ist():
+        return datetime.datetime.utcnow().isoformat() + "Z"
+
+    timeline = {
+        "created": get_now_ist()
+    }
+
     # --- Layer 2: Gemini Vision (API, optional enrichment) ---
     gemini_analysis = {
         "image_description": "",
@@ -498,6 +509,9 @@ async def analyze_ticket(request: TicketRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Classification error: {str(e)}")
 
+    timeline["ai_analyzed"] = get_now_ist()
+    timeline["triaged"] = get_now_ist()
+
     # --- NER ---
     try:
         entities = ner_service.extract_entities(text)
@@ -506,6 +520,8 @@ async def analyze_ticket(request: TicketRequest):
     except Exception as e:
         traceback.print_exc()
         entities = []
+    
+    timeline["metadata_harvested"] = get_now_ist()
 
     # --- Duplicate detection ---
     try:
@@ -533,6 +549,10 @@ async def analyze_ticket(request: TicketRequest):
         reasoning += "Since this is a common, documented issue, it has been flagged for auto-resolution."
     else:
         reasoning += f"Due to the nature of the request, it has been routed to the {classification['assigned_team']}."
+    
+    timeline["routed"] = get_now_ist()
+    if classification["auto_resolve"]:
+        timeline["resolution_started"] = get_now_ist()
 
     # --- Gemini Deep Reasoning ---
     # Disabled as per user request to remove 'Deep Reasoning' section
@@ -541,11 +561,14 @@ async def analyze_ticket(request: TicketRequest):
     # --- Confidence-Based Routing ---
     REVIEW_THRESHOLD = request.confidence_threshold
     needs_review = False
-    if classification["confidence"] < REVIEW_THRESHOLD:
+    if classification["confidence"] < 0.20:
         needs_review = True
         classification["auto_resolve"] = False
         classification["assigned_team"] = "Human Review Queue"
-        print(f'[LOW CONFIDENCE] Text: "{text[:80]}...", Confidence: {classification["confidence"]:.2f}')
+        print(f'[CRITICAL LOW CONFIDENCE] Confidence: {classification["confidence"]:.2f}')
+    else:
+        # Respect the model's assigned team if above 20%
+        print(f'[AI ROUTED] Team: {classification["assigned_team"]}, Confidence: {classification["confidence"]:.2f}')
 
     # --- Low-Confidence Logging (threshold: 85%) ---
     LOW_CONF_LOG_PATH = Path(__file__).parent / "data" / "low_confidence_log.json"
@@ -596,7 +619,8 @@ async def analyze_ticket(request: TicketRequest):
         decision_factors=decision_factors,
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
-        highlights=highlights
+        highlights=highlights,
+        timeline=timeline
     )
 
 @app.post("/ai/analyze-v2")

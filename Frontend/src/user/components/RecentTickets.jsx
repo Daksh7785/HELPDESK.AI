@@ -5,6 +5,7 @@ import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { Badge } from "../../components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
+import { formatTimelineDate, getTimeZoneAbbr } from '../../utils/dateUtils';
 
 const RecentTickets = () => {
     const navigate = useNavigate();
@@ -128,12 +129,12 @@ const RecentTickets = () => {
                                         <td className="py-4">
                                             {getStatusBadge(ticket.status)}
                                         </td>
-                                        <td className="py-4 px-4">
-                                            <p className="text-xs font-medium text-gray-500">
-                                                {new Date(ticket.created_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                                        <td className="py-4 px-4 whitespace-nowrap">
+                                            <p className="text-sm font-bold text-gray-700 tracking-tight">
+                                                {formatTimelineDate(ticket.created_at)}
                                             </p>
-                                            <p className="text-[10px] text-gray-400">
-                                                {new Date(ticket.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest mt-0.5">
+                                                {getTimeZoneAbbr()} Node
                                             </p>
                                         </td>
                                     </tr>
