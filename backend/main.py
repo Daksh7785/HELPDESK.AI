@@ -76,6 +76,7 @@ class TicketResponse(BaseModel):
     ocr_text: str = ""
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
+    env_metadata: dict = {} # IP, Hostname, Browser/OS
 
 
 # --- Persistence Models ---
@@ -446,15 +447,26 @@ async def update_ticket(ticket_id: str, updates: dict):
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
-async def analyze_ticket(request: TicketRequest):
+async def analyze_ticket(request_body: TicketRequest, http_request: Request):
     """Analyze a support ticket and return classification, entities, and duplicate info."""
-    text = request.text
+    text = request_body.text
     
+    # --- Capture Environment Metadata ---
+    client_ip = http_request.client.host if http_request.client else "unknown"
+    user_agent = http_request.headers.get("user-agent", "unknown")
+    origin_host = http_request.headers.get("origin", "unknown")
+    
+    env_metadata = {
+        "ip": client_ip,
+        "user_agent": user_agent,
+        "origin": origin_host
+    }
+
     # --- Layer 1: Local OCR (CPU, no API required) ---
     local_ocr_text = ""
-    if request.image_base64 and ocr_service:
+    if request_body.image_base64 and ocr_service:
         print("[AI] Extracting text via local OCR...")
-        local_ocr_text = ocr_service.extract_text(request.image_base64)
+        local_ocr_text = ocr_service.extract_text(request_body.image_base64)
         if local_ocr_text:
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
@@ -475,9 +487,9 @@ async def analyze_ticket(request: TicketRequest):
         "detected_problem": ""
     }
 
-    if request.image_base64 and gemini_service and gemini_service._initialized:
+    if request_body.image_base64 and gemini_service and gemini_service._initialized:
         print("[AI] Enriching image context with Gemini Vision...")
-        gemini_result = gemini_service.analyze_image(request.image_base64)
+        gemini_result = gemini_service.analyze_image(request_body.image_base64)
         gemini_analysis["image_description"] = gemini_result.get("image_description", "")
         gemini_analysis["detected_problem"] = gemini_result.get("detected_problem", "")
         # Merge Gemini OCR only if local OCR found nothing
@@ -525,7 +537,7 @@ async def analyze_ticket(request: TicketRequest):
 
     # --- Duplicate detection ---
     try:
-        dup_result = duplicate_service.check_duplicate(text, threshold=request.duplicate_sensitivity)
+        dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
     except Exception as e:
         traceback.print_exc()
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
@@ -533,7 +545,7 @@ async def analyze_ticket(request: TicketRequest):
     # --- Reasoning ---
     # Create template-based reasoning (can be upgraded to OpenAI later)
     decision_factors = []
-    if classification["confidence"] > request.confidence_threshold:
+    if classification["confidence"] > request_body.confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
     if entities:
         entity_names = ", ".join([e["text"] for e in entities[:3]])
@@ -559,7 +571,7 @@ async def analyze_ticket(request: TicketRequest):
     highlights = []
 
     # --- Confidence-Based Routing ---
-    REVIEW_THRESHOLD = request.confidence_threshold
+    REVIEW_THRESHOLD = request_body.confidence_threshold
     needs_review = False
     if classification["confidence"] < 0.20:
         needs_review = True
@@ -568,11 +580,16 @@ async def analyze_ticket(request: TicketRequest):
         print(f'[CRITICAL LOW CONFIDENCE] Confidence: {classification["confidence"]:.2f}')
     else:
         # Respect the model's assigned team if above 20%
+        # FIX: Ensure if it's Software/Network/Access it doesn't default to Human Queue regardless of threshold
+        if classification["assigned_team"] == "General Support" and classification["confidence"] < 0.40:
+             classification["assigned_team"] = "Human Review Queue"
+             needs_review = True
+        
         print(f'[AI ROUTED] Team: {classification["assigned_team"]}, Confidence: {classification["confidence"]:.2f}')
 
     # --- Low-Confidence Logging (threshold: 85%) ---
     LOW_CONF_LOG_PATH = Path(__file__).parent / "data" / "low_confidence_log.json"
-    LOW_CONF_THRESHOLD = max(0.85, request.confidence_threshold)
+    LOW_CONF_THRESHOLD = max(0.85, request_body.confidence_threshold)
     if classification["confidence"] < LOW_CONF_THRESHOLD:
         try:
             if LOW_CONF_LOG_PATH.exists() and LOW_CONF_LOG_PATH.stat().st_size > 2:
@@ -631,7 +648,8 @@ async def analyze_ticket(request: TicketRequest):
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
         highlights=highlights,
-        timeline=timeline
+        timeline=timeline,
+        env_metadata=env_metadata
     )
 
 @app.post("/ai/analyze-v2")

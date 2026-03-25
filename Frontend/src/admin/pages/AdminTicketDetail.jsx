@@ -376,6 +376,33 @@ const AdminTicketDetail = () => {
                                     </div>
                                 </div>
                             )}
+
+                            {/* Technical Environment Byte */}
+                            <div className="pt-6 border-t border-slate-100 space-y-4">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic flex items-center gap-2">
+                                    <Globe size={12} className="text-emerald-400" /> Technical Environment
+                                </label>
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">User IP</span>
+                                        <span className="text-[10px] font-black text-slate-700 font-mono italic">
+                                           {ticket.metadata?.env_metadata?.ip || '127.0.0.1'}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Detected Host</span>
+                                        <span className="text-[10px] font-black text-slate-700 italic">
+                                           {entities.find(e => e.label === 'HOSTNAME')?.text || 'Auto-Detecting...'}
+                                        </span>
+                                    </div>
+                                    <div className="flex flex-col p-2.5 bg-slate-50 rounded-xl border border-slate-100">
+                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Device Signature</span>
+                                        <span className="text-[10px] font-medium text-slate-600 leading-tight">
+                                           {ticket.metadata?.env_metadata?.user_agent || 'Neural Interface v1.0'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </Card>
 

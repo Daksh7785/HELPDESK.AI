@@ -307,6 +307,30 @@ const AIUnderstanding = () => {
                                     <span className="text-sm text-gray-500 italic">No specific signals detected.</span>
                                 )}
 
+                                {/* Technical Environment — User visible diagnostic */}
+                                {aiTicket.env_metadata && (
+                                    <div className="mt-6 p-4 rounded-xl border border-indigo-100 bg-indigo-50/30">
+                                        <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                                            <ShieldCheck className="w-3.5 h-3.5" />
+                                            Technical Environment
+                                        </h4>
+                                        <div className="space-y-2">
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Interface IP</span>
+                                                <span className="text-[10px] font-black text-indigo-600 font-mono italic">
+                                                    {aiTicket.env_metadata.ip || '127.0.0.1'}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Device Signal</span>
+                                                <span className="text-[10px] font-medium text-gray-500 truncate ml-4 italic">
+                                                    {aiTicket.env_metadata.user_agent ? aiTicket.env_metadata.user_agent.split(' ').slice(0, 3).join(' ') + '...' : 'SECURE_NODE'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
                                 {/* OCR Screenshot Entities */}
                                 {aiTicket.ocrText && (
                                     <div className="mt-6 p-4 rounded-xl border border-dashed border-gray-200 bg-gray-50/50">

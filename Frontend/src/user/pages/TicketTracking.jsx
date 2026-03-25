@@ -91,7 +91,8 @@ const TicketTracking = () => {
                             company: profile?.company || user?.user_metadata?.company || "System",
                             metadata: {
                                 confidence: aiTicket.confidence,
-                                entities: aiTicket.entities
+                                entities: aiTicket.entities,
+                                env_metadata: aiTicket.env_metadata
                             }
                         }
                     ])

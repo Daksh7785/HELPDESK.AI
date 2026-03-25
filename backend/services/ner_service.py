@@ -19,9 +19,12 @@ import re
 REGEX_PATTERNS = {
     "IP_ADDRESS": r"\b(?:\d{1,3}\.){3}\d{1,3}\b|IP\s?Address",
     "HOSTNAME": r"\b(?:srv|db|app|web|dev|prod)-[\w\d-]+\b|Hostname",
-    "NETWORK_ERROR": r"Network issues|Timeout|Connection failed|Cannot load",
-    "LOGIN_ISSUE": r"logging in|login error|authentication failed",
-    "VLAN": r"\bVLAN\s?\d+\b"
+    "NETWORK_ERROR": r"Network issues|Timeout|Connection failed|Cannot load|Latency|Spikes",
+    "LOGIN_ISSUE": r"logging in|login error|authentication failed|MFA",
+    "VLAN": r"\bVLAN\s?\d+\b",
+    "DATABASE": r"\bSQL\b|\bPostgres\b|\bDatabase\b|\bCluster\b|\bNode\b",
+    "SYSTEM": r"\bProduction\b|\bStaging\b|\bInstance\b|\bMainframe\b",
+    "BROWSER": r"Chrome|Edge|Firefox|Safari|Browser"
 }
 
 
