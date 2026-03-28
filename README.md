@@ -148,3 +148,4 @@ Built with ❤️ by the **HELPDESK.AI Professional** Team.
 *Driving the future of Intelligent Enterprise Support.*
 
 </div>
+Contributed by Keerthi
