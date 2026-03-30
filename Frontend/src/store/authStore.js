@@ -132,6 +132,59 @@ const useAuthStore = create(
                 }
             },
 
+            signInWithMagicLink: async (email) => {
+                set({ loading: true });
+                console.log("Attempting magic link / OTP login for:", email);
+                try {
+                    const { error } = await supabase.auth.signInWithOtp({
+                        email,
+                        options: {
+                            shouldCreateUser: false, // Only existing users
+                        }
+                    });
+
+                    if (error) throw error;
+                    return true;
+                } catch (error) {
+                    console.error("Magic link operation failed:", error.message);
+                    throw error;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
+            verifyOtpAndLogin: async (email, token, type = 'magiclink') => {
+                set({ loading: true });
+                console.log("Attempting OTP verification for:", email);
+                try {
+                    const { data, error } = await supabase.auth.verifyOtp({
+                        email,
+                        token,
+                        type,
+                    });
+
+                    if (error) throw error;
+
+                    const user = data.user;
+                    set({ user });
+
+                    console.log("OTP Login successful, resolving profile...");
+                    const profile = await get().getProfile(user);
+
+                    if (profile?.status === 'pending_email_verification') {
+                         await supabase.auth.signOut();
+                         set({ user: null, profile: null });
+                         throw new Error("Please verify your email address before continuing.");
+                    }
+                    return { user, profile };
+                } catch (error) {
+                    console.error("OTP verification failed:", error.message);
+                    throw error;
+                } finally {
+                    set({ loading: false });
+                }
+            },
+
             signup: async (email, password, fullName, role = 'user', company = '', extraMetadata = {}, emailRedirectTo = undefined) => {
                 set({ loading: true });
                 console.log("Starting signup for:", email);

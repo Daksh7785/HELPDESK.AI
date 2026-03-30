@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import { motion } from "framer-motion";
 import useAuthStore from "../store/authStore";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
 
@@ -9,8 +10,11 @@ function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
+  const [isMagicLink, setIsMagicLink] = useState(false);
+  const [magicLinkSent, setMagicLinkSent] = useState(false);
+
   const navigate = useNavigate();
-  const { login, loading, user, profile } = useAuthStore();
+  const { login, signInWithMagicLink, loading, user, profile } = useAuthStore();
 
   // Auto-redirect if already logged in
   useEffect(() => {
@@ -67,6 +71,24 @@ function Login() {
       setError(err.message || "Invalid credentials. Please try again.");
     }
   };
+
+  const handleMagicLink = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setError("Please enter your email address");
+      return;
+    }
+
+    setError("");
+    try {
+      await signInWithMagicLink(email);
+      setMagicLinkSent(true);
+    } catch (err) {
+      setError(err.message || "Failed to send magic link. Please check your email.");
+    }
+  };
+
+  const currentSubmitHandler = isMagicLink ? handleMagicLink : handleLogin;
 
   return (
     <div className="min-h-screen flex font-sans">
@@ -131,57 +153,89 @@ function Login() {
             </div>
           )}
 
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-              <input
-                type="email"
-                placeholder="Enter your system email"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <label className="block text-sm font-semibold text-gray-700">Password</label>
-                <Link to="/forgot-password" title="Reset your password" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 rounded-md px-1 transition-all">Forgot password?</Link>
+          {magicLinkSent ? (
+            <div className="text-center py-6">
+              <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-6">
+                <BrainCircuit className="w-8 h-8 text-emerald-600" />
               </div>
-              <div className="relative">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Check your email</h3>
+              <p className="text-gray-500 mb-6">We've sent a magic link to <span className="font-semibold text-gray-800">{email}</span></p>
+              <button
+                onClick={() => setMagicLinkSent(false)}
+                className="text-emerald-700 font-bold hover:underline transition-all"
+              >
+                Try another email
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={currentSubmitHandler} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
                 <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium pr-10"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  type="email"
+                  placeholder="Enter your system email"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                </button>
               </div>
-            </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-emerald-900 text-white rounded-xl py-3.5 font-bold hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
-              {loading ? "Signing in..." : "Sign In"}
-            </button>
+              {!isMagicLink && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="block text-sm font-semibold text-gray-700">Password</label>
+                    <Link to="/forgot-password" title="Reset your password" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 rounded-md px-1 transition-all">Forgot password?</Link>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium pr-10"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </motion.div>
+              )}
 
-            <p className="text-center text-sm text-gray-500 mt-8">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-emerald-700 font-bold hover:underline transition-all">
-                Create Account
-              </Link>
-            </p>
-          </form>
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-emerald-900 text-white rounded-xl py-3.5 font-bold hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {loading && <Loader2 className="w-5 h-5 animate-spin" />}
+                {!loading && (isMagicLink ? "Send Magic Link" : "Sign In")}
+              </button>
+
+              <div className="relative flex items-center py-2">
+                <div className="flex-grow border-t border-gray-200"></div>
+                <span className="flex-shrink-0 mx-4 text-gray-400 text-sm font-medium">Or</span>
+                <div className="flex-grow border-t border-gray-200"></div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => { setIsMagicLink(!isMagicLink); setError(""); }}
+                className="w-full bg-white text-emerald-900 border-2 border-emerald-100 rounded-xl py-3.5 font-bold hover:bg-emerald-50 hover:border-emerald-200 transition-all flex items-center justify-center gap-2"
+              >
+                {isMagicLink ? "Sign in with Password" : "Sign in with Magic Link"}
+              </button>
+
+              <p className="text-center text-sm text-gray-500 mt-8">
+                Don't have an account?{" "}
+                <Link to="/signup" className="text-emerald-700 font-bold hover:underline transition-all">
+                  Create Account
+                </Link>
+              </p>
+            </form>
+          )}
         </div>
       </div>
     </div>

@@ -9,7 +9,7 @@ import useTicketStore from '../store/ticketStore';
 /* ─── Animated progress steps at the top ─────────────────────────────────── */
 const steps = [
     { icon: Search, label: 'Your Issue', desc: 'Captured & analysed' },
-    { icon: Database, label: 'Knowledge Base', desc: 'Searching 10 000+ tickets' },
+    { icon: Database, label: 'Case History', desc: 'Scanning 10 000+ cases' },
     { icon: Zap, label: 'Match Found', desc: 'Similarity calculated' },
 ];
 
@@ -86,11 +86,11 @@ function KnowledgeCheck() {
                     {/* Live badge */}
                     <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/25 rounded-full mb-5">
                         <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
-                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.18em]">Live Knowledge Scan</span>
+                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.18em]">Analyzing History</span>
                     </div>
 
                     <h1 className="text-2xl md:text-3xl font-black text-white tracking-tight mb-1">
-                        Checking our <span className="text-emerald-400">knowledge base</span>
+                        Scanning our <span className="text-emerald-400">case history</span>
                     </h1>
                     <p className="text-slate-400 text-sm font-medium mb-9">
                         We searched previous issues to see if this problem was already solved.

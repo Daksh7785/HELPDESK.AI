@@ -39,11 +39,6 @@ const Profile = () => {
     const [userTickets, setUserTickets] = useState([]);
     const [isEditing, setIsEditing] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
-    const [showPasswordModal, setShowPasswordModal] = useState(false);
-    const [passwordForm, setPasswordForm] = useState({
-        newPassword: '',
-        confirmPassword: ''
-    });
     const [formData, setFormData] = useState({
         full_name: '',
         job_title: '',
@@ -136,28 +131,11 @@ const Profile = () => {
         }
     };
 
-    const handlePasswordChange = async () => {
-        if (!passwordForm.newPassword) {
-            showToast("Password cannot be empty", "error");
-            return;
-        }
-        if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-            showToast("Passwords do not match", "error");
-            return;
-        }
-
-        try {
-            const { error } = await supabase.auth.updateUser({
-                password: passwordForm.newPassword
-            });
-            if (error) throw error;
-
-            showToast("Security Credentials updated successfully.", "success");
-            setShowPasswordModal(false);
-            setPasswordForm({ newPassword: '', confirmPassword: '' });
-        } catch (err) {
-            showToast("Update failed: " + err.message, "error");
-        }
+    const handlePasswordChange = () => {
+        // Redirect to the new secure OTP verification flow
+        logout();
+        navigate('/forgot-password');
+        showToast("Session secured. Redirecting to OTP password recovery.", "success");
     };
 
     const handleDeleteAccount = async () => {
@@ -444,7 +422,7 @@ const Profile = () => {
                                 <CardContent className="p-0">
                                     <div className="divide-y divide-slate-50">
                                         <button
-                                            onClick={() => setShowPasswordModal(true)}
+                                            onClick={handlePasswordChange}
                                             className="w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all group"
                                         >
                                             <div className="flex items-center gap-6">
@@ -517,49 +495,7 @@ const Profile = () => {
                 </div>
             </main>
 
-            {/* Change Password Modal */}
-            {showPasswordModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-                    <Card className="w-full max-w-sm bg-white rounded-[2.5rem] border-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="px-10 py-8 bg-slate-900 text-white flex items-center justify-between">
-                            <h3 className="font-black italic uppercase text-lg tracking-tight">Update Credentials</h3>
-                            <button onClick={() => setShowPasswordModal(false)} className="text-white hover:text-emerald-400 transition-colors">
-                                <X size={24} />
-                            </button>
-                        </div>
-                        <div className="p-10 space-y-6">
-                            <div className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">New Password</label>
-                                    <input
-                                        type="password"
-                                        placeholder="Enter new password"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-emerald-600/5 focus:border-emerald-600 transition-all outline-none"
-                                        value={passwordForm.newPassword}
-                                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Confirm Password</label>
-                                    <input
-                                        type="password"
-                                        placeholder="Re-enter password"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-emerald-600/5 focus:border-emerald-600 transition-all outline-none"
-                                        value={passwordForm.confirmPassword}
-                                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                            <button
-                                onClick={handlePasswordChange}
-                                className="w-full py-4 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
-                            >
-                                <Lock size={16} /> Update Password
-                            </button>
-                        </div>
-                    </Card>
-                </div>
-            )}
+
         </div>
     );
 };

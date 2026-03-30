@@ -49,6 +49,7 @@ from backend.services.classifier_v2 import classifier_v2
 from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
+from backend.services.rag_service import RagService
 
 
 # ---------------------------------------------------------------------------
@@ -140,6 +141,7 @@ class HealthResponse(BaseModel):
 classifier_service = ClassifierService()
 ner_service = NERService()
 duplicate_service = DuplicateService()
+rag_service = RagService()
 
 try:
     from backend.services.gemini_service import GeminiService
@@ -173,6 +175,10 @@ async def lifespan(app: FastAPI):
         duplicate_service.load()
     except Exception as e:
         print(f"[WARNING] Duplicate service not loaded: {e}")
+    try:
+        rag_service.load()
+    except Exception as e:
+        print(f"[WARNING] RAG service not loaded: {e}")
     
     if gemini_service:
         print(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
@@ -260,7 +266,6 @@ async def root():
             
             <h1 class="text-4xl md:text-5xl font-bold mb-4">HELPDESK<span class="gradient-text">.AI</span></h1>
             <p class="text-slate-400 text-lg mb-8">Next-Generation IT Ticket Inference Engine</p>
-            
             <div class="inline-flex items-center space-x-2 bg-emerald-500/10 text-emerald-400 px-4 py-2 rounded-full border border-emerald-500/20 mb-10 text-sm font-semibold tracking-wide">
                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>System Online • v1.0.0</span>
@@ -281,10 +286,10 @@ async def root():
 
                 <!-- System Health Button -->
                 <a href="/health" class="btn-hover block w-full bg-slate-800/80 border border-slate-700 hover:border-emerald-500/50 hover:bg-slate-700/80 rounded-xl p-5 group md:col-span-2">
-                    <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between">
                         <div>
                             <h3 class="font-bold text-white mb-1 group-hover:text-emerald-400 transition-colors">System Health Check</h3>
-                            <p class="text-slate-400 text-sm">Verify AI model loading statuses</p>
+                            <p class="text-slate-400 text-sm text-center md:text-left">Verify AI model loading statuses</p>
                         </div>
                         <svg class="w-6 h-6 text-slate-500 group-hover:text-emerald-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </div>
@@ -581,6 +586,20 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
         traceback.print_exc()
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
+    # --- RAG Knowledge Base Check ---
+    # Intercept with RAG Auto-resolution if a strong match is found
+    # RAG helps skip the human queue for known solutions
+    rag_match = None
+    try:
+        rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+        if rag_match:
+            classification["auto_resolve"] = True
+            classification["assigned_team"] = "Auto-Resolve AI"
+            classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
+            print(f"[RAG SUCCESS] Found matching article in Solution Library: '{rag_match['title']}' (Similarity: {rag_match['similarity']:.2f})")
+    except Exception as e:
+        print(f"[RAG SERVICE ERROR] {e}")
+
     # --- Reasoning ---
     # Create template-based reasoning (can be upgraded to OpenAI later)
     decision_factors = []
@@ -591,13 +610,18 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
         decision_factors.append(f"Detected key entities: {entity_names}")
     if dup_result["is_duplicate"]:
         decision_factors.append(f"Significant similarity ({int(dup_result['similarity']*100)}%) to existing ticket")
+    if rag_match:
+        decision_factors.append(f"Identified proven solution from Knowledge Base: '{rag_match['title']}'")
 
     reasoning = (
         f"The AI categorized this as '{classification['category']}' because the content strongly relates to "
         f"{classification['subcategory']}. "
     )
     if classification["auto_resolve"]:
-        reasoning += "Since this is a common, documented issue, it has been flagged for auto-resolution."
+        if rag_match:
+            reasoning += f"An existing knowledge base article matching your exact issue was discovered '{rag_match['title']}'."
+        else:
+            reasoning += "Since this is a common, documented issue, it has been flagged for auto-resolution."
     else:
         reasoning += f"Due to the nature of the request, it has been routed to the {classification['assigned_team']}."
     
@@ -729,7 +753,10 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             if final_ticket_id:
                 msg = "Our AI has automatically categorized your issue and escalated it to the right team."
                 if classification["auto_resolve"]:
-                    msg = "Our AI has detected a known solution for this issue. See the resolution steps below."
+                    if rag_match:
+                        msg = f"Auto-Resolution AI found a perfect solution for your issue in our Knowledge Base.\n\n### {rag_match['title']}\n{rag_match['content']}\n\n*If this solves your issue, you may close the ticket.*"
+                    else:
+                        msg = "Our AI has detected a known solution for this issue. See the resolution steps below."
                 
                 supabase.table("ticket_messages").insert({
                     "ticket_id": final_ticket_id,

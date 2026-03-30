@@ -17,7 +17,7 @@ class DuplicateService:
         self._loaded = False
         # In-memory store: list of (ticket_id, embedding, text)
         self._tickets: list[tuple[str, object, str]] = []
-        self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "knowledge_base.json")
+        self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
 
     def load(self):
@@ -30,7 +30,7 @@ class DuplicateService:
         self._loaded = True
         
         if os.path.exists(self.storage_file):
-            print(f"[DuplicateService] Loading knowledge base from {self.storage_file}...")
+            print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
             import json
             try:
                 with open(self.storage_file, "r") as f:
@@ -61,7 +61,7 @@ class DuplicateService:
             data.append({"ticket_id": ticket_id, "text": text})
             with open(self.storage_file, "w") as f:
                 json.dump(data, f, indent=2)
-            print(f"[DuplicateService] Saved ticket {ticket_id} to knowledge base.")
+            print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
         except Exception as e:
             print(f"[DuplicateService] Failed to save to disk: {e}")
 
