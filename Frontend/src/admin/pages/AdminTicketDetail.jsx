@@ -30,6 +30,8 @@ const AdminTicketDetail = () => {
     const [isReassigning, setIsReassigning] = useState(false);
     const [isCorrecting, setIsCorrecting] = useState(false);
     const [selectedTeam, setSelectedTeam] = useState('');
+    const [selectedAgent, setSelectedAgent] = useState('');
+    const [agents, setAgents] = useState([]);
     const [imageUrl, setImageUrl] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null); // 'accept', 'resolve', 'reassign', 'correct'
     const [isLive, setIsLive] = useState(false);
@@ -46,7 +48,11 @@ const AdminTicketDetail = () => {
         try {
             const { data, error: sbError } = await supabase
                 .from('tickets')
-                .select('*, profiles!user_id(full_name, email)')
+                .select(`
+                    *,
+                    creator:profiles!tickets_user_id_fkey(full_name, email),
+                    assignee:profiles!tickets_assigned_agent_id_fkey(full_name, email)
+                `)
                 .eq('id', ticket_id)
                 .single();
 
@@ -75,7 +81,21 @@ const AdminTicketDetail = () => {
     };
 
     useEffect(() => {
+        // Fetch company agents
+        const fetchAgents = async () => {
+            const { profile } = useAuthStore.getState();
+            if (profile?.company) {
+                const { data } = await supabase
+                    .from('profiles')
+                    .select('id, full_name')
+                    .eq('company', profile.company)
+                    .in('role', ['admin', 'super_admin', 'agent']);
+                setAgents(data || []);
+            }
+        };
+
         fetchTicketDetail();
+        fetchAgents();
 
         // 3. Subscribe to REAL-TIME updates for THIS ticket
         const channel = supabase
@@ -127,16 +147,19 @@ const AdminTicketDetail = () => {
     const handleAccept = () => {
         handleUpdate({
             status: 'in progress',
-            metadata: { ...ticket.metadata, accepted_by: user.id, accepted_at: new Date().toISOString() }
+            assigned_agent_id: user.id
         }, 'accept');
     };
 
     const handleReassign = () => {
-        if (!selectedTeam) return;
-        handleUpdate({
-            assigned_team: selectedTeam,
-            metadata: { ...ticket.metadata, reassigned_at: new Date().toISOString() }
-        }, 'reassign');
+        if (!selectedTeam && !selectedAgent) return;
+        const updates = {};
+        if (selectedTeam) updates.assigned_team = selectedTeam;
+        if (selectedAgent) {
+            updates.assigned_agent_id = selectedAgent;
+            updates.status = 'in progress';
+        }
+        handleUpdate(updates, 'reassign');
         setIsReassigning(false);
     };
 
@@ -205,6 +228,7 @@ const AdminTicketDetail = () => {
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{displayStatus || 'Routing...'}</p>
+                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">• {ticket.assignee?.full_name || 'Unassigned'}</span>
                             <SLABadge priority={displayPriority} createdAt={ticket.created_at} status={displayStatus} compact />
                         </div>
                     </div>
@@ -449,19 +473,38 @@ const AdminTicketDetail = () => {
                             <h3 className="text-xl font-black text-slate-900 uppercase italic">Divert Protocol</h3>
                             <p className="text-xs text-slate-400 font-medium">Reassign incident to a specialized unit.</p>
                         </div>
-                        <div className="space-y-2">
-                            {['Network Team', 'Hardware Team', 'Software Team', 'Account Ops'].map(team => (
-                                <button
-                                    key={team}
-                                    onClick={() => setSelectedTeam(team)}
-                                    className={`w-full text-left px-4 py-3 rounded-xl text-xs font-black uppercase transition-all border-2 ${selectedTeam === team ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-slate-50 border-transparent text-slate-600 hover:border-slate-200'}`}
-                                >
-                                    {team}
-                                </button>
-                            ))}
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target Unit (Team)</label>
+                                <Select
+                                    value={selectedTeam}
+                                    onChange={(e) => setSelectedTeam(e.target.value)}
+                                    buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 rounded-xl px-4 py-3 text-xs font-black uppercase transition-all outline-none flex justify-between items-center"
+                                    options={[
+                                        { value: "", label: "Select Team..." },
+                                        { value: "Network Ops", label: "Network Ops" },
+                                        { value: "Hardware Support", label: "Hardware Support" },
+                                        { value: "Software Team", label: "Software Team" },
+                                        { value: "Security Unit", label: "Security Unit" }
+                                    ]}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Individual Agent</label>
+                                <Select
+                                    value={selectedAgent}
+                                    onChange={(e) => setSelectedAgent(e.target.value)}
+                                    buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 rounded-xl px-4 py-3 text-xs font-black uppercase transition-all outline-none flex justify-between items-center"
+                                    options={[
+                                        { value: "", label: "Select Agent..." },
+                                        ...agents.map(a => ({ value: a.id, label: a.full_name }))
+                                    ]}
+                                />
+                            </div>
                         </div>
                         <div className="flex gap-3 pt-2">
-                            <button onClick={handleReassign} className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Confirm</button>
+                            <button onClick={handleReassign} className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Execute Handoff</button>
                             <button onClick={() => setIsReassigning(false)} className="flex-1 py-3 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest">Abort</button>
                         </div>
                     </Card>

@@ -11,6 +11,9 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     const [unreadCount, setUnreadCount] = useState(0);
     const [isAtBottom, setIsAtBottom] = useState(true);
 
+    const [isInternal, setIsInternal] = useState(false);
+    const [isStaff, setIsStaff] = useState(false);
+
     const { user, profile } = useAuthStore();
     const messagesEndRef = useRef(null);
     const scrollContainerRef = useRef(null);
@@ -19,25 +22,48 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
 
     // ─── Fetch Messages ──────────────────────────────────────────────────
     const fetchMessages = async () => {
-        if (!ticketId) {
-            console.warn("[TicketChat] fetchMessages aborted: No ticketId provided.");
-            setLoading(false);
-            return;
-        }
+        if (!ticketId) return;
         setLoading(true);
         try {
-            console.log(`[TicketChat] Fetching messages for ticket: ${ticketId}`);
-            const { data, error } = await supabase
+            // 1. Fetch Public Messages
+            const { data: publicMsgs, error: pubErr } = await supabase
                 .from('ticket_messages')
                 .select('*')
                 .eq('ticket_id', ticketId)
                 .order('created_at', { ascending: true });
 
-            if (error) {
-                console.error("[TicketChat] Supabase error:", error);
-                throw error;
+            if (pubErr) throw pubErr;
+
+            // 2. Fetch Internal Notes if staff
+            let internalMsgs = [];
+            const userRole = profile?.role || 'user';
+            const isStaffUser = ['admin', 'super_admin', 'agent', 'master_admin'].includes(userRole);
+            setIsStaff(isStaffUser);
+
+            if (isStaffUser) {
+                const { data: privateMsgs, error: privErr } = await supabase
+                    .from('internal_notes')
+                    .select('*, profiles:agent_id(full_name)')
+                    .eq('ticket_id', ticketId)
+                    .order('created_at', { ascending: true });
+
+                if (!privErr && privateMsgs) {
+                    internalMsgs = privateMsgs.map(m => ({
+                        ...m,
+                        message: m.content,
+                        sender_name: m.profiles?.full_name || 'Agent',
+                        sender_role: 'admin',
+                        is_internal: true
+                    }));
+                }
             }
-            setMessages(data || []);
+
+            // 3. Combine and Sort
+            const combined = [...(publicMsgs || []), ...internalMsgs].sort(
+                (a, b) => new Date(a.created_at) - new Date(b.created_at)
+            );
+
+            setMessages(combined);
         } catch (err) {
             console.error("Error fetching messages:", err);
         } finally {
@@ -138,34 +164,49 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
         e.preventDefault();
         if (!inputValue.trim() || !user) return;
 
-        const messageData = {
+        const content = inputValue.trim();
+        const currentIsInternal = isInternal;
+
+        // Optimistic UI update
+        const tempMessage = {
+            id: `temp-${Date.now()}`,
             ticket_id: ticketId,
             sender_id: user.id,
             sender_name: profile?.full_name || user.email,
             sender_role: profile?.role || 'user',
-            message: inputValue.trim(),
-        };
-
-        const tempMessage = {
-            ...messageData,
-            id: `temp-${Date.now()}`,
+            message: content,
+            is_internal: currentIsInternal,
             created_at: new Date().toISOString()
         };
 
         setMessages(prev => [...prev, tempMessage]);
         setInputValue('');
-        inputRef.current?.focus();
         setTimeout(() => scrollToBottom(), 50);
 
         try {
-            const { error } = await supabase
-                .from('ticket_messages')
-                .insert([messageData]);
-
-            if (error) throw error;
+            if (currentIsInternal) {
+                const { error } = await supabase
+                    .from('internal_notes')
+                    .insert([{
+                        ticket_id: ticketId,
+                        agent_id: user.id,
+                        content: content
+                    }]);
+                if (error) throw error;
+            } else {
+                const { error } = await supabase
+                    .from('ticket_messages')
+                    .insert([{
+                        ticket_id: ticketId,
+                        sender_id: user.id,
+                        sender_name: profile?.full_name || user.email,
+                        sender_role: profile?.role || 'user',
+                        message: content
+                    }]);
+                if (error) throw error;
+            }
         } catch (err) {
             console.error("Error sending message:", err);
-            // Revert optimistic update on failure
             setMessages(prev => prev.filter(m => m.id !== tempMessage.id));
         }
     };
@@ -203,26 +244,37 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     return (
         <div className="flex flex-col h-full w-full bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {/* Header */}
-            <div className="px-5 py-4 border-b border-gray-100 bg-slate-50/60 flex items-center justify-between shrink-0">
-                <h2 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-emerald-500" />
-                    Support Conversation
-                </h2>
-                <div className="flex items-center gap-3">
-                    {unreadCount > 0 && (
-                        <button
-                            onClick={() => { scrollToBottom(); setUnreadCount(0); }}
-                            className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white text-[10px] font-black rounded-full animate-pulse shadow-lg shadow-emerald-500/20"
-                        >
-                            {unreadCount} new ↓
-                        </button>
+            <div className="px-5 py-3 border-b border-gray-100 bg-slate-50/60 flex items-center justify-between shrink-0">
+                <div className="flex flex-col">
+                    <h2 className="text-[11px] font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-2">
+                        <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
+                        Communication Hub
+                    </h2>
+                </div>
+
+                <div className="flex items-center gap-4">
+                    {isStaff && (
+                        <div className="flex items-center bg-white border border-slate-200 rounded-full p-0.5 shadow-sm">
+                            <button
+                                onClick={() => setIsInternal(false)}
+                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${!isInternal ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                Public
+                            </button>
+                            <button
+                                onClick={() => setIsInternal(true)}
+                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${isInternal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                🔒 Internal
+                            </button>
+                        </div>
                     )}
-                    <span className="flex items-center gap-1.5">
-                        <span className="relative flex h-2 w-2">
+                    <span className="flex items-center gap-1.5 grayscale opacity-50">
+                        <span className="relative flex h-1.5 w-1.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
                         </span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Live</span>
+                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Live</span>
                     </span>
                 </div>
             </div>
@@ -268,17 +320,19 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                                 )}
 
                                 <div className={`max-w-[80%] flex flex-col gap-1 ${isMe ? 'items-end' : 'items-start'}`}>
-                                    <div className="flex items-center gap-2 px-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
-                                            {isMe ? 'You' : msg.sender_name || (isAdmin ? 'Support' : 'User')}
+                                    <div className={`flex items-center gap-2 px-1`}>
+                                        <span className={`text-[9px] font-black uppercase tracking-widest ${msg.is_internal ? 'text-amber-600' : 'text-slate-400'}`}>
+                                            {msg.is_internal ? '🔒 Internal Note' : (isMe ? 'You' : msg.sender_name || (isAdmin ? 'Support ' : 'User'))}
                                         </span>
                                         <span className="text-[8px] font-bold text-slate-300">
                                             {formatTime(msg.created_at)}
                                         </span>
                                     </div>
 
-                                    <div className={`px-4 py-2 rounded-2xl text-sm leading-relaxed shadow-sm
-                                        ${isMe ? 'bg-emerald-600 text-white rounded-tr-sm' : 'bg-white border border-slate-100 text-slate-800 rounded-tl-sm'}`}>
+                                    <div className={`px-4 py-2 rounded-2xl text-sm leading-relaxed shadow-sm transition-all duration-300
+                                        ${msg.is_internal 
+                                            ? 'bg-amber-50 border-2 border-amber-100 text-amber-900 italic rounded-b-sm' 
+                                            : isMe ? 'bg-emerald-600 text-white rounded-tr-sm' : 'bg-white border border-slate-100 text-slate-800 rounded-tl-sm'}`}>
                                         {msg.message}
                                     </div>
                                 </div>
@@ -310,15 +364,15 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                         value={inputValue}
                         onChange={handleInputChange}
                         placeholder="Type your message..."
-                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/10 transition-all placeholder:text-slate-400"
+                        className={`flex-1 ${isInternal ? 'bg-amber-50 border-amber-200 focus:ring-amber-500/10' : 'bg-slate-50 border-slate-200 focus:ring-emerald-500/10'} border rounded-xl px-4 py-3 text-sm font-medium focus:outline-none transition-all placeholder:text-slate-400`}
                     />
                     <button
                         type="submit"
                         disabled={!inputValue.trim() || !user}
-                        className="px-5 py-3 bg-emerald-600 text-white font-black text-[10px] uppercase tracking-widest rounded-xl hover:bg-emerald-700 active:scale-95 transition-all disabled:opacity-40 shadow-md shadow-emerald-600/15 flex items-center gap-2"
+                        className={`px-5 py-3 ${isInternal ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/15' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/15'} text-white font-black text-[10px] uppercase tracking-widest rounded-xl active:scale-95 transition-all disabled:opacity-40 shadow-md flex items-center gap-2`}
                     >
-                        <Send size={14} />
-                        <span className="hidden sm:inline">Send</span>
+                        {isInternal ? <ShieldCheck size={14} /> : <Send size={14} />}
+                        <span className="hidden sm:inline">{isInternal ? 'Post Note' : 'Send'}</span>
                     </button>
                 </form>
             </div>

@@ -44,19 +44,50 @@ const AdminTickets = () => {
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
     const [teamFilter, setTeamFilter] = useState('All');
+    const [agents, setAgents] = useState([]); // All staff/admins in the company
+
+    const fetchInitialData = async () => {
+        setLoading(true);
+        try {
+            const { profile } = useAuthStore.getState();
+            
+            // 1. Fetch Agents for this company
+            if (profile?.company) {
+                const { data: agentData } = await supabase
+                    .from('profiles')
+                    .select('id, full_name, role')
+                    .eq('company', profile.company)
+                    .in('role', ['admin', 'super_admin', 'agent']);
+                setAgents(agentData || []);
+            }
+
+            // 2. Fetch Tickets (Join with both Creator and Assignee)
+            fetchTickets();
+        } catch (err) {
+            console.error("Initialization error:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const fetchTickets = async () => {
-        setLoading(true);
         setError(null);
         try {
-            let query = supabase.from('tickets').select('*, profiles!user_id(full_name, email)');
-
             const { profile } = useAuthStore.getState();
+            
+            // Join with profiles for both user_id (creator) and assigned_agent_id (assignee)
+            let query = supabase
+                .from('tickets')
+                .select(`
+                    *,
+                    creator:profiles!tickets_user_id_fkey(full_name, email),
+                    assignee:profiles!tickets_assigned_agent_id_fkey(full_name, email)
+                `);
+
             if (profile?.role === 'admin' && profile?.company) {
                 query = query.eq('company', profile.company);
             }
 
-            // Apply DB-side filters if they aren't 'All'
             if (statusFilter !== 'All') query = query.eq('status', statusFilter.toLowerCase());
             if (categoryFilter !== 'All') query = query.eq('category', categoryFilter);
             if (priorityFilter !== 'All') query = query.eq('priority', priorityFilter.toLowerCase());
@@ -64,39 +95,24 @@ const AdminTickets = () => {
 
             let { data, error: sbError } = await query.order('created_at', { ascending: false });
 
-            // MULTI-STRATEGY FALLBACK: If the relationship join fails (PGRST200), try secondary methods
-            if (sbError && sbError.code === 'PGRST200') {
-                console.warn("⚠️ Relationship join (FK) failed, trying secondary join...");
-                const altQuery = supabase.from('tickets').select('*, profiles(full_name, email)');
-                const { data: altData, error: altError } = await altQuery.eq('company', profile?.company).order('created_at', { ascending: false });
-
-                if (!altError) {
-                    setTickets(altData || []);
-                } else {
-                    console.warn("⚠️ Secondary join failed, falling back to simple fetch...");
-                    const { data: basicData, error: basicError } = await supabase.from('tickets')
-                        .select('*')
-                        .eq('company', profile?.company)
-                        .order('created_at', { ascending: false });
-
-                    if (basicError) throw basicError;
-                    setTickets(basicData || []);
-                }
-            } else if (sbError) {
-                throw sbError;
+            if (sbError) {
+                // Secondary check: If the FK alias fails, try a simpler select
+                console.warn("Retrying fetch without relationship aliases...");
+                const basicQuery = supabase.from('tickets').select('*, profiles(full_name, email)');
+                const { data: basicData, error: basicError } = await basicQuery.eq('company', profile?.company).order('created_at', { ascending: false });
+                if (basicError) throw basicError;
+                setTickets(basicData || []);
             } else {
                 setTickets(data || []);
             }
         } catch (err) {
             console.error("Admin fetch error:", err);
             setError(err.message);
-        } finally {
-            setLoading(false);
         }
     };
 
     useEffect(() => {
-        fetchTickets();
+        fetchInitialData();
 
         // 4. Real-time subscription to ticket changes
         const { profile } = useAuthStore.getState();
@@ -280,7 +296,8 @@ const AdminTickets = () => {
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">User</th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Subject</th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Priority</th>
-                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Assignee Team</th>
+                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">AI Score</th>
+                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Agent</th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</th>
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">SLA</th>
                                 <th className="px-6 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Actions</th>
@@ -326,22 +343,71 @@ const AdminTickets = () => {
 
                                     {/* Priority (Editable) */}
                                     <td className="px-6 py-6">
-                                        <Select
+                                        <select
                                             value={String(ticket.priority || 'medium').toLowerCase()}
                                             onChange={(e) => handleUpdateTicket(ticket.id, { priority: e.target.value })}
-                                            buttonClassName={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border outline-none cursor-pointer transition-all flex items-center justify-between ${getPriorityStyle(ticket.priority)}`}
-                                            options={priorities.filter(p => p !== 'All').map(p => ({ value: p.toLowerCase(), label: p }))}
-                                        />
+                                            className={`px-3 py-1.5 rounded-xl text-[9px] font-black uppercase tracking-wider border outline-none cursor-pointer transition-all flex items-center justify-between ${getPriorityStyle(ticket.priority)}`}
+                                        >
+                                            {priorities.filter(p => p !== 'All').map(p => (
+                                                <option key={p} value={p.toLowerCase()}>{p}</option>
+                                            ))}
+                                        </select>
+                                    </td>
+
+                                    {/* AI Score (Confidence) */}
+                                    <td className="px-6 py-6">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center text-[8px] font-black
+                                                ${ticket.confidence >= 0.8 ? 'border-emerald-500 text-emerald-600 bg-emerald-50' : 
+                                                  ticket.confidence >= 0.5 ? 'border-amber-500 text-amber-600 bg-amber-50' : 
+                                                  'border-red-500 text-red-600 bg-red-50'}`}>
+                                                {(ticket.confidence * 100).toFixed(0)}%
+                                            </div>
+                                            <div className="flex flex-col">
+                                                <span className="text-[8px] font-black text-slate-400 uppercase">Confidence</span>
+                                                <div className="w-12 h-1 bg-slate-100 rounded-full overflow-hidden mt-0.5">
+                                                    <div 
+                                                        className={`h-full ${getConfidenceColor(ticket.confidence || 0)}`} 
+                                                        style={{ width: `${(ticket.confidence || 0) * 100}%` }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
                                     </td>
 
                                     {/* Assigned Team (Editable) */}
+                                    <td className="px-6 py-6 text-emerald-600 font-bold text-[10px]">
+                                        {ticket.assigned_team || 'General'}
+                                    </td>
+
+                                    {/* Agent Assignee (Editable) */}
                                     <td className="px-6 py-6">
-                                        <Select
-                                            value={ticket.assigned_team}
-                                            onChange={(e) => handleUpdateTicket(ticket.id, { assigned_team: e.target.value })}
-                                            buttonClassName="bg-transparent text-[10px] font-black text-slate-600 uppercase tracking-tight italic outline-none cursor-pointer hover:underline underline-offset-4 decoration-indigo-400/50 decoration-2 flex justify-between items-center"
-                                            options={teams.filter(t => t !== 'All').map(t => ({ value: t, label: t }))}
-                                        />
+                                        <div className="flex flex-col gap-1 min-w-[120px]">
+                                            {ticket.assigned_agent_id ? (
+                                                <select
+                                                    value={ticket.assigned_agent_id}
+                                                    onChange={(e) => handleUpdateTicket(ticket.id, { 
+                                                        assigned_agent_id: e.target.value,
+                                                        status: 'in progress'
+                                                    })}
+                                                    className="bg-transparent text-[10px] font-black text-indigo-600 uppercase tracking-tight italic border-none focus:ring-0 cursor-pointer hover:underline"
+                                                >
+                                                    {agents.map(a => (
+                                                        <option key={a.id} value={a.id}>{a.full_name}</option>
+                                                    ))}
+                                                </select>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleUpdateTicket(ticket.id, { 
+                                                        assigned_agent_id: user.id,
+                                                        status: 'in progress'
+                                                    })}
+                                                    className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                                >
+                                                    Claim
+                                                </button>
+                                            )}
+                                        </div>
                                     </td>
 
                                     {/* Status (Editable) */}

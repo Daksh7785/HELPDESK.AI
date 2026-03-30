@@ -7,6 +7,8 @@ import { Card } from "../../components/ui/card";
 import AIProcessingSteps from "../components/AIProcessingSteps";
 import useTicketStore from "../../store/ticketStore";
 import useAdminStore from '../../admin/store/adminStore';
+import useAuthStore from '../../store/authStore';
+import { supabase } from '../../lib/supabaseClient';
 import { API_CONFIG } from '../../config';
 
 const steps = [
@@ -42,11 +44,48 @@ const AIProcessing = () => {
                 // Classification, NER, priority, team assignment, duplicate detection → local ML model
                 // Summary generation → backend Gemini service (no redundant frontend API call)
                 const { settings } = useAdminStore.getState();
+                const { user, profile } = useAuthStore.getState();
+
+                // ── Upload Image if present ──
+                let uploadedImageUrl = null;
+                if (image_base64) {
+                    try {
+                        const base64Data = image_base64.split(',')[1] || image_base64;
+                        const contentType = image_base64.match(/data:(.*?);/)?.[1] || 'image/jpeg';
+                        const fileExt = contentType.split('/')[1] || 'jpeg';
+
+                        const byteCharacters = atob(base64Data);
+                        const byteNumbers = new Array(byteCharacters.length);
+                        for (let i = 0; i < byteCharacters.length; i++) {
+                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                        }
+                        const byteArray = new Uint8Array(byteNumbers);
+                        const blob = new Blob([byteArray], { type: contentType });
+
+                        const fileName = `${user?.id || 'anon'}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+                        const { error: uploadError } = await supabase.storage
+                            .from('ticket-attachments')
+                            .upload(fileName, blob, { contentType, upsert: true });
+
+                        if (!uploadError) {
+                            const { data: publicUrlData } = supabase.storage
+                                .from('ticket-attachments')
+                                .getPublicUrl(fileName);
+                            uploadedImageUrl = publicUrlData?.publicUrl;
+                        }
+                    } catch (err) {
+                        console.error("[AIProcessing] Image upload failed:", err);
+                    }
+                }
 
                 const response = await axios.post(`${API_CONFIG.BACKEND_URL}/ai/analyze_ticket`, {
                     text: text,
                     image_text: image_text || "",
                     image_base64: image_base64 || "",
+                    user_id: user?.id,
+                    company: profile?.company || user?.user_metadata?.company || "System",
+                    image_url: uploadedImageUrl,
                     confidence_threshold: settings.aiConfidenceThreshold,
                     duplicate_sensitivity: settings.duplicateSensitivity
                 });

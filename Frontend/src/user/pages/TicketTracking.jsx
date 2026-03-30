@@ -19,167 +19,39 @@ const TicketTracking = () => {
     const [error, setError] = useState(null);
     const [createdTicket, setCreatedTicket] = useState(null);
     const hasCreated = useRef(false);
-
     useEffect(() => {
         if (!aiTicket) {
             navigate('/create-ticket');
             return;
         }
 
-        const createTicket = async () => {
+        const finalizeTracking = async () => {
             if (hasCreated.current) return;
             hasCreated.current = true;
 
             try {
-                const now = new Date().toISOString();
+                // The ticket was ALREADY created in the backend during AI analysis.
+                // We just need to ensure our local store is synced.
+                if (aiTicket.id || aiTicket.ticket_id) {
+                    setCreatedTicket(aiTicket);
+                    setIsCreating(false);
 
-                // 0. Upload image if present
-                let uploadedImageUrl = null;
-
-                if (aiTicket.capturedFileBase64) {
-                    try {
-                        const base64Data = aiTicket.capturedFileBase64.split(',')[1] || aiTicket.capturedFileBase64;
-                        const contentType = aiTicket.capturedFileBase64.match(/data:(.*?);/)?.[1] || 'image/jpeg';
-                        const fileExt = contentType.split('/')[1] || 'jpeg';
-
-                        // Convert base64 to Blob
-                        const byteCharacters = atob(base64Data);
-                        const byteNumbers = new Array(byteCharacters.length);
-                        for (let i = 0; i < byteCharacters.length; i++) {
-                            byteNumbers[i] = byteCharacters.charCodeAt(i);
-                        }
-                        const byteArray = new Uint8Array(byteNumbers);
-                        const blob = new Blob([byteArray], { type: contentType });
-
-                        const fileName = `${user?.id || 'anon'}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-
-                        const { error: uploadError } = await supabase.storage
-                            .from('ticket-attachments')
-                            .upload(fileName, blob, {
-                                contentType: contentType,
-                                upsert: true
-                            });
-
-                        if (!uploadError) {
-                            const { data: publicUrlData } = supabase.storage
-                                .from('ticket-attachments')
-                                .getPublicUrl(fileName);
-                            uploadedImageUrl = publicUrlData?.publicUrl;
-                        } else {
-                            console.error("Failed to upload image:", uploadError);
-                        }
-                    } catch (uploadErr) {
-                        console.error("Error processing image upload:", uploadErr);
-                    }
+                    // Redirect to the detail page after a short confirmation pause
+                    setTimeout(() => {
+                        navigate(`/ticket/${aiTicket.id || aiTicket.ticket_id}`);
+                    }, 2500);
+                } else {
+                    throw new Error("Missing ID from backend analysis.");
                 }
-
-                // 1. Insert into Supabase — the DB generates the real ID
-                const { data, error: sbError } = await supabase
-                    .from('tickets')
-                    .insert([
-                        {
-                            user_id: user?.id,
-                            subject: aiTicket.summary,
-                            description: aiTicket.originalIssue || aiTicket.summary,
-                            category: aiTicket.category,
-                            subcategory: aiTicket.subcategory,
-                            priority: aiTicket.priority,
-                            assigned_team: aiTicket.assigned_team || "General Support",
-                            status: "pending_human",
-                            image_url: uploadedImageUrl,
-                            // Fallback chain: Real Profile Metadata -> Auth Metadata -> "System"
-                            company: profile?.company || user?.user_metadata?.company || "System",
-                            metadata: {
-                                confidence: aiTicket.confidence,
-                                entities: aiTicket.entities,
-                                env_metadata: aiTicket.env_metadata
-                            }
-                        }
-                    ])
-                    .select();
-
-                if (sbError) throw sbError;
-
-                const supabaseRecord = data[0];
-
-                // 2. Insert Initial Messages into the chat table for persistence
-                const initialMessages = [
-                    {
-                        ticket_id: supabaseRecord.id,
-                        sender_id: user?.id,
-                        sender_name: user?.user_metadata?.full_name || user?.email || "User",
-                        sender_role: "user",
-                        message: aiTicket.originalIssue || aiTicket.summary
-                    },
-                    {
-                        ticket_id: supabaseRecord.id,
-                        sender_id: null, // AI system ID
-                        sender_name: "AI Support Assistant",
-                        sender_role: "admin",
-                        message: "Our AI has automatically categorized your issue and escalated it to our support team. An agent will be with you shortly."
-                    }
-                ];
-
-                await supabase.from('ticket_messages').insert(initialMessages);
-
-                // 3. Build the local ticket using the SUPABASE ID as the single source of truth
-                const newTicket = {
-                    ticket_id: String(supabaseRecord.id),
-                    id: supabaseRecord.id,
-                    text: aiTicket.originalIssue || aiTicket.summary,
-                    summary: aiTicket.summary,
-                    subject: aiTicket.summary,
-                    description: aiTicket.originalIssue || aiTicket.summary,
-                    category: aiTicket.category,
-                    subcategory: aiTicket.subcategory,
-                    priority: aiTicket.priority,
-                    assigned_team: aiTicket.assigned_team || "General Support",
-                    status: "pending_human",
-                    company: profile?.company || user?.user_metadata?.company || "System",
-                    image_url: uploadedImageUrl,
-                    confidence: aiTicket.confidence,
-                    entities: aiTicket.entities,
-                    image: uploadedImageUrl || aiTicket.capturedFileBase64,
-                    user_name: user?.user_metadata?.full_name || user?.email || "Anonymous",
-                    user_email: user?.email || "No email provided",
-                    owner_id: user?.id,
-                    user_id: user?.id,
-                    created_at: supabaseRecord.created_at || now,
-                    timestamp: supabaseRecord.created_at || now,
-                    messages: [
-                        {
-                            sender: "user",
-                            user_name: user?.user_metadata?.full_name || "User",
-                            message: aiTicket.originalIssue || aiTicket.summary,
-                            timestamp: now
-                        },
-                        {
-                            sender: "admin",
-                            user_name: "AI Support Assistant",
-                            message: "Our AI has automatically categorized your issue and escalated it to our support team. An agent will be with you shortly.",
-                            timestamp: now
-                        }
-                    ]
-                };
-
-                addTicket(newTicket);
-                setActiveTicket(newTicket);
-                setCreatedTicket(newTicket);
-
-                setIsCreating(false);
-                setTimeout(() => {
-                    navigate(`/ticket/${supabaseRecord.id}`);
-                }, 2500);
-
             } catch (err) {
-                console.error("Failed to create ticket in Supabase:", err);
+                console.error("Tracking Error:", err);
                 setError(err.message);
                 setIsCreating(false);
             }
         };
 
-        createTicket();
-    }, [aiTicket, navigate, addTicket, setActiveTicket, user]);
+        finalizeTracking();
+    }, [aiTicket, navigate, user]);
 
     if (!aiTicket) return null;
 
