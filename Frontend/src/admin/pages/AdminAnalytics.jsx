@@ -53,8 +53,8 @@ const AdminAnalytics = () => {
         };
 
         const total = tickets.length;
-        const open = tickets.filter(t => t.status?.toLowerCase() === 'open').length;
-        const resolved = tickets.filter(t => ['resolved', 'closed'].includes(t.status?.toLowerCase())).length;
+        const resolved = tickets.filter(t => t.status?.toLowerCase().includes('resolv')).length;
+        const open = tickets.filter(t => !t.status?.toLowerCase().includes('resolv')).length;
         const highPriority = tickets.filter(t => t.priority?.toLowerCase() === 'high').length;
 
         // 1. Tickets Per Day (Volume Timeline)

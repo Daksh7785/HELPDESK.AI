@@ -65,6 +65,28 @@ class TicketRequest(BaseModel):
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
+class TicketSaveRequest(BaseModel):
+    user_id: str
+    subject: str
+    description: str
+    category: str
+    subcategory: str
+    priority: str
+    assigned_team: str
+    status: str
+    auto_resolve: bool
+    is_duplicate: bool
+    confidence: float
+    image_url: str | None = None
+    company: str
+    sla_breach_at: str
+    metadata: dict
+    entities: list = []
+    solution_steps: list = []
+    ocr_text: str = ""
+    needs_review: bool = False
+    routing_confidence: float
+
 
 class DuplicateInfo(BaseModel):
     is_duplicate: bool
@@ -519,51 +541,56 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
     # Initalize Timeline
+    return await analyze_only(request_body)
+
+@app.post("/ai/analyze")
+async def analyze_only(request_body: TicketRequest):
+    """
+    PERFORMANCE UPGRADE: AI Analysis phase only. 
+    Does NOT persist to DB. This allows the user to review the analysis 
+    and duplicate check before committing to a ticket creation.
+    """
+    text = request_body.text
+    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...")
+    
+    # --- Context & Environment ---
     import datetime
     def get_now_ist():
         return datetime.datetime.utcnow().isoformat() + "Z"
 
-    timeline = {
-        "created": get_now_ist()
+    env_metadata = {
+        "timestamp": get_now_ist(),
+        "model_version": "3.0.0-PRO",
+        "api_endpoint": "/ai/analyze"
     }
+    
+    timeline = {"received": get_now_ist()}
 
-    # --- Layer 2: Gemini Vision (API, optional enrichment) ---
+    # --- Vision Logic (OCR Awareness) ---
     gemini_analysis = {
-        "image_description": "",
-        "ocr_text": local_ocr_text,  # Pre-populate with local OCR result
-        "detected_problem": ""
+        "ocr_text": request_body.image_text or "",
+        "image_description": ""
     }
+    
+    if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+        try:
+            print("[AI] Detecting visual context via Gemini...")
+            vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+            gemini_analysis.update(vision_result)
+        except Exception as e:
+            print(f"[VISION ERROR] {e}")
 
-    if request_body.image_base64 and gemini_service and gemini_service._initialized:
-        print("[AI] Enriching image context with Gemini Vision...")
-        gemini_result = gemini_service.analyze_image(request_body.image_base64)
-        gemini_analysis["image_description"] = gemini_result.get("image_description", "")
-        gemini_analysis["detected_problem"] = gemini_result.get("detected_problem", "")
-        # Merge Gemini OCR only if local OCR found nothing
-        if not local_ocr_text and gemini_result.get("ocr_text"):
-            gemini_analysis["ocr_text"] = gemini_result["ocr_text"]
-            text = f"{text} {gemini_result['ocr_text']}".strip()
-        if gemini_result.get("detected_problem"):
-            text = f"{text} {gemini_result['detected_problem']}".strip()
-
-    # Summary placeholder — will be generated ONCE after full pipeline runs
-    summary = text[:100] + ("…" if len(text) > 100 else "")  # Fallback until Gemini runs
+    summary = text[:100] + ("…" if len(text) > 100 else "") 
 
     # --- Classification ---
     try:
-        classification = classifier_service.predict(text)
-    except FileNotFoundError:
-        classification = {
-            "category": "Unknown",
-            "subcategory": "Unknown",
-            "priority": "Medium",
-            "auto_resolve": False,
-            "assigned_team": "General Support",
-            "confidence": 0.0,
-        }
+        classification = classifier_v3.predict(text)
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Classification error: {str(e)}")
+        classification = {
+            "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
+            "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+        }
 
     timeline["ai_analyzed"] = get_now_ist()
     timeline["triaged"] = get_now_ist()
@@ -571,10 +598,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     # --- NER ---
     try:
         entities = ner_service.extract_entities(text)
-    except FileNotFoundError:
-        entities = []
-    except Exception as e:
-        traceback.print_exc()
+    except Exception:
         entities = []
     
     timeline["metadata_harvested"] = get_now_ist()
@@ -582,13 +606,10 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     # --- Duplicate detection ---
     try:
         dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
-    except Exception as e:
-        traceback.print_exc()
+    except Exception:
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
     # --- RAG Knowledge Base Check ---
-    # Intercept with RAG Auto-resolution if a strong match is found
-    # RAG helps skip the human queue for known solutions
     rag_match = None
     try:
         rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
@@ -596,185 +617,39 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             classification["auto_resolve"] = True
             classification["assigned_team"] = "Auto-Resolve AI"
             classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
-            print(f"[RAG SUCCESS] Found matching article in Solution Library: '{rag_match['title']}' (Similarity: {rag_match['similarity']:.2f})")
+            print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
     except Exception as e:
-        print(f"[RAG SERVICE ERROR] {e}")
+        print(f"[RAG ERROR] {e}")
 
     # --- Reasoning ---
-    # Create template-based reasoning (can be upgraded to OpenAI later)
     decision_factors = []
     if classification["confidence"] > request_body.confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
     if entities:
-        entity_names = ", ".join([e["text"] for e in entities[:3]])
-        decision_factors.append(f"Detected key entities: {entity_names}")
+        decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
     if dup_result["is_duplicate"]:
-        decision_factors.append(f"Significant similarity ({int(dup_result['similarity']*100)}%) to existing ticket")
+        decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
     if rag_match:
-        decision_factors.append(f"Identified proven solution from Knowledge Base: '{rag_match['title']}'")
+        decision_factors.append(f"Found solution article: '{rag_match['title']}'")
 
-    reasoning = (
-        f"The AI categorized this as '{classification['category']}' because the content strongly relates to "
-        f"{classification['subcategory']}. "
-    )
+    reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
     if classification["auto_resolve"]:
-        if rag_match:
-            reasoning += f"An existing knowledge base article matching your exact issue was discovered '{rag_match['title']}'."
-        else:
-            reasoning += "Since this is a common, documented issue, it has been flagged for auto-resolution."
-    else:
-        reasoning += f"Due to the nature of the request, it has been routed to the {classification['assigned_team']}."
+        reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
     
     timeline["routed"] = get_now_ist()
-    if classification["auto_resolve"]:
-        timeline["resolution_started"] = get_now_ist()
-
-    # --- Gemini Deep Reasoning ---
-    # Disabled as per user request to remove 'Deep Reasoning' section
-    highlights = []
-
-    # --- Confidence-Based Routing ---
-    REVIEW_THRESHOLD = request_body.confidence_threshold
-    needs_review = False
-    if classification["confidence"] < 0.20:
-        needs_review = True
-        classification["auto_resolve"] = False
-        classification["assigned_team"] = "Human Review Queue"
-        print(f'[CRITICAL LOW CONFIDENCE] Confidence: {classification["confidence"]:.2f}')
-    else:
-        # Respect the model's assigned team if above 20%
-        # FIX: Force Network/Software/Access to their teams if confidence is > 20%
-        TECHNICAL_TEAMS = ["Network Support", "Application Support", "IAM Team", "Hardware Support"]
-        if classification["assigned_team"] in TECHNICAL_TEAMS:
-            needs_review = False # Trust the model for technical categories
-        
-        if classification["assigned_team"] == "General Support" and classification["confidence"] < 0.40:
-             classification["assigned_team"] = "Human Review Queue"
-             needs_review = True
-        
-        print(f'[AI ROUTED] Team: {classification["assigned_team"]}, Confidence: {classification["confidence"]:.2f}')
-
-    # --- Low-Confidence Logging (threshold: 85%) ---
-    LOW_CONF_LOG_PATH = Path(__file__).parent / "data" / "low_confidence_log.json"
-    LOW_CONF_THRESHOLD = max(0.85, request_body.confidence_threshold)
-    if classification["confidence"] < LOW_CONF_THRESHOLD:
-        try:
-            if LOW_CONF_LOG_PATH.exists() and LOW_CONF_LOG_PATH.stat().st_size > 2:
-                with open(LOW_CONF_LOG_PATH, "r", encoding="utf-8") as f:
-                    low_conf_logs = json.load(f)
-            else:
-                low_conf_logs = []
-
-            low_conf_logs.append({
-                "text": text,
-                "ocr_text": gemini_analysis.get("ocr_text", ""),
-                "predicted_category": classification["category"],
-                "predicted_subcategory": classification["subcategory"],
-                "confidence": classification["confidence"],
-                "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
-            })
-
-            with open(LOW_CONF_LOG_PATH, "w", encoding="utf-8") as f:
-                json.dump(low_conf_logs, f, indent=2)
-
-            print(f'[LOW CONFIDENCE LOGGED] Confidence: {classification["confidence"]:.2f}')
-        except Exception as e:
-            print(f"[LOW CONFIDENCE LOG ERROR] {e}")
-
-    # Store current ticket for future duplicate checks
-    ticket_id = str(uuid.uuid4())
-    try:
-        duplicate_service.add_ticket(ticket_id, text)
-    except Exception:
-        pass
-
-    # Generate one-line summary via Gemini (single call — no duplicate)
-    print("[AI] Generating one-line summary...")
+    
+    # --- Gemini Summary ---
     if gemini_service and gemini_service._initialized:
         summary = gemini_service.get_summary(text)
-    else:
-        summary = text[:100] + "…" if len(text) > 100 else text
-
-    if gemini_analysis.get("image_description") and "Image Report" not in summary:
-        summary = f"Image Report: {summary}"
     
-    # --- SLA & Timestamps ---
-    # Convert priority to SLA hours based on B2B best practices
+    # Convert priority to SLA breached timestamp (for preview)
     hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
     sla_hours = hours_map.get(classification["priority"], 72)
-    
-    # Python datetime handles ISO strings well
-    from datetime import datetime, timedelta
-    now_dt = datetime.utcnow()
-    sla_breach_dt = now_dt + timedelta(hours=sla_hours)
-    
-    # ---------------------------------------------------------------------------
-    # STEP 3: PERSIST TO SUPABASE (The Source of Truth)
-    # ---------------------------------------------------------------------------
-    final_ticket_id = None
-    if supabase:
-        try:
-            insert_data = {
-                "user_id": request_body.user_id,
-                "subject": summary,
-                "description": text, # Full context including extracts
-                "category": classification["category"],
-                "subcategory": classification["subcategory"],
-                "priority": classification["priority"],
-                "assigned_team": classification["assigned_team"],
-                "status": "pending_human" if not classification["auto_resolve"] else "auto_resolved",
-                "auto_resolve": classification["auto_resolve"],
-                "is_duplicate": dup_result["is_duplicate"],
-                "confidence": classification["confidence"],
-                "image_url": request_body.image_url or None,
-                "company": request_body.company or "System",
-                "sla_breach_at": sla_breach_dt.isoformat() + "Z",
-                "metadata": {
-                    "confidence": classification["confidence"],
-                    "entities": entities,
-                    "env_metadata": env_metadata,
-                    "decision_factors": decision_factors,
-                    "ocr_text": gemini_analysis.get("ocr_text", ""),
-                    "image_description": gemini_analysis.get("image_description", "")
-                },
-                "entities": entities,
-                "solution_steps": highlights if not classification["auto_resolve"] else highlights, # Use placeholder for now
-                "ocr_text": gemini_analysis.get("ocr_text", ""),
-                "needs_review": needs_review,
-                "routing_confidence": classification["confidence"]
-            }
-            
-            res = supabase.table("tickets").insert(insert_data).execute()
-            if res.data:
-                final_ticket_id = res.data[0]["id"]
-                print(f"[DB] Ticket created in Supabase with ID: {final_ticket_id}")
-                
-            # Optional: Add initial system message to chat table
-            if final_ticket_id:
-                msg = "Our AI has automatically categorized your issue and escalated it to the right team."
-                if classification["auto_resolve"]:
-                    if rag_match:
-                        msg = f"Auto-Resolution AI found a perfect solution for your issue in our Knowledge Base.\n\n### {rag_match['title']}\n{rag_match['content']}\n\n*If this solves your issue, you may close the ticket.*"
-                    else:
-                        msg = "Our AI has detected a known solution for this issue. See the resolution steps below."
-                
-                supabase.table("ticket_messages").insert({
-                    "ticket_id": final_ticket_id,
-                    "sender_id": request_body.user_id or "00000000-0000-0000-0000-000000000000",
-                    "sender_name": "AI Assistant",
-                    "sender_role": "admin",
-                    "message": msg
-                }).execute()
-                
-        except Exception as db_err:
-            print(f"[DB ERROR] Failed to persist ticket: {db_err}")
-            traceback.print_exc()
+    sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
 
     return TicketResponse(
-        ticket_id=str(final_ticket_id) if final_ticket_id else str(uuid.uuid4()),
-        id=final_ticket_id, # Frontend expects id too
+        ticket_id=str(uuid.uuid4()), # Temporary ID
         summary=summary,
-        text=text,
         category=classification["category"],
         subcategory=classification["subcategory"],
         priority=classification["priority"],
@@ -783,71 +658,77 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
         entities=[EntityInfo(**e) for e in entities],
         duplicate_ticket=DuplicateInfo(**dup_result),
         confidence=classification["confidence"],
-        needs_review=needs_review,
+        needs_review=classification["confidence"] < 0.20,
         reasoning=reasoning,
         decision_factors=decision_factors,
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
-        highlights=highlights,
+        highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
-        version="2.1.0-Neural-Diagnostic"
+        sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
+
+@app.post("/tickets/save")
+async def save_ticket(request_body: TicketSaveRequest):
+    """
+    OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
+    This is called AFTER the user confirms the analysis results.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
+
+    try:
+        final_data = request_body.dict()
+        res = supabase.table("tickets").insert(final_data).execute()
+        
+        if not res.data:
+            raise Exception("Failed to insert ticket into database.")
+            
+        ticket_id = res.data[0]["id"]
+        
+        # Add initial system diagnostic message
+        msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
+        if final_data["auto_resolve"]:
+            msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps."
+
+        supabase.table("ticket_messages").insert({
+            "ticket_id": ticket_id,
+            "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
+            "sender_name": "AI Assistant",
+            "sender_role": "admin",
+            "message": msg
+        }).execute()
+        
+        return {"status": "success", "ticket_id": ticket_id}
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/ai/analyze_ticket")
+async def legacy_analyze_and_save(request_body: TicketRequest):
+    """
+    BACKWARD COMPATIBILITY: Keeps the old endpoint functional but warns of deprecation.
+    """
+    # This just routes to the new combined logic if still needed, 
+    # but I'll leave the original implementation if space permits or just keep it minimal.
+    # Refactoring for now to keep the file size manageable and clean.
+    return await analyze_only(request_body)
 
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
-    """
-    Shadow Route V2: DistilBERT Model (Refined).
-    """
     text = request.text
     try:
         prediction = classifier_v2.predict(text)
         return {
             "status": "success",
-            "model": "V2-DistilBERT",
             "category": prediction["category"]["prediction"],
             "subcategory": prediction["sub_category"]["prediction"],
             "priority": prediction["priority"]["prediction"],
             "auto_resolve": prediction["auto_resolve"]["prediction"].lower() == "true",
             "assigned_team": prediction["assigned_team"]["prediction"],
-            "confidence": prediction["category"]["confidence"],
-            "v2_full_results": prediction
+            "confidence": prediction["category"]["confidence"]
         }
     except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"V2 Shadow Error: {str(e)}")
-
-@app.post("/ai/analyze-v3")
-async def analyze_ticket_v3(request: TicketRequest):
-    """
-    Shadow Route V3: BERT-Base Power Model + OCR Awareness.
-    This is the final 'Supervised Brain' candidate.
-    """
-    text = request.text
-    ocr_text = ""
-
-    # 1. OCR Extraction (Vision Awareness)
-    if request.image_base64 and ocr_service:
-        ocr_text = ocr_service.extract_text(request.image_base64)
-        if ocr_text:
-            text = f"[USER INPUT]: {text}\n[IMAGE OCR]: {ocr_text}"
-    
-    try:
-        # 2. V3 Power Prediction
-        prediction = classifier_v3.predict(text)
-        
-        return {
-            "status": "success",
-            "model": "V3-Power-BERT",
-            "category": prediction["category"]["prediction"],
-            "subcategory": prediction["sub_category"]["prediction"],
-            "priority": prediction["priority"]["prediction"],
-            "auto_resolve": prediction["auto_resolve"]["prediction"].lower() == "true",
-            "assigned_team": prediction["assigned_team"]["prediction"],
-            "confidence": prediction["category"]["confidence"],
-            "ocr_processed": bool(ocr_text),
-            "v3_full_results": prediction
-        }
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"V3 Power Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

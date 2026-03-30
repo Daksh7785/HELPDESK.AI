@@ -93,11 +93,12 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
                                     onMouseEnter={() => setHovered(star)}
                                     onMouseLeave={() => setHovered(0)}
                                     onClick={() => { setSelected(star); setError(''); }}
-                                    className="transition-transform hover:scale-110 active:scale-95"
+                                    className="transition-all duration-200"
+                                    style={{ transform: hovered === star ? 'scale(1.2)' : 'scale(1)' }}
                                 >
                                     <Star
-                                        className={`w-9 h-9 transition-colors ${star <= (hovered || selected)
-                                                ? 'text-yellow-400 fill-yellow-400'
+                                        className={`w-9 h-9 transition-all duration-300 ${star <= (hovered || selected)
+                                                ? 'text-yellow-400 fill-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]'
                                                 : 'text-gray-200 fill-gray-200'
                                             }`}
                                     />

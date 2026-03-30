@@ -36,7 +36,7 @@ const AdminDashboard = () => {
         try {
             let query = supabase
                 .from('tickets')
-                .select('*')
+                .select('*, profiles(full_name, email, company)')
                 .order('created_at', { ascending: false });
 
             const { profile } = useAuthStore.getState();

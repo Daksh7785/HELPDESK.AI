@@ -66,12 +66,59 @@ const DuplicateDetection = () => {
         return () => clearInterval(interval);
     }, [isLoading, aiTicket, isDuplicate]);
 
+    const handleCreateTicket = async () => {
+        if (!aiTicket) return;
+        setIsLoading(true);
+        try {
+            const { user, profile } = useAuthStore.getState();
+            // Map AI Analysis into the TicketSaveRequest format
+            const savePayload = {
+                user_id: user?.id,
+                subject: aiTicket.summary,
+                description: aiTicket.originalIssue,
+                category: aiTicket.category,
+                subcategory: aiTicket.subcategory,
+                priority: aiTicket.priority,
+                assigned_team: aiTicket.assigned_team,
+                status: aiTicket.auto_resolve ? 'auto_resolved' : 'pending_human',
+                auto_resolve: aiTicket.auto_resolve,
+                is_duplicate: aiTicket.duplicate_ticket?.is_duplicate || false,
+                confidence: aiTicket.confidence,
+                image_url: aiTicket.image_url || null,
+                company: profile?.company || "System",
+                sla_breach_at: aiTicket.sla_breach_at,
+                metadata: {
+                    confidence: aiTicket.confidence,
+                    entities: aiTicket.entities,
+                    decision_factors: aiTicket.decision_factors,
+                    ocr_text: aiTicket.ocr_text,
+                    image_description: aiTicket.image_description
+                },
+                entities: aiTicket.entities,
+                solution_steps: resolutionSteps || [],
+                ocr_text: aiTicket.ocr_text || "",
+                needs_review: aiTicket.needs_review,
+                routing_confidence: aiTicket.confidence
+            };
+
+            const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload);
+            if (res.data?.ticket_id) {
+                navigate(`/ticket/${res.data.ticket_id}`);
+            }
+        } catch (err) {
+            console.error("Failed to save ticket:", err);
+            navigate('/create-ticket');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     // Navigate when countdown reaches 0
     useEffect(() => {
         if (countdown === 0 && !isDuplicate && aiTicket) {
-            navigate('/ticket-tracking');
+            handleCreateTicket();
         }
-    }, [countdown, isDuplicate, aiTicket, navigate]);
+    }, [countdown, isDuplicate, aiTicket]);
 
     if (isLoading) return <SkeletonLoader />;
     if (!aiTicket) return null;
@@ -246,7 +293,7 @@ const DuplicateDetection = () => {
                                     <CheckCircle2 size={16} />
                                     Try This Solution
                                 </button>
-                                <button onClick={() => navigate('/ticket-tracking')}
+                                <button onClick={handleCreateTicket}
                                     className="flex-1 bg-white border border-slate-200 text-slate-700 px-6 py-3.5 rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-50 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
                                     Create New Ticket
                                     <ArrowRight size={16} className="text-slate-400" />

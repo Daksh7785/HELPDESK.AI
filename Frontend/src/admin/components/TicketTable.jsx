@@ -100,8 +100,12 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                             <User size={18} />
                                         </div>
                                         <div className="flex flex-col max-w-[280px]">
-                                            <span className="text-sm font-black text-slate-900 tracking-tight leading-tight line-clamp-1 group-hover:text-indigo-700 transition-colors uppercase italic">{ticket.user_name || 'System User'}</span>
-                                            <span className="text-xs text-slate-400 font-medium line-clamp-1 lowercase">{ticket.user_email || 'No email associated'}</span>
+                                            <span className="text-sm font-black text-slate-900 tracking-tight leading-tight line-clamp-1 group-hover:text-indigo-700 transition-colors uppercase italic">
+                                                {ticket.profiles?.full_name || ticket.user_name || 'System User'}
+                                            </span>
+                                            <span className="text-xs text-slate-400 font-medium line-clamp-1 lowercase">
+                                                {ticket.profiles?.email || ticket.user_email || 'No email associated'}
+                                            </span>
                                             <p className="text-[11px] font-bold text-slate-500 mt-1 line-clamp-1">{ticket.summary}</p>
                                         </div>
                                     </div>
