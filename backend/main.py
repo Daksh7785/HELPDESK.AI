@@ -7,6 +7,8 @@ GET  /health             →  service health check
 import os
 import sys
 import uuid
+import json
+import datetime
 import traceback
 import warnings
 from contextlib import asynccontextmanager
@@ -16,6 +18,9 @@ warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
 from fastapi import FastAPI, Depends, HTTPException, Request
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pathlib import Path
@@ -175,9 +180,19 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Rate limiter — 10 AI requests per minute per IP (free tier protection)
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CORS — locked to production + local dev only
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://helpdeskaiv1.vercel.app",
+        "http://localhost:5173",
+        "http://localhost:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -373,20 +388,20 @@ async def log_correction(raw_request: Request):
         "corrected_prediction": corrected_prediction,
         "changed_fields": changed_fields,
         "confidence": confidence,
-        "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z"
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
     }
 
     try:
         if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
             with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
-                logs = __import__("json").load(f)
+                logs = json.load(f)
         else:
             logs = []
 
         logs.append(entry)
 
         with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
-            __import__("json").dump(logs, f, indent=2)
+            json.dump(logs, f, indent=2)
 
         print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
         return {"status": "saved", "changed_fields": changed_fields}
@@ -448,6 +463,7 @@ async def update_ticket(ticket_id: str, updates: dict):
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
+@limiter.limit("10/minute")
 async def analyze_ticket(request_body: TicketRequest, http_request: Request):
     """Analyze a support ticket and return classification, entities, and duplicate info."""
     text = request_body.text
@@ -500,11 +516,8 @@ async def analyze_ticket(request_body: TicketRequest, http_request: Request):
         if gemini_result.get("detected_problem"):
             text = f"{text} {gemini_result['detected_problem']}".strip()
 
-    # Summary: Generate a concise one-line summary using Gemini
-    summary = text[:100] + ("…" if len(text) > 100 else "") # Fallback
-    if gemini_service and gemini_service._initialized:
-        print("[AI] Generating one-line summary...")
-        summary = gemini_service.get_summary(text)
+    # Summary placeholder — will be generated ONCE after full pipeline runs
+    summary = text[:100] + ("…" if len(text) > 100 else "")  # Fallback until Gemini runs
 
     # --- Classification ---
     try:
@@ -599,7 +612,7 @@ async def analyze_ticket(request_body: TicketRequest, http_request: Request):
         try:
             if LOW_CONF_LOG_PATH.exists() and LOW_CONF_LOG_PATH.stat().st_size > 2:
                 with open(LOW_CONF_LOG_PATH, "r", encoding="utf-8") as f:
-                    low_conf_logs = __import__("json").load(f)
+                    low_conf_logs = json.load(f)
             else:
                 low_conf_logs = []
 
@@ -609,11 +622,11 @@ async def analyze_ticket(request_body: TicketRequest, http_request: Request):
                 "predicted_category": classification["category"],
                 "predicted_subcategory": classification["subcategory"],
                 "confidence": classification["confidence"],
-                "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z"
+                "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
             })
 
             with open(LOW_CONF_LOG_PATH, "w", encoding="utf-8") as f:
-                __import__("json").dump(low_conf_logs, f, indent=2)
+                json.dump(low_conf_logs, f, indent=2)
 
             print(f'[LOW CONFIDENCE LOGGED] Confidence: {classification["confidence"]:.2f}')
         except Exception as e:
@@ -626,11 +639,12 @@ async def analyze_ticket(request_body: TicketRequest, http_request: Request):
     except Exception:
         pass
 
-    # Generate a concise 1-2 line summary for the UI using AI
-    if gemini_service:
+    # Generate one-line summary via Gemini (single call — no duplicate)
+    print("[AI] Generating one-line summary...")
+    if gemini_service and gemini_service._initialized:
         summary = gemini_service.get_summary(text)
     else:
-        summary = text[:100] + "..." if len(text) > 100 else text
+        summary = text[:100] + "…" if len(text) > 100 else text
 
     if gemini_analysis.get("image_description") and "Image Report" not in summary:
         summary = f"Image Report: {summary}"
