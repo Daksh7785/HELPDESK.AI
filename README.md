@@ -1,5 +1,7 @@
 <div align="center">
 
+
+
 # `H E L P D E S K . A I`
 **The Intelligent Standard for Enterprise IT Service Management**
 
@@ -77,6 +79,17 @@ Using `sentence-transformers` and **Cosine Similarity**, the system prevents "Ti
 - **Intelligent OCR**: Built-in screenshot analysis to pull error codes from user-uploaded images via Tesseract.
 - **Gemini Reasoning**: Advanced LLM integration for generating human-like auto-resolutions and knowledge base summaries.
 
+### 🚀 Team Quick Start (Interns)
+If you are part of the development team, run the following command in PowerShell to set up your environment automatically:
+```powershell
+.\setup_workspace.ps1
+```
+This script will:
+1. Verify Node.js and Python installations.
+2. Install all Frontend dependencies (`npm install`).
+3. Create a Python virtual environment for the Backend and install all AI dependencies.
+4. Verify your `.env` configuration.
+
 ---
 
 ## ✨ Feature Ecosystem
@@ -145,7 +158,4 @@ Navigate to `/backend` and refer to internal documentation for Python environmen
 <div align="center">
 
 Built with ❤️ by the **HELPDESK.AI Professional** Team. 
-*Driving the future of Intelligent Enterprise Support.*
-
-</div>
-I contributed to the frontend development of this project, focusing on improving the user interface and user experience.
+*Driving the future of Intelligent Enterprise Support

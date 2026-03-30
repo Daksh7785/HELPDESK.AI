@@ -135,7 +135,7 @@ const TEAM_MEMBERS = [
         role: "Member",
         team: "Frontend",
         image: "/team/kpvvssmphara.jpg",
-        linkedin: "https://www.linkedin.com/in/phani",
+        linkedin: "https://www.linkedin.com/in/phani-kotha-26073439b",
         github: "https://github.com/phanikotha18-sudo"
     },
 
