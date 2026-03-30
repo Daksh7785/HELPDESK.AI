@@ -78,7 +78,7 @@ class EntityInfo(BaseModel):
 
 
 class TicketResponse(BaseModel):
-    id: int | None = None
+    id: str | int | None = None
     ticket_id: str | None = None
     summary: str
     category: str
@@ -487,14 +487,16 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
-async def analyze_ticket(request_body: TicketRequest, http_request: Request):
-    """Analyze a support ticket and return classification, entities, and duplicate info."""
+async def analyze_ticket(request_body: TicketRequest, request: Request):
+    """
+    Main endpoint for analyzing a new ticket using the cascade of local AI models.
+    """
     text = request_body.text
     
-    # --- Capture Environment Metadata ---
-    client_ip = http_request.client.host if http_request.client else "unknown"
-    user_agent = http_request.headers.get("user-agent", "unknown")
-    origin_host = http_request.headers.get("origin", "unknown")
+    # Grab client metadata
+    client_ip = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")
+    origin_host = request.headers.get("origin", "unknown")
     
     env_metadata = {
         "ip": client_ip,
@@ -731,7 +733,7 @@ async def analyze_ticket(request_body: TicketRequest, http_request: Request):
                 
                 supabase.table("ticket_messages").insert({
                     "ticket_id": final_ticket_id,
-                    "sender_id": None, # System
+                    "sender_id": request_body.user_id or "00000000-0000-0000-0000-000000000000",
                     "sender_name": "AI Assistant",
                     "sender_role": "admin",
                     "message": msg
