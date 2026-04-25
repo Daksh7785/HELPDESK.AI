@@ -15,10 +15,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
-      - name: Install Hugging Face Hub
+      - name: Install Hugging Face CLI
         run: pip install huggingface_hub
       - name: Upload to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          huggingface-cli upload ritesh19180/ai-helpdesk-api . . --repo-type space --delete-missing --token $HF_TOKEN
+          hf upload ritesh19180/ai-helpdesk-api . . --repo-type space --delete-missing --token $HF_TOKEN
