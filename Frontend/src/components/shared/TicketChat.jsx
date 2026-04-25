@@ -242,40 +242,32 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
     });
 
     return (
-        <div className="flex flex-col h-full w-full bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* Header */}
-            <div className="px-5 py-3 border-b border-gray-100 bg-slate-50/60 flex items-center justify-between shrink-0">
-                <div className="flex flex-col">
-                    <h2 className="text-[11px] font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-2">
-                        <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
-                        Communication Hub
+            <div style={{ padding: '12px 20px', borderBottom: '1px solid #f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h2 style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>
+                        AI ASSISTANT
                     </h2>
                 </div>
 
                 <div className="flex items-center gap-4">
                     {isStaff && (
-                        <div className="flex items-center bg-white border border-slate-200 rounded-full p-0.5 shadow-sm">
+                        <div style={{ display: 'flex', alignItems: 'center', background: 'transparent', gap: '4px' }}>
                             <button
                                 onClick={() => setIsInternal(false)}
-                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${!isInternal ? 'bg-slate-900 text-white' : 'text-slate-400 hover:text-slate-600'}`}
+                                style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 700, borderRadius: '8px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', ...( !isInternal ? { background: '#0f1f12', color: '#ffffff' } : { background: 'transparent', color: '#6b7280' } ) }}
                             >
-                                Public
+                                PUBLIC
                             </button>
                             <button
                                 onClick={() => setIsInternal(true)}
-                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${isInternal ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20' : 'text-slate-400 hover:text-slate-600'}`}
+                                style={{ padding: '4px 12px', fontSize: '10px', fontWeight: 700, borderRadius: '8px', cursor: 'pointer', border: 'none', transition: 'all 0.2s', ...( isInternal ? { background: '#0f1f12', color: '#ffffff' } : { background: 'transparent', color: '#6b7280' } ) }}
                             >
-                                🔒 Internal
+                                INTERNAL
                             </button>
                         </div>
                     )}
-                    <span className="flex items-center gap-1.5 grayscale opacity-50">
-                        <span className="relative flex h-1.5 w-1.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                        </span>
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Live</span>
-                    </span>
                 </div>
             </div>
 
@@ -283,7 +275,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
             <div
                 ref={scrollContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto px-5 py-4 space-y-1 bg-gray-50/20"
+                className="flex-1 overflow-y-auto px-5 py-4 space-y-1 bg-white"
             >
                 {loading ? (
                     <div className="h-full flex flex-col items-center justify-center">
@@ -329,10 +321,16 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                                         </span>
                                     </div>
 
-                                    <div className={`px-4 py-2 rounded-2xl text-sm leading-relaxed shadow-sm transition-all duration-300
-                                        ${msg.is_internal 
-                                            ? 'bg-amber-50 border-2 border-amber-100 text-amber-900 italic rounded-b-sm' 
-                                            : isMe ? 'bg-emerald-600 text-white rounded-tr-sm' : 'bg-white border border-slate-100 text-slate-800 rounded-tl-sm'}`}>
+                                    <div style={{
+                                        padding: '14px 18px', fontSize: '13px', lineHeight: 1.5,
+                                        ...(!isMe && !msg.is_internal ? {
+                                            background: '#f0fdf4', color: '#0f1f12', borderRadius: '14px', border: '1px solid #d1fae5'
+                                        } : msg.is_internal ? {
+                                            background: '#fef3c7', color: '#92400e', borderRadius: '14px', border: '1px solid #fde68a'
+                                        } : {
+                                            background: '#0f1f12', color: '#ffffff', borderRadius: '14px'
+                                        })
+                                    }}>
                                         {msg.message}
                                     </div>
                                 </div>
@@ -356,7 +354,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
             </div>
 
             {/* Input */}
-            <div className="px-5 py-4 border-t border-gray-100 bg-white shrink-0">
+            <div style={{ padding: '16px 20px', borderTop: '1px solid #f0fdf4', background: '#ffffff' }}>
                 <form onSubmit={handleSend} className="flex gap-3">
                     <input
                         ref={inputRef}
@@ -364,15 +362,17 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                         value={inputValue}
                         onChange={handleInputChange}
                         placeholder="Type your message..."
-                        className={`flex-1 ${isInternal ? 'bg-amber-50 border-amber-200 focus:ring-amber-500/10' : 'bg-slate-50 border-slate-200 focus:ring-emerald-500/10'} border rounded-xl px-4 py-3 text-sm font-medium focus:outline-none transition-all placeholder:text-slate-400`}
+                        style={{ flex: 1, background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: '12px', padding: '10px 16px', fontSize: '13px', outline: 'none' }}
+                        className="focus:border-emerald-500 transition-colors"
                     />
                     <button
                         type="submit"
                         disabled={!inputValue.trim() || !user}
-                        className={`px-5 py-3 ${isInternal ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/15' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/15'} text-white font-black text-[10px] uppercase tracking-widest rounded-xl active:scale-95 transition-all disabled:opacity-40 shadow-md flex items-center gap-2`}
+                        style={{ padding: '10px 20px', background: '#16a34a', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '12px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
+                        className="active:scale-95 transition-transform disabled:opacity-50"
                     >
                         {isInternal ? <ShieldCheck size={14} /> : <Send size={14} />}
-                        <span className="hidden sm:inline">{isInternal ? 'Post Note' : 'Send'}</span>
+                        <span className="hidden sm:inline">{isInternal ? 'Note' : 'Send'}</span>
                     </button>
                 </form>
             </div>

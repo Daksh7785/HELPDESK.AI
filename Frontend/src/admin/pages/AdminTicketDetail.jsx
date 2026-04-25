@@ -1,22 +1,21 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     CheckCircle2, Clock, AlertCircle, User,
     Activity, ShieldCheck, Briefcase, Globe, BarChart3,
     ImageIcon, CornerUpLeft, CheckSquare, XCircle,
-    ArrowUpRight, Cpu, Binary, Eye, MessageSquare,
-    ChevronDown, Save, Eraser, MoveRight, Loader2, Star
+    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
-import { Card, CardContent } from "../../components/ui/card";
+import { Card } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
-import { formatFullTimestamp, formatTimelineDate } from "../../utils/dateUtils";
-import TicketTimeline from "../../user/components/TicketTimeline"; // Reuse the 6-step timeline
+import { formatFullTimestamp } from "../../utils/dateUtils";
+import TicketTimeline from "../../user/components/TicketTimeline";
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
@@ -33,7 +32,7 @@ const AdminTicketDetail = () => {
     const [selectedAgent, setSelectedAgent] = useState('');
     const [agents, setAgents] = useState([]);
     const [imageUrl, setImageUrl] = useState(null);
-    const [isUpdating, setIsUpdating] = useState(null); // 'accept', 'resolve', 'reassign', 'correct'
+    const [isUpdating, setIsUpdating] = useState(null);
     const [isLive, setIsLive] = useState(false);
 
     const [correctionForm, setCorrectionForm] = useState({
@@ -66,7 +65,6 @@ const AdminTicketDetail = () => {
                 priority: data.priority || ''
             });
 
-            // Parse metadata for image URL
             if (data.image_url) {
                 setImageUrl(data.image_url);
             } else if (data.metadata?.capturedFileBase64) {
@@ -81,7 +79,6 @@ const AdminTicketDetail = () => {
     };
 
     useEffect(() => {
-        // Fetch company agents
         const fetchAgents = async () => {
             const { profile } = useAuthStore.getState();
             if (profile?.company) {
@@ -97,7 +94,6 @@ const AdminTicketDetail = () => {
         fetchTicketDetail();
         fetchAgents();
 
-        // 3. Subscribe to REAL-TIME updates for THIS ticket
         const channel = supabase
             .channel(`admin_sync_${ticket_id}`)
             .on(
@@ -109,7 +105,6 @@ const AdminTicketDetail = () => {
                     filter: `id=eq.${ticket_id}`
                 },
                 (payload) => {
-                    console.log("Admin real-time update received:", payload.new);
                     setTicket(prev => ({ ...prev, ...payload.new }));
                 }
             )
@@ -123,8 +118,6 @@ const AdminTicketDetail = () => {
         };
     }, [ticket_id]);
 
-
-    // 2. Administrative Action Handlers
     const handleUpdate = async (updates, actionType) => {
         setIsUpdating(actionType);
         try {
@@ -134,7 +127,6 @@ const AdminTicketDetail = () => {
                 .eq('id', ticket_id);
 
             if (upError) throw upError;
-            // Real-time listener will update local state, but optimistic update is safer for UI
             setTicket(prev => ({ ...prev, ...updates }));
             showToast("System synchronization complete. Incident record updated.", "success");
         } catch (err) {
@@ -206,42 +198,58 @@ const AdminTicketDetail = () => {
     const displayText = ticket.description || ticket.text || displaySummary;
 
     return (
-        <div className="space-y-6 relative pb-20 animate-in fade-in duration-700">
-            {/* 0. Sticky Action Terminal */}
-            <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200 -mx-6 md:-mx-10 px-6 md:px-10 py-4 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
-                <div className="flex items-center gap-4">
+        <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="-m-6 p-6 md:-m-10 md:p-10 space-y-6 animate-in fade-in duration-700">
+            {/* Header */}
+            <div style={{
+                background: '#ffffff',
+                borderBottom: '1px solid #f0fdf4',
+                boxShadow: '0 1px 8px rgba(0,0,0,0.05)',
+                padding: '14px 28px',
+                position: 'sticky', top: 0, zIndex: 50,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                flexWrap: 'wrap', gap: '16px', margin: '-24px -24px 24px -24px'
+            }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     <button
                         onClick={() => navigate('/admin/tickets')}
-                        className="p-2 hover:bg-slate-100 rounded-xl text-slate-500 transition-colors"
+                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        className="hover:bg-slate-50 rounded-xl transition-colors"
                     >
                         <CornerUpLeft size={20} />
                     </button>
                     <div>
-                        <div className="flex items-center gap-2">
-                            <h2 className="text-sm font-black text-slate-900 uppercase tracking-tighter italic">Inspection // #{formatTicketId(ticket.id)}</h2>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <h2 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#0f1f12', fontSize: '14px', margin: 0, textTransform: 'uppercase' }}>
+                                INSPECTION // #{formatTicketId(ticket.id)}
+                            </h2>
                             {isLive && (
-                                <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 rounded-md border border-emerald-100">
-                                    <div className="w-1 h-1 bg-emerald-500 rounded-full animate-pulse"></div>
-                                    <span className="text-[8px] font-black text-emerald-600 uppercase tracking-widest">Live Sync</span>
+                                <div style={{ background: '#dcfce7', color: '#15803d', borderRadius: '100px', fontSize: '10px', fontWeight: 700, padding: '2px 10px', display: 'flex', alignItems: 'center', gap: '6px', textTransform: 'uppercase' }}>
+                                    <div style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#22c55e' }} className="animate-pulse"></div>
+                                    LIVE SYNC
                                 </div>
                             )}
                         </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{displayStatus || 'Routing...'}</p>
-                            <span className="text-[9px] font-black text-indigo-400 uppercase tracking-widest">• {ticket.assignee?.full_name || 'Unassigned'}</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', color: displayStatus?.includes('progress') ? '#2563eb' : displayStatus?.includes('resolv') ? '#16a34a' : '#d97706', background: displayStatus?.includes('progress') ? '#dbeafe' : displayStatus?.includes('resolv') ? '#dcfce7' : '#fef3c7', padding: '2px 8px', borderRadius: '100px' }}>
+                                {displayStatus === 'pending' ? 'PENDING_HUMAN' : displayStatus}
+                            </span>
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#475569', background: '#f1f5f9', padding: '2px 8px', borderRadius: '100px', textTransform: 'uppercase' }}>
+                                {ticket.assignee?.full_name || 'UNASSIGNED'}
+                            </span>
                             <SLABadge priority={displayPriority} createdAt={ticket.created_at} status={displayStatus} compact />
                         </div>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-2 w-full md:w-auto">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', maxWidth: 'max-content' }}>
                     {!ticket.status?.toLowerCase()?.includes('resolv') ? (
                         <>
                             {ticket.status?.toLowerCase() !== 'in progress' && (
                                 <button
                                     onClick={handleAccept}
                                     disabled={!!isUpdating}
-                                    className="flex-1 md:flex-none px-5 py-2.5 bg-emerald-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-emerald-700 shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                                    style={{ background: 'linear-gradient(135deg,#16a34a,#22c55e)', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', padding: '10px 20px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(34,160,69,0.3)', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}
+                                    className="disabled:opacity-50"
                                 >
                                     {isUpdating === 'accept' ? <Loader2 size={14} className="animate-spin" /> : <CheckSquare size={14} />}
                                     Accept
@@ -250,150 +258,132 @@ const AdminTicketDetail = () => {
                             <button
                                 onClick={() => setIsReassigning(true)}
                                 disabled={!!isUpdating}
-                                className="flex-1 md:flex-none px-5 py-2.5 bg-white border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                                style={{ background: '#ffffff', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontWeight: 600, fontSize: '11px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}
+                                className="disabled:opacity-50"
                             >
-                                {isUpdating === 'reassign' ? <Loader2 size={14} className="animate-spin" /> : <MoveRight size={14} className="text-indigo-500" />}
+                                {isUpdating === 'reassign' ? <Loader2 size={14} className="animate-spin" /> : <MoveRight size={14} color="#374151" />}
                                 Divert
                             </button>
                             <button
                                 onClick={() => setIsCorrecting(true)}
                                 disabled={!!isUpdating}
-                                className="flex-1 md:flex-none px-5 py-2.5 bg-white border border-slate-200 text-slate-700 text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-slate-50 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                                style={{ background: '#ffffff', color: '#374151', border: '1.5px solid #e5e7eb', borderRadius: '10px', fontWeight: 600, fontSize: '11px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}
+                                className="disabled:opacity-50"
                             >
-                                {isUpdating === 'correct' ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} className="text-amber-500" />}
+                                {isUpdating === 'correct' ? <Loader2 size={14} className="animate-spin" /> : <Eraser size={14} color="#374151" />}
                                 Correct
                             </button>
                             <button
                                 onClick={handleClose}
                                 disabled={!!isUpdating}
-                                className="flex-1 md:flex-none px-5 py-2.5 bg-slate-900 text-white text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-black transition-all flex items-center justify-center gap-2 shadow-xl shadow-slate-900/10 disabled:opacity-50"
+                                style={{ background: '#0f1f12', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', padding: '10px 20px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}
+                                className="disabled:opacity-50"
                             >
                                 {isUpdating === 'resolve' ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />}
                                 Resolve
                             </button>
                         </>
                     ) : (
-                        <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 border border-slate-100 rounded-xl">
-                            <CheckCircle2 size={16} className="text-emerald-500" />
-                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Protocol Finalized</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', background: '#f8faf9', border: '1px solid #e5e7eb', borderRadius: '10px' }}>
+                            <CheckCircle2 size={16} color="#16a34a" />
+                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Protocol Finalized</span>
                         </div>
                     )}
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* 1. Primary Evidence Column (Left - 8 cols) */}
+                {/* Primary Column */}
                 <div className="lg:col-span-8 space-y-8">
-                    {/* User Raw Message */}
-                    <Card className="border-none shadow-xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
-                        <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
-                            <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-2">
-                                <MessageSquare size={18} className="text-indigo-600" /> User Input Payload
+                    {/* User Payload */}
+                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                        <div style={{ padding: '20px 28px', borderBottom: '1px solid #f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <MessageSquare size={14} color="#16a34a" /> USER INPUT PAYLOAD
                             </h3>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest italic">{formatFullTimestamp(ticket.created_at)}</span>
+                            <span style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>{formatFullTimestamp(ticket.created_at)}</span>
                         </div>
-                        <div className="p-8 space-y-6">
-                            <div className="p-8 bg-slate-900 text-white rounded-3xl border-l-[6px] border-indigo-600 shadow-2xl shadow-slate-900/10">
-                                <p className="text-lg font-medium leading-[1.6] italic">"{displayText}"</p>
+                        <div style={{ padding: '28px' }}>
+                            <div style={{ background: 'linear-gradient(135deg, #0f1f12, #1a3320)', color: '#ffffff', borderRadius: '16px', padding: '24px 28px', fontSize: '15px', fontStyle: 'italic', lineHeight: 1.7 }}>
+                                "{displayText}"
                             </div>
 
-                            {/* Artifact Visualization */}
                             {imageUrl && (
-                                <div className="space-y-4">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                        <ImageIcon size={14} className="text-indigo-400" /> Visual Telemetry Record
+                                <div style={{ marginTop: '24px' }}>
+                                    <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.12em', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                        <ImageIcon size={14} color="#16a34a" /> VISUAL EVIDENCE
                                     </p>
-                                    <div
-                                        className="rounded-3xl overflow-hidden border border-slate-100 bg-slate-50 shadow-sm transition-transform duration-700 hover:scale-[1.01] cursor-zoom-in relative group"
-                                        onClick={() => window.open(imageUrl, '_blank')}
-                                    >
-                                        <img src={imageUrl} alt="Telemetry Evidence" className="w-full object-contain max-h-[500px]" />
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 bg-slate-900/10 transition-opacity">
-                                            <span className="bg-white/90 text-slate-900 text-xs font-bold px-4 py-2 rounded-xl shadow-lg flex items-center gap-2">
-                                                <Eye size={16} /> View Full Resolution
-                                            </span>
-                                        </div>
+                                    <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid #f0fdf4', background: '#f8faf9', cursor: 'zoom-in' }} onClick={() => window.open(imageUrl, '_blank')}>
+                                        <img src={imageUrl} alt="Telemetry Evidence" style={{ width: '100%', objectFit: 'contain', maxHeight: '500px' }} />
                                     </div>
                                 </div>
                             )}
                         </div>
-                    </Card>
-
-                    {/* Collaborative Communications */}
-                    <div className="h-[600px] shadow-2xl shadow-slate-200/50 rounded-[2rem] overflow-hidden border border-slate-100">
-                        <TicketChat
-                            ticketId={ticket.id}
-                            currentUserRole="admin"
-                        />
                     </div>
 
-                    {/* Integrated Journey Timeline */}
-                    <Card className="border-none shadow-xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white p-8">
-                        <div className="flex items-center gap-3 mb-6">
-                            <Clock size={18} className="text-emerald-500" />
-                            <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight">Full Lifecycle Journey</h3>
+                    {/* Chat Hub */}
+                    <div style={{ height: '500px', background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                        <TicketChat ticketId={ticket.id} currentUserRole="admin" />
+                    </div>
+
+                    {/* Timeline */}
+                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '28px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '24px' }}>
+                            <Clock size={16} color="#16a34a" />
+                            <h3 style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>FULL LIFECYCLE JOURNEY</h3>
                         </div>
                         <TicketTimeline ticket={ticket} />
-                    </Card>
+                    </div>
                 </div>
 
-                {/* 2. AI Analytics Column (Right - 4 cols) */}
+                {/* AI Column */}
                 <div className="lg:col-span-4 space-y-8">
-                    {/* Neural Analytics Card */}
-                    <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white sticky top-24">
-                        <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between">
-                            <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-2">
-                                <Cpu size={18} className="text-emerald-400" /> Neural Insights
+                    {/* Neural Insights */}
+                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden', position: 'sticky', top: '100px' }}>
+                        <div style={{ background: '#0f1f12', borderRadius: '20px 20px 0 0', color: '#ffffff', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '14px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}>
+                                <Cpu size={16} color="#22c55e" /> NEURAL INSIGHTS
                             </h3>
-                            <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                            <div style={{ width: '6px', height: '6px', background: '#22c55e', borderRadius: '50%' }} className="animate-pulse"></div>
                         </div>
-                        <div className="p-8 space-y-8">
-                            {/* Summary Byte */}
+                        <div style={{ padding: '24px' }} className="space-y-6">
                             <div className="space-y-2">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">AI Generated Summary</label>
-                                <p className="text-xs font-bold text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100 underline-offset-4 decoration-emerald-500/30">
+                                <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>SUMMARY BYTE</label>
+                                <p style={{ fontSize: '13px', fontWeight: 500, color: '#111827', lineHeight: 1.5, margin: 0 }}>
                                     {displaySummary}
                                 </p>
                             </div>
 
-                            {/* Classification Matrix */}
-                            <div className="space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Sector Mapping</label>
-                                <div className="grid grid-cols-1 gap-3">
-                                    <div className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><Briefcase size={12} className="text-indigo-400" /> Category</span>
-                                        <span className="text-[11px] font-black text-slate-900 uppercase italic">{ticket.category}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-sm">
-                                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2"><BarChart3 size={12} className="text-amber-400" /> Priority</span>
-                                        <span className={`text-[11px] font-black uppercase italic ${ticket.priority?.toLowerCase() === 'high' ? 'text-red-600' : 'text-slate-900'}`}>
-                                            {ticket.priority}
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Confidence Gauge */}
                             <div className="space-y-3">
-                                <div className="flex justify-between items-center">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Routing Confidence</label>
-                                    <span className="text-xs font-black text-emerald-600">{(confidence * 100).toFixed(0)}%</span>
-                                </div>
-                                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                    <div
-                                        className="bg-emerald-500 h-full transition-all duration-1000 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                                        style={{ width: `${confidence * 100}%` }}
-                                    ></div>
+                                <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>SECTOR MAPPING</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>CATEGORY</span>
+                                        <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 10px', borderRadius: '100px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>{ticket.category || 'NETWORK'}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>PRIORITY</span>
+                                        <span style={{ background: ticket.priority?.toLowerCase() === 'high' || ticket.priority?.toLowerCase() === 'critical' ? '#fef2f2' : '#fef3c7', color: ticket.priority?.toLowerCase() === 'high' || ticket.priority?.toLowerCase() === 'critical' ? '#dc2626' : '#d97706', padding: '2px 10px', borderRadius: '100px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>{ticket.priority || 'MEDIUM'}</span>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Extracted Artifacts (Entities) */}
+                            <div className="space-y-2">
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>ROUTING CONFIDENCE</label>
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803d' }}>{(confidence * 100).toFixed(0)}%</span>
+                                </div>
+                                <div style={{ width: '100%', height: '6px', background: '#f0fdf4', borderRadius: '100px', overflow: 'hidden' }}>
+                                    <div style={{ width: `${confidence * 100}%`, height: '100%', background: '#22c55e', borderRadius: '100px' }}></div>
+                                </div>
+                            </div>
+
                             {entities && entities.length > 0 && (
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic">Identified Entities</label>
-                                    <div className="flex flex-wrap gap-2">
+                                    <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>EXTRACTED ENTITIES</label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                         {entities.map((e, idx) => (
-                                            <span key={idx} className="px-3 py-1 bg-indigo-50 text-indigo-600 text-[9px] font-black uppercase tracking-widest rounded-lg border border-indigo-100">
+                                            <span key={idx} style={{ background: '#f0fdf4', color: '#15803d', padding: '4px 10px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                                 {typeof e === 'object' ? e.text : String(e)}
                                             </span>
                                         ))}
@@ -401,111 +391,71 @@ const AdminTicketDetail = () => {
                                 </div>
                             )}
 
-                             {/* Technical Environment Byte */}
-                            <div className="pt-6 border-t border-slate-100 space-y-4">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest italic flex items-center gap-2">
-                                    <Globe size={12} className="text-emerald-400" /> Technical Environment
-                                </label>
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">User IP</span>
-                                        <span className="text-[10px] font-black text-slate-700 font-mono italic">
-                                           {ticket.metadata?.env_metadata?.ip || '127.0.0.1'}
-                                        </span>
+                            <div style={{ borderTop: '1px solid #f0fdf4', paddingTop: '20px' }} className="space-y-3">
+                                <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>TECHNICAL ENV</label>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600 }}>IP</span>
+                                        <span style={{ fontFamily: 'monospace', fontSize: '11px', color: '#6b7280' }}>{ticket.metadata?.env_metadata?.ip || '127.0.0.1'}</span>
                                     </div>
-                                    <div className="flex items-center justify-between p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Detected Host</span>
-                                        <span className="text-[10px] font-black text-slate-700 italic">
-                                           {entities.find(e => e.label === 'HOSTNAME')?.text || 'Auto-Detecting...'}
-                                        </span>
-                                    </div>
-                                    <div className="flex flex-col p-2.5 bg-slate-50 rounded-xl border border-slate-100">
-                                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider mb-1">Device Signature</span>
-                                        <span className="text-[10px] font-medium text-slate-600 leading-tight">
-                                           {ticket.metadata?.env_metadata?.user_agent || 'Neural Interface v1.0'}
-                                        </span>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                        <span style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600, marginBottom: '2px' }}>SIGNATURE</span>
+                                        <span style={{ fontFamily: 'monospace', fontSize: '10px', color: '#6b7280', lineHeight: 1.4 }}>{ticket.metadata?.env_metadata?.user_agent || 'Neural Interface v1.0'}</span>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </Card>
+                    </div>
 
-                    {/* CSAT Rating Card */}
+                    {/* CSAT */}
                     {ticket.csat_rating && (
-                        <Card className="border-none shadow-2xl shadow-slate-200/50 bg-white rounded-[2rem] overflow-hidden">
-                            <div className="px-8 py-6 bg-emerald-900 text-white flex items-center justify-between">
-                                <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-2">
-                                    <Star size={18} className="text-yellow-300 fill-yellow-300" /> Customer Satisfaction
+                        <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                            <div style={{ background: '#f8faf9', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f0fdf4' }}>
+                                <h3 style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Star size={14} color="#f59e0b" className="fill-amber-400" /> SATISFACTION
                                 </h3>
                             </div>
-                            <div className="p-8 space-y-4">
+                            <div style={{ padding: '24px' }} className="space-y-4">
                                 <div className="flex gap-1">
                                     {[1, 2, 3, 4, 5].map(star => (
-                                        <Star
-                                            key={star}
-                                            className={`w-7 h-7 ${star <= ticket.csat_rating
-                                                    ? 'text-yellow-400 fill-yellow-400'
-                                                    : 'text-slate-200 fill-slate-200'
-                                                }`}
-                                        />
+                                        <Star key={star} size={20} className={star <= ticket.csat_rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'} />
                                     ))}
                                 </div>
-                                <p className="text-xs font-black text-slate-500 uppercase tracking-widest">
+                                <p style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase' }}>
                                     {['', 'Very Dissatisfied', 'Dissatisfied', 'Neutral', 'Satisfied', 'Very Satisfied'][ticket.csat_rating]}
                                 </p>
                                 {ticket.csat_comment && (
-                                    <div className="bg-slate-50 border border-slate-100 rounded-xl p-4">
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">User Comment</p>
-                                        <p className="text-sm text-slate-700 leading-relaxed italic">"{ticket.csat_comment}"</p>
-                                    </div>
+                                    <p style={{ fontSize: '13px', color: '#475569', fontStyle: 'italic', background: '#f8faf9', padding: '16px', borderRadius: '12px' }}>
+                                        "{ticket.csat_comment}"
+                                    </p>
                                 )}
                             </div>
-                        </Card>
+                        </div>
                     )}
                 </div>
             </div>
 
-            {/* Modals & Overlays */}
+            {/* Modals */}
             {isReassigning && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
                     <Card className="w-full max-w-sm bg-white rounded-[2rem] border-none shadow-2xl p-8 space-y-6">
                         <div className="space-y-2">
-                            <h3 className="text-xl font-black text-slate-900 uppercase italic">Divert Protocol</h3>
-                            <p className="text-xs text-slate-400 font-medium">Reassign incident to a specialized unit.</p>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '18px', fontWeight: 700, color: '#0f1f12', textTransform: 'uppercase', margin: 0 }}>Divert Protocol</h3>
+                            <p style={{ fontSize: '12px', color: '#6b7280' }}>Reassign incident to a specialized unit.</p>
                         </div>
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Target Unit (Team)</label>
-                                <Select
-                                    value={selectedTeam}
-                                    onChange={(e) => setSelectedTeam(e.target.value)}
-                                    buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 rounded-xl px-4 py-3 text-xs font-black uppercase transition-all outline-none flex justify-between items-center"
-                                    options={[
-                                        { value: "", label: "Select Team..." },
-                                        { value: "Network Ops", label: "Network Ops" },
-                                        { value: "Hardware Support", label: "Hardware Support" },
-                                        { value: "Software Team", label: "Software Team" },
-                                        { value: "Security Unit", label: "Security Unit" }
-                                    ]}
-                                />
+                                <label style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Target Unit (Team)</label>
+                                <Select value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)} buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-xl px-4 py-3 text-xs font-bold transition-all outline-none" options={[{ value: "", label: "Select Team..." }, { value: "Network Ops", label: "Network Ops" }, { value: "Hardware Support", label: "Hardware Support" }, { value: "Software Team", label: "Software Team" }, { value: "Security Unit", label: "Security Unit" }]} />
                             </div>
-
                             <div className="space-y-2">
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Individual Agent</label>
-                                <Select
-                                    value={selectedAgent}
-                                    onChange={(e) => setSelectedAgent(e.target.value)}
-                                    buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 rounded-xl px-4 py-3 text-xs font-black uppercase transition-all outline-none flex justify-between items-center"
-                                    options={[
-                                        { value: "", label: "Select Agent..." },
-                                        ...agents.map(a => ({ value: a.id, label: a.full_name }))
-                                    ]}
-                                />
+                                <label style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Individual Agent</label>
+                                <Select value={selectedAgent} onChange={(e) => setSelectedAgent(e.target.value)} buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-xl px-4 py-3 text-xs font-bold transition-all outline-none" options={[{ value: "", label: "Select Agent..." }, ...agents.map(a => ({ value: a.id, label: a.full_name }))]} />
                             </div>
                         </div>
                         <div className="flex gap-3 pt-2">
-                            <button onClick={handleReassign} className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Execute Handoff</button>
-                            <button onClick={() => setIsReassigning(false)} className="flex-1 py-3 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest">Abort</button>
+                            <button onClick={handleReassign} style={{ flex: 1, padding: '12px', background: '#0f1f12', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Execute</button>
+                            <button onClick={() => setIsReassigning(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#475569', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Abort</button>
                         </div>
                     </Card>
                 </div>
@@ -515,41 +465,22 @@ const AdminTicketDetail = () => {
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 text-slate-900">
                     <Card className="w-full max-w-sm bg-white rounded-[2rem] border-none shadow-2xl p-8 space-y-6 text-black">
                         <div className="space-y-2">
-                            <h3 className="text-xl font-black text-slate-900 uppercase italic">Override Protocol</h3>
-                            <p className="text-xs text-slate-400 font-medium">Manually correct AI classification labels.</p>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '18px', fontWeight: 700, color: '#0f1f12', textTransform: 'uppercase', margin: 0 }}>Override Protocol</h3>
+                            <p style={{ fontSize: '12px', color: '#6b7280' }}>Manually correct AI classification labels.</p>
                         </div>
                         <div className="space-y-4">
                             <div>
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Refined Category</label>
-                                <Select
-                                    value={correctionForm.category}
-                                    onChange={(e) => setCorrectionForm({ ...correctionForm, category: e.target.value })}
-                                    buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 rounded-xl px-4 py-3 text-xs font-black uppercase transition-all outline-none flex justify-between items-center"
-                                    options={[
-                                        { value: "Network", label: "Network Ops" },
-                                        { value: "Hardware", label: "Hardware Systems" },
-                                        { value: "Software", label: "Cloud Applications" },
-                                        { value: "Access", label: "Security & Access" }
-                                    ]}
-                                />
+                                <label style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Refined Category</label>
+                                <Select value={correctionForm.category} onChange={(e) => setCorrectionForm({ ...correctionForm, category: e.target.value })} buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-xl px-4 py-3 text-xs font-bold transition-all outline-none" options={[{ value: "Network", label: "Network Ops" }, { value: "Hardware", label: "Hardware Systems" }, { value: "Software", label: "Cloud Applications" }, { value: "Access", label: "Security & Access" }]} />
                             </div>
                             <div>
-                                <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Priority Assessment</label>
-                                <Select
-                                    value={correctionForm.priority}
-                                    onChange={(e) => setCorrectionForm({ ...correctionForm, priority: e.target.value })}
-                                    buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-indigo-600 rounded-xl px-4 py-3 text-xs font-black uppercase transition-all outline-none flex justify-between items-center"
-                                    options={[
-                                        { value: "Low", label: "Low Risk" },
-                                        { value: "Medium", label: "Medium Incident" },
-                                        { value: "High", label: "Critical Escalation" }
-                                    ]}
-                                />
+                                <label style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Priority Assessment</label>
+                                <Select value={correctionForm.priority} onChange={(e) => setCorrectionForm({ ...correctionForm, priority: e.target.value })} buttonClassName="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-xl px-4 py-3 text-xs font-bold transition-all outline-none" options={[{ value: "Low", label: "Low Risk" }, { value: "Medium", label: "Medium Incident" }, { value: "High", label: "Critical Escalation" }]} />
                             </div>
                         </div>
                         <div className="flex gap-3 pt-2">
-                            <button onClick={handleSaveCorrection} className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest">Save Correction</button>
-                            <button onClick={() => setIsCorrecting(false)} className="flex-1 py-3 bg-slate-50 text-slate-400 rounded-xl text-[10px] font-black uppercase tracking-widest">Abort</button>
+                            <button onClick={handleSaveCorrection} style={{ flex: 1, padding: '12px', background: '#0f1f12', color: '#ffffff', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Save</button>
+                            <button onClick={() => setIsCorrecting(false)} style={{ flex: 1, padding: '12px', background: '#f3f4f6', color: '#475569', borderRadius: '10px', fontWeight: 600, fontSize: '11px', textTransform: 'uppercase', border: 'none', cursor: 'pointer' }}>Abort</button>
                         </div>
                     </Card>
                 </div>
