@@ -342,7 +342,7 @@ const AdminTicketDetail = () => {
                     <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden', position: 'sticky', top: '100px' }}>
                         <div style={{ background: '#0f1f12', borderRadius: '20px 20px 0 0', color: '#ffffff', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '14px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}>
-                                <Cpu size={16} color="#22c55e" /> NEURAL INSIGHTS
+                                <Cpu size={16} color="#22c55e" /> AI INSIGHTS
                             </h3>
                             <div style={{ width: '6px', height: '6px', background: '#22c55e', borderRadius: '50%' }} className="animate-pulse"></div>
                         </div>
@@ -359,11 +359,25 @@ const AdminTicketDetail = () => {
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>CATEGORY</span>
-                                        <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 10px', borderRadius: '100px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>{ticket.category || 'NETWORK'}</span>
+                                        <span style={{ 
+                                            background: ticket.category?.toLowerCase() === 'hardware' ? '#fff7ed' : ticket.category?.toLowerCase() === 'network' ? '#eff6ff' : ticket.category?.toLowerCase() === 'access' ? '#f5f3ff' : ticket.category?.toLowerCase() === 'software' ? '#f0fdf4' : '#f8fafc', 
+                                            color: ticket.category?.toLowerCase() === 'hardware' ? '#ea580c' : ticket.category?.toLowerCase() === 'network' ? '#2563eb' : ticket.category?.toLowerCase() === 'access' ? '#7c3aed' : ticket.category?.toLowerCase() === 'software' ? '#16a34a' : '#475569', 
+                                            border: `1px solid ${ticket.category?.toLowerCase() === 'hardware' ? '#fed7aa' : ticket.category?.toLowerCase() === 'network' ? '#bfdbfe' : ticket.category?.toLowerCase() === 'access' ? '#ddd6fe' : ticket.category?.toLowerCase() === 'software' ? '#bbf7d0' : '#e2e8f0'}`,
+                                            padding: '2px 10px', borderRadius: '100px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' 
+                                        }}>
+                                            {ticket.category || 'GENERAL'}
+                                        </span>
                                     </div>
                                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <span style={{ fontSize: '11px', color: '#6b7280', fontWeight: 600 }}>PRIORITY</span>
-                                        <span style={{ background: ticket.priority?.toLowerCase() === 'high' || ticket.priority?.toLowerCase() === 'critical' ? '#fef2f2' : '#fef3c7', color: ticket.priority?.toLowerCase() === 'high' || ticket.priority?.toLowerCase() === 'critical' ? '#dc2626' : '#d97706', padding: '2px 10px', borderRadius: '100px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>{ticket.priority || 'MEDIUM'}</span>
+                                        <span style={{ 
+                                            background: ticket.priority?.toLowerCase() === 'critical' ? '#fef2f2' : ticket.priority?.toLowerCase() === 'high' ? '#fff7ed' : ticket.priority?.toLowerCase() === 'medium' ? '#fefce8' : '#f0fdf4', 
+                                            color: ticket.priority?.toLowerCase() === 'critical' ? '#dc2626' : ticket.priority?.toLowerCase() === 'high' ? '#ea580c' : ticket.priority?.toLowerCase() === 'medium' ? '#ca8a04' : '#16a34a', 
+                                            border: `1px solid ${ticket.priority?.toLowerCase() === 'critical' ? '#fecaca' : ticket.priority?.toLowerCase() === 'high' ? '#fed7aa' : ticket.priority?.toLowerCase() === 'medium' ? '#fde68a' : '#bbf7d0'}`,
+                                            padding: '2px 10px', borderRadius: '100px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' 
+                                        }}>
+                                            {ticket.priority || 'NORMAL'}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -383,7 +397,7 @@ const AdminTicketDetail = () => {
                                     <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase' }}>EXTRACTED ENTITIES</label>
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                                         {entities.map((e, idx) => (
-                                            <span key={idx} style={{ background: '#f0fdf4', color: '#15803d', padding: '4px 10px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                            <span key={idx} style={{ background: '#f0fdf4', color: '#15803d', border: '1px solid #bbf7d0', padding: '4px 10px', borderRadius: '100px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                                 {typeof e === 'object' ? e.text : String(e)}
                                             </span>
                                         ))}
