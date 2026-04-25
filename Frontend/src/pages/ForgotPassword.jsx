@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { BrainCircuit, Mail, ArrowLeft, Loader2, CheckCircle2, ShieldCheck, Lock, KeyRound } from "lucide-react";
+import { BrainCircuit, Mail, ArrowLeft, Loader2, CheckCircle2, ShieldCheck, Lock, KeyRound, AlertCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 function ForgotPassword() {
@@ -12,6 +12,22 @@ function ForgotPassword() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
+    const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
+
+    useEffect(() => {
+        if (step === 2 && timeLeft > 0) {
+            const timer = setInterval(() => {
+                setTimeLeft((prev) => prev - 1);
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [step, timeLeft]);
+
+    const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
 
     const handleSendOtp = async (e) => {
         e.preventDefault();
@@ -94,7 +110,7 @@ function ForgotPassword() {
     return (
         <div className="min-h-screen flex items-center justify-center font-sans relative overflow-hidden p-6 py-12" style={{ background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
             {/* Background Patterns */}
-            <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none"></div>
+            <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
             <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
             
             <div className="w-full max-w-md relative z-10">
@@ -215,7 +231,7 @@ function ForgotPassword() {
                                                     autoFocus
                                                 />
                                             </div>
-                                            <p className="text-center text-xs text-gray-400 font-bold">Expires in 15:00</p>
+                                            <p className="text-center text-xs text-gray-400 font-bold">Expires in {formatTime(timeLeft)}</p>
                                         </div>
 
                                         <button
