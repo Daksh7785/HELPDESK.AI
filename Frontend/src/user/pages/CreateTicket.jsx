@@ -45,12 +45,41 @@ const CreateTicket = () => {
     const [isTranslating, setIsTranslating] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
     const langRef = useRef(null);
-    
+
     // Voice UI states
     const [showVoiceModal, setShowVoiceModal] = useState(false);
     const [voiceTranscript, setVoiceTranscript] = useState('');
     const [interimVoice, setInterimVoice] = useState('');
-    const recognitionRef = useRef(null);
+    const [isModelLoading, setIsModelLoading] = useState(false);
+
+    // Web Worker & Audio Refs
+    const workerRef = useRef(null);
+    const audioContextRef = useRef(null);
+    const streamRef = useRef(null);
+    const processorRef = useRef(null);
+    const audioDataRef = useRef([]);
+
+    useEffect(() => {
+        // Initialize Web Worker
+        workerRef.current = new Worker(new URL('../../workers/whisper.worker.js', import.meta.url), { type: 'module' });
+        
+        workerRef.current.onmessage = (e) => {
+            const msg = e.data;
+            if (msg.type === 'ready') {
+                setIsModelLoading(false);
+            } else if (msg.type === 'result') {
+                setVoiceTranscript(msg.text);
+            } else if (msg.type === 'error') {
+                setError("AI Model Error: " + msg.error);
+                stopListening();
+            }
+        };
+
+        return () => {
+            if (workerRef.current) workerRef.current.terminate();
+            if (audioContextRef.current) audioContextRef.current.close();
+        };
+    }, []);
 
     // Close language dropdown on outside click
     useEffect(() => {
@@ -84,77 +113,86 @@ const CreateTicket = () => {
     };
 
     const toggleMic = () => {
-        if (!supportsSpeech) {
-            setError('Speech Recognition is not supported in this browser. Please try Chrome or Edge.');
-            return;
-        }
-
         if (isListening) {
             stopListening();
             return;
         }
-
         startListening();
     };
 
-    const startListening = () => {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!recognitionRef.current) {
-            recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = true;
-            recognitionRef.current.interimResults = true;
-            recognitionRef.current.lang = 'en-US';
-
-            recognitionRef.current.onstart = () => {
-                setIsListening(true);
-                setShowVoiceModal(true);
-                setVoiceTranscript('');
-                setInterimVoice('');
-                setError('');
-            };
-
-            recognitionRef.current.onresult = (event) => {
-                let finalStr = '';
-                let interimStr = '';
-
-                for (let i = event.resultIndex; i < event.results.length; ++i) {
-                    if (event.results[i].isFinal) {
-                        finalStr += event.results[i][0].transcript;
-                    } else {
-                        interimStr += event.results[i][0].transcript;
-                    }
-                }
-
-                if (finalStr) {
-                    setVoiceTranscript(prev => prev + ' ' + finalStr);
-                }
-                setInterimVoice(interimStr);
-            };
-
-            recognitionRef.current.onerror = (event) => {
-                console.error("Mic Error:", event.error);
-                if (event.error !== 'no-speech') {
-                    setError(`Microphone error: ${event.error}`);
-                }
-            };
-
-            recognitionRef.current.onend = () => {
-                setIsListening(false);
-            };
-        }
-
+    const startListening = async () => {
         try {
-            recognitionRef.current.start();
-        } catch (e) {
-            console.error("Start failed:", e);
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
+            
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            audioContextRef.current = new AudioContext({ sampleRate: 16000 });
+            
+            const source = audioContextRef.current.createMediaStreamSource(stream);
+            // 4096 buffer size gives us chunks of audio roughly every ~250ms
+            const processor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
+            processorRef.current = processor;
+            
+            audioDataRef.current = [];
+            setIsModelLoading(true);
+            workerRef.current.postMessage({ type: 'load' }); // Pre-load / warm-up model
+            
+            let lastSendTime = Date.now();
+            processor.onaudioprocess = (e) => {
+                const channelData = e.inputBuffer.getChannelData(0);
+                audioDataRef.current.push(new Float32Array(channelData));
+                
+                // Transcribe the accumulated audio every 1.5 seconds for live feedback
+                if (Date.now() - lastSendTime > 1500) {
+                    lastSendTime = Date.now();
+                    const length = audioDataRef.current.reduce((acc, val) => acc + val.length, 0);
+                    const flattened = new Float32Array(length);
+                    let offset = 0;
+                    for (let arr of audioDataRef.current) {
+                        flattened.set(arr, offset);
+                        offset += arr.length;
+                    }
+                    workerRef.current.postMessage({ type: 'transcribe', audio: flattened });
+                }
+            };
+            
+            source.connect(processor);
+            processor.connect(audioContextRef.current.destination);
+            
+            setIsListening(true);
+            setShowVoiceModal(true);
+            setVoiceTranscript('');
+            setInterimVoice('');
+            setError('');
+        } catch (err) {
+            console.error("Microphone access denied:", err);
+            setError("Could not access microphone. Please ensure permissions are granted.");
         }
     };
 
     const stopListening = () => {
-        if (recognitionRef.current) {
-            recognitionRef.current.stop();
-        }
         setIsListening(false);
+        if (processorRef.current && audioContextRef.current) {
+            processorRef.current.disconnect();
+            audioContextRef.current.close();
+            audioContextRef.current = null;
+        }
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+        
+        // Final transcription flush
+        if (audioDataRef.current.length > 0) {
+            const length = audioDataRef.current.reduce((acc, val) => acc + val.length, 0);
+            const flattened = new Float32Array(length);
+            let offset = 0;
+            for (let arr of audioDataRef.current) {
+                flattened.set(arr, offset);
+                offset += arr.length;
+            }
+            workerRef.current.postMessage({ type: 'transcribe', audio: flattened, isFinal: true });
+        }
     };
 
     const handleSaveVoice = () => {
@@ -581,7 +619,14 @@ const CreateTicket = () => {
                                 </button>
                             </div>
 
-                            <div className="p-8 min-h-[200px] max-h-[300px] overflow-y-auto">
+                            <div className="p-8 min-h-[200px] max-h-[300px] overflow-y-auto relative">
+                                {isModelLoading && (
+                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-10">
+                                        <div className="w-8 h-8 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-3"></div>
+                                        <p className="text-emerald-700 font-bold text-sm">Loading Local AI Model...</p>
+                                        <p className="text-gray-400 text-xs mt-1 font-medium max-w-[200px] text-center">This runs entirely in your browser and will only take a moment the first time.</p>
+                                    </div>
+                                )}
                                 <p className="text-gray-800 text-lg leading-relaxed font-medium">
                                     {voiceTranscript}
                                     <span className="text-gray-400"> {interimVoice}</span>

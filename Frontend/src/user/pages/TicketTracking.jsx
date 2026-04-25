@@ -68,16 +68,38 @@ const TicketTracking = () => {
                     routing_confidence: aiTicket.confidence
                 };
 
-                const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload);
+                const { data, error: dbError } = await supabase
+                    .from('tickets')
+                    .insert([savePayload])
+                    .select()
+                    .single();
 
-                if (res.data?.ticket_id) {
-                    const newTicket = { ...aiTicket, id: res.data.ticket_id, ticket_id: res.data.ticket_id, status };
+                if (dbError) throw dbError;
+
+                if (data?.id) {
+                    const ticketId = data.id;
+
+                    // Create the initial AI welcome message in the thread
+                    let msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team.";
+                    if (isAutoResolved) {
+                        msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps.";
+                    }
+
+                    await supabase.from('ticket_messages').insert([{
+                        ticket_id: ticketId,
+                        sender_id: "00000000-0000-0000-0000-000000000000",
+                        sender_name: "AI Assistant",
+                        sender_role: "admin",
+                        message: msg
+                    }]);
+
+                    const newTicket = { ...aiTicket, id: ticketId, ticket_id: ticketId, status };
                     setCreatedTicket(newTicket);
                     setIsCreating(false);
 
                     // Redirect to the detail page after a short confirmation pause
                     setTimeout(() => {
-                        navigate(`/ticket/${res.data.ticket_id}`);
+                        navigate(`/ticket/${ticketId}`);
                     }, 2500);
                 } else {
                     throw new Error("Failed to retrieve ID from backend.");
