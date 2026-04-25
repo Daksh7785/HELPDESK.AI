@@ -12,16 +12,26 @@ function ForgotPassword() {
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState("");
     const [error, setError] = useState("");
-    const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
+    const [timeLeft, setTimeLeft] = useState(900);
+    const [timerExpired, setTimerExpired] = useState(false);
 
+    // Only re-run when step changes. DO NOT add timeLeft to deps array.
     useEffect(() => {
-        if (step === 2 && timeLeft > 0) {
-            const timer = setInterval(() => {
-                setTimeLeft((prev) => prev - 1);
-            }, 1000);
-            return () => clearInterval(timer);
-        }
-    }, [step, timeLeft]);
+        if (step !== 2) return;
+        setTimerExpired(false);
+        setTimeLeft(900);
+        const timer = setInterval(() => {
+            setTimeLeft((prev) => {
+                if (prev <= 1) {
+                    clearInterval(timer);
+                    setTimerExpired(true);
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
@@ -40,7 +50,14 @@ function ForgotPassword() {
         setError("");
 
         try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email);
+            // signInWithOtp with shouldCreateUser:false sends a 6-digit OTP
+            // (not a magic link) to the user's existing account email.
+            const { error } = await supabase.auth.signInWithOtp({
+                email,
+                options: {
+                    shouldCreateUser: false,
+                }
+            });
 
             if (error) throw error;
 
@@ -48,7 +65,7 @@ function ForgotPassword() {
             setStep(2);
         } catch (err) {
             console.error("Password reset error:", err);
-            setError(err.message || "An error occurred. Please try again.");
+            setError(err.message || "No account found for this email. Please check and try again.");
         } finally {
             setLoading(false);
         }
@@ -60,6 +77,10 @@ function ForgotPassword() {
             setError("Please enter the 6-digit code");
             return;
         }
+        if (timerExpired) {
+            setError("Your code has expired. Please request a new one.");
+            return;
+        }
 
         setLoading(true);
         setError("");
@@ -68,7 +89,7 @@ function ForgotPassword() {
             const { error } = await supabase.auth.verifyOtp({
                 email,
                 token: otp,
-                type: 'recovery'
+                type: 'email'
             });
 
             if (error) throw error;
@@ -76,7 +97,7 @@ function ForgotPassword() {
             setMessage("Code verified. Please enter your new password.");
         } catch (err) {
             console.error("OTP verification error:", err);
-            setError("Invalid or expired code. Please try again.");
+            setError("Invalid or expired code. Please check your email and try again.");
         } finally {
             setLoading(false);
         }
@@ -231,19 +252,32 @@ function ForgotPassword() {
                                                     autoFocus
                                                 />
                                             </div>
-                                            <p className="text-center text-xs text-gray-400 font-bold">Expires in {formatTime(timeLeft)}</p>
+                                            <p className={`text-center text-xs font-bold mt-1 ${
+                                                timerExpired ? 'text-red-500' : timeLeft < 60 ? 'text-orange-500' : 'text-gray-400'
+                                            }`}>
+                                                {timerExpired ? '⚠ Code expired — request a new one below' : `Expires in ${formatTime(timeLeft)}`}
+                                            </p>
                                         </div>
 
                                         <button
                                             type="submit"
-                                            disabled={loading || otp.length < 6}
+                                            disabled={loading || otp.length < 6 || timerExpired}
                                             className="w-full rounded-2xl py-4 font-bold transition-all flex items-center justify-center gap-2"
-                                            style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', boxShadow: '0 10px 30px rgba(34,160,69,0.2)' }}
-                                            onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                            style={{ background: timerExpired ? '#e5e7eb' : 'linear-gradient(135deg, #16a34a, #22c55e)', color: timerExpired ? '#9ca3af' : '#fff', boxShadow: timerExpired ? 'none' : '0 10px 30px rgba(34,160,69,0.2)' }}
+                                            onMouseEnter={(e) => { if (!timerExpired) e.currentTarget.style.transform = 'translateY(-2px)'; }}
                                             onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                                         >
                                             {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Verify Identity Signature"}
                                         </button>
+                                        {timerExpired && (
+                                            <button
+                                                type="button"
+                                                onClick={() => { setStep(1); setOtp(""); setError(""); }}
+                                                className="w-full rounded-2xl py-3 font-bold text-sm transition-all flex items-center justify-center gap-2 border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+                                            >
+                                                Request New Code
+                                            </button>
+                                        )}
                                     </form>
                                 )}
 
