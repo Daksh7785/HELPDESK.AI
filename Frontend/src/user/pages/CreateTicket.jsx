@@ -51,42 +51,19 @@ const CreateTicket = () => {
     const [voiceTranscript, setVoiceTranscript] = useState('');
     const [interimVoice, setInterimVoice] = useState('');
     const [isModelLoading, setIsModelLoading] = useState(false);
-    const [modelProgress, setModelProgress] = useState(0);
 
-    // Web Worker & Audio Refs
-    const workerRef = useRef(null);
+    // Voice Refs & Visualizer
+    const recognitionRef = useRef(null);
     const audioContextRef = useRef(null);
     const analyserRef = useRef(null);
     const dataArrayRef = useRef(null);
     const animationFrameRef = useRef(null);
     const [visualizerData, setVisualizerData] = useState(new Array(16).fill(15));
     const streamRef = useRef(null);
-    const processorRef = useRef(null);
-    const audioDataRef = useRef([]);
 
     useEffect(() => {
-        // Initialize Web Worker
-        workerRef.current = new Worker(new URL('../../workers/whisper.worker.js', import.meta.url), { type: 'module' });
-        
-        workerRef.current.onmessage = (e) => {
-            const msg = e.data;
-            if (msg.type === 'ready') {
-                setIsModelLoading(false);
-                setModelProgress(100);
-            } else if (msg.type === 'progress') {
-                if (msg.status === 'progress') {
-                    setModelProgress(msg.progress);
-                }
-            } else if (msg.type === 'result') {
-                setVoiceTranscript(msg.text);
-            } else if (msg.type === 'error') {
-                setError("AI Model Error: " + msg.error);
-                stopListening();
-            }
-        };
-
         return () => {
-            if (workerRef.current) workerRef.current.terminate();
+            if (recognitionRef.current) recognitionRef.current.stop();
             if (audioContextRef.current) audioContextRef.current.close();
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
@@ -132,18 +109,23 @@ const CreateTicket = () => {
     };
 
     const startListening = async () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (!SpeechRecognition) {
+            setError("Speech recognition is not supported in this browser.");
+            return;
+        }
+
         try {
+            // Start Visualizer for UI feedback
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             streamRef.current = stream;
             
             const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioContextRef.current = new AudioContext({ sampleRate: 16000 });
-            
+            audioContextRef.current = new AudioContext();
             const source = audioContextRef.current.createMediaStreamSource(stream);
-            
-            // Setup Visualizer
             const analyser = audioContextRef.current.createAnalyser();
-            analyser.fftSize = 64; // Small FFT for simple visualization
+            analyser.fftSize = 64;
             const bufferLength = analyser.frequencyBinCount;
             const dataArray = new Uint8Array(bufferLength);
             analyserRef.current = analyser;
@@ -153,13 +135,10 @@ const CreateTicket = () => {
             const updateVisualizer = () => {
                 if (!analyserRef.current) return;
                 analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-                
-                // Map frequency data to our 16 bars
                 const bars = [];
                 for (let i = 0; i < 16; i++) {
-                    // Average a small range of frequencies for each bar
                     const val = dataArrayRef.current[i] || 0;
-                    const height = Math.max(5, (val / 255) * 50); // Scale to 5-55px
+                    const height = Math.max(5, (val / 255) * 50);
                     bars.push(height);
                 }
                 setVisualizerData(bars);
@@ -167,42 +146,49 @@ const CreateTicket = () => {
             };
             updateVisualizer();
 
-            // 4096 buffer size gives us chunks of audio roughly every ~250ms
-            const processor = audioContextRef.current.createScriptProcessor(4096, 1, 1);
-            processorRef.current = processor;
-            
-            audioDataRef.current = [];
-            setIsModelLoading(true);
-            setModelProgress(0);
-            workerRef.current.postMessage({ type: 'load' }); // Pre-load / warm-up model
-            
-            let lastSendTime = Date.now();
-            processor.onaudioprocess = (e) => {
-                const channelData = e.inputBuffer.getChannelData(0);
-                audioDataRef.current.push(new Float32Array(channelData));
-                
-                // Transcribe the accumulated audio every 1.5 seconds for live feedback
-                if (Date.now() - lastSendTime > 1500) {
-                    lastSendTime = Date.now();
-                    const length = audioDataRef.current.reduce((acc, val) => acc + val.length, 0);
-                    const flattened = new Float32Array(length);
-                    let offset = 0;
-                    for (let arr of audioDataRef.current) {
-                        flattened.set(arr, offset);
-                        offset += arr.length;
+            // Initialize Speech Recognition
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'en-US';
+
+            recognition.onresult = (event) => {
+                let finalStr = '';
+                let interimStr = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalStr += event.results[i][0].transcript;
+                    } else {
+                        interimStr += event.results[i][0].transcript;
                     }
-                    workerRef.current.postMessage({ type: 'transcribe', audio: flattened });
+                }
+                if (finalStr) setVoiceTranscript(prev => prev + ' ' + finalStr);
+                setInterimVoice(interimStr);
+            };
+
+            recognition.onerror = (event) => {
+                console.error("Speech Recognition Error:", event.error);
+                if (event.error !== 'no-speech') {
+                    setError(`Microphone error: ${event.error}`);
                 }
             };
-            
-            source.connect(processor);
-            processor.connect(audioContextRef.current.destination);
-            
+
+            recognition.onend = () => {
+                // Only stop visualizer if we actually intended to stop
+                if (!isListening) {
+                    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+                }
+            };
+
+            recognitionRef.current = recognition;
+            recognition.start();
+
             setIsListening(true);
             setShowVoiceModal(true);
             setVoiceTranscript('');
             setInterimVoice('');
             setError('');
+
         } catch (err) {
             console.error("Microphone access denied:", err);
             setError("Could not access microphone. Please ensure permissions are granted.");
@@ -211,30 +197,21 @@ const CreateTicket = () => {
 
     const stopListening = () => {
         setIsListening(false);
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+            recognitionRef.current = null;
+        }
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
         }
-        if (processorRef.current && audioContextRef.current) {
-            processorRef.current.disconnect();
+        if (audioContextRef.current) {
             audioContextRef.current.close();
             audioContextRef.current = null;
         }
         if (streamRef.current) {
             streamRef.current.getTracks().forEach(track => track.stop());
             streamRef.current = null;
-        }
-        
-        // Final transcription flush
-        if (audioDataRef.current.length > 0) {
-            const length = audioDataRef.current.reduce((acc, val) => acc + val.length, 0);
-            const flattened = new Float32Array(length);
-            let offset = 0;
-            for (let arr of audioDataRef.current) {
-                flattened.set(arr, offset);
-                offset += arr.length;
-            }
-            workerRef.current.postMessage({ type: 'transcribe', audio: flattened, isFinal: true });
         }
     };
 
@@ -663,26 +640,6 @@ const CreateTicket = () => {
                             </div>
 
                             <div className="p-8 min-h-[200px] max-h-[300px] overflow-y-auto relative">
-                                {isModelLoading && (
-                                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-white/90 z-10 p-8">
-                                        <div className="w-12 h-12 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin mb-4"></div>
-                                        <p className="text-emerald-700 font-bold text-lg mb-2">Initializing Neural Voice AI...</p>
-                                        
-                                        <div className="w-full max-w-[280px] bg-gray-100 h-2.5 rounded-full overflow-hidden mb-3">
-                                            <motion.div 
-                                                className="bg-emerald-500 h-full"
-                                                initial={{ width: 0 }}
-                                                animate={{ width: `${modelProgress}%` }}
-                                                transition={{ duration: 0.3 }}
-                                            />
-                                        </div>
-                                        <p className="text-emerald-600 font-bold text-xs uppercase tracking-widest">{Math.round(modelProgress)}% Downloaded</p>
-                                        
-                                        <p className="text-gray-400 text-xs mt-6 font-medium max-w-[240px] text-center leading-relaxed">
-                                            We're downloading a lightweight Whisper AI model directly to your browser for private, local transcription.
-                                        </p>
-                                    </div>
-                                )}
                                 <p className="text-gray-800 text-lg leading-relaxed font-medium">
                                     {voiceTranscript}
                                     <span className="text-gray-400"> {interimVoice}</span>
