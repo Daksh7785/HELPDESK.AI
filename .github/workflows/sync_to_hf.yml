@@ -21,4 +21,14 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -m huggingface_hub.commands.huggingface_cli upload ritesh19180/ai-helpdesk-api . . --repo-type space --token $HF_TOKEN --delete-missing
+          python -c '
+          import os
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          api.upload_folder(
+              folder_path=".",
+              repo_id="ritesh19180/ai-helpdesk-api",
+              repo_type="space",
+              ignore_patterns=[".git/*", ".github/*"]
+          )
+          '
