@@ -63,10 +63,10 @@ const AdminProfile = () => {
     const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     const [passwordForm, setPasswordForm] = useState({
-        currentPassword: '',
         newPassword: '',
         confirmPassword: ''
     });
+    const [passwordLoading, setPasswordLoading] = useState(false);
 
     const fileInputRef = useRef(null);
 
@@ -194,15 +194,32 @@ const AdminProfile = () => {
         navigate('/login');
     };
 
-    const handlePasswordChange = () => {
-        // In a real app we'd validate and send this to the backend
+    const handlePasswordChange = async () => {
+        if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
+            showToast("Password must be at least 6 characters.", "error");
+            return;
+        }
         if (passwordForm.newPassword !== passwordForm.confirmPassword) {
             showToast("Passwords do not match", "error");
             return;
         }
-        setShowPasswordModal(false);
-        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        showToast("Security Sequence Updated Successfully", "success");
+
+        setPasswordLoading(true);
+        try {
+            const { error } = await supabase.auth.updateUser({
+                password: passwordForm.newPassword
+            });
+
+            if (error) throw error;
+
+            showToast("Security Sequence Updated Successfully", "success");
+            setShowPasswordModal(false);
+            setPasswordForm({ newPassword: '', confirmPassword: '' });
+        } catch (err) {
+            showToast("Sequence Interrupted: " + err.message, "error");
+        } finally {
+            setPasswordLoading(false);
+        }
     };
 
     return (
@@ -469,16 +486,7 @@ const AdminProfile = () => {
                         </div>
                         <div className="p-10 space-y-6">
                             <div className="space-y-4">
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Current Protocol</label>
-                                    <input
-                                        type="password"
-                                        placeholder="••••••••"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all outline-none"
-                                        value={passwordForm.currentPassword}
-                                        onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                                    />
-                                </div>
+
                                 <div className="space-y-1.5">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">New Sequence</label>
                                     <input
@@ -502,9 +510,11 @@ const AdminProfile = () => {
                             </div>
                             <button
                                 onClick={handlePasswordChange}
+                                disabled={passwordLoading}
                                 className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
                             >
-                                <Save size={16} /> Hard Sync Sequence
+                                {passwordLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <Save size={16} />}
+                                {passwordLoading ? "Syncing Sequence..." : "Hard Sync Sequence"}
                             </button>
                         </div>
                     </Card>

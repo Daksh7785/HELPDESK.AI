@@ -45,6 +45,13 @@ const Profile = () => {
         phone: ''
     });
 
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
+    const [passwordData, setPasswordData] = useState({
+        newPassword: '',
+        confirmPassword: ''
+    });
+    const [passwordLoading, setPasswordLoading] = useState(false);
+
     const fileInputRef = useRef(null);
 
     useEffect(() => {
@@ -131,11 +138,34 @@ const Profile = () => {
         }
     };
 
-    const handlePasswordChange = () => {
-        // Redirect to the new secure OTP verification flow
-        logout();
-        navigate('/forgot-password');
-        showToast("Session secured. Redirecting to OTP password recovery.", "success");
+    const handlePasswordChange = async (e) => {
+        if (e) e.preventDefault();
+        
+        if (!passwordData.newPassword || passwordData.newPassword.length < 6) {
+            showToast("Password must be at least 6 characters.", "error");
+            return;
+        }
+        if (passwordData.newPassword !== passwordData.confirmPassword) {
+            showToast("Passwords do not match.", "error");
+            return;
+        }
+
+        setPasswordLoading(true);
+        try {
+            const { error } = await supabase.auth.updateUser({
+                password: passwordData.newPassword
+            });
+
+            if (error) throw error;
+
+            showToast("Security credentials updated successfully.", "success");
+            setShowPasswordModal(false);
+            setPasswordData({ newPassword: '', confirmPassword: '' });
+        } catch (err) {
+            showToast("Sync failed: " + err.message, "error");
+        } finally {
+            setPasswordLoading(false);
+        }
     };
 
     const handleDeleteAccount = async () => {
@@ -422,7 +452,7 @@ const Profile = () => {
                                 <CardContent className="p-0">
                                     <div className="divide-y divide-slate-50">
                                         <button
-                                            onClick={handlePasswordChange}
+                                            onClick={() => setShowPasswordModal(true)}
                                             className="w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all group"
                                         >
                                             <div className="flex items-center gap-6">
@@ -494,6 +524,61 @@ const Profile = () => {
                     </div>
                 </div>
             </main>
+
+            {/* Change Password Modal */}
+            <AnimatePresence>
+                {showPasswordModal && (
+                    <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-white"
+                        >
+                            <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between">
+                                <h3 className="font-black italic uppercase text-sm tracking-widest flex items-center gap-2">
+                                    <Lock size={16} className="text-emerald-400" /> Security Sequence
+                                </h3>
+                                <button onClick={() => setShowPasswordModal(false)} className="text-white/60 hover:text-white transition-colors">
+                                    <X size={20} />
+                                </button>
+                            </div>
+                            <div className="p-8 space-y-6">
+                                <div className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">New Sequence</label>
+                                        <input
+                                            type="password"
+                                            placeholder="Enter new password"
+                                            className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm font-bold outline-none transition-all"
+                                            value={passwordData.newPassword}
+                                            onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Confirm Sequence</label>
+                                        <input
+                                            type="password"
+                                            placeholder="Re-enter password"
+                                            className="w-full bg-slate-50 border-2 border-transparent focus:border-emerald-500 rounded-2xl px-4 py-3 text-sm font-bold outline-none transition-all"
+                                            value={passwordData.confirmPassword}
+                                            onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={handlePasswordChange}
+                                    disabled={passwordLoading}
+                                    className="w-full h-14 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-500/20 text-xs uppercase tracking-widest flex items-center justify-center gap-2"
+                                >
+                                    {passwordLoading ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
+                                    {passwordLoading ? "Syncing..." : "Update Security"}
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
 
         </div>
