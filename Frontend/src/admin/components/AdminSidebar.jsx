@@ -46,15 +46,19 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
             {/* Logo Section */}
             <div className="p-6 border-b border-gray-50 flex items-center" style={{ justifyContent: showLabels ? 'space-between' : 'center', padding: isCollapsed && !isMobile ? '24px 16px' : '24px 32px' }}>
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 flex items-center justify-center shrink-0 rounded-xl" style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)' }}>
-                        <Activity size={20} color="#ffffff" />
-                    </div>
+                    <img 
+                        src="/favicon.png" 
+                        alt="HelpDesk.ai Logo" 
+                        style={{ 
+                            height: showLabels ? '32px' : '32px', 
+                            width: showLabels ? 'auto' : '32px',
+                            objectFit: 'contain',
+                            borderRadius: showLabels ? '0' : '8px'
+                        }} 
+                    />
                     {showLabels && (
-                        <div className="animate-in fade-in duration-500">
-                            <h1 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 800, color: '#0f1f12', fontSize: '20px', letterSpacing: '-0.02em', lineHeight: 1 }}>
-                                HELPDESK.AI
-                            </h1>
-                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mt-1">Admin Console</p>
+                        <div className="animate-in fade-in duration-500 flex flex-col justify-center">
+                            <p className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em]">Admin Console</p>
                         </div>
                     )}
                 </div>
