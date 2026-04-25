@@ -15,8 +15,8 @@ const Dashboard = () => {
             className="min-h-screen pb-20 relative"
             style={{
                 background: `
-                    radial-gradient(circle at top right, rgba(19,236,146,0.08), transparent 60%),
-                    linear-gradient(180deg, #f8faf9 0%, #f3f6f4 100%)
+                    radial-gradient(circle at top right, rgba(34,160,69,0.06), transparent 60%),
+                    #F8FAF9
                 `,
                 backgroundAttachment: 'fixed'
             }}
@@ -32,7 +32,7 @@ const Dashboard = () => {
                     {/* Quick Actions Grid */}
                     <section id="tour-quick-actions">
                         <div className="flex items-center justify-between mb-4 px-2">
-                            <h2 className="text-sm font-black text-gray-400 uppercase tracking-[0.2em]">Quick Support Actions</h2>
+                            <h2 style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase' }}>Quick Support Actions</h2>
                         </div>
                         <QuickActions />
                     </section>

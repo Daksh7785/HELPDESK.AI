@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Network, Laptop, ShieldCheck, ArrowRight } from 'lucide-react';
-import { Card, CardContent } from "../../components/ui/card";
 
 const actions = [
     {
@@ -9,61 +8,75 @@ const actions = [
         description: "Connectivity problems, VPN access, and slow internet.",
         category: "Network",
         icon: Network,
-        color: "emerald"
+        iconBg: '#EDFAF3',
+        iconColor: '#16a34a',
     },
     {
         title: "Software Problems",
         description: "Application crashes, license issues, and installations.",
         category: "Software",
         icon: Laptop,
-        color: "blue"
+        iconBg: '#EEF2FF',
+        iconColor: '#4f46e5',
     },
     {
         title: "Access Requests",
         description: "Permission changes, new account setup, and MFA.",
         category: "Access",
         icon: ShieldCheck,
-        color: "purple"
+        iconBg: '#F5F0FF',
+        iconColor: '#7c3aed',
     }
 ];
 
 const QuickActions = () => {
     const navigate = useNavigate();
+    const [hoveredIdx, setHoveredIdx] = useState(null);
 
     const handleActionClick = (category) => {
         navigate('/create-ticket', { state: { prefilledCategory: category } });
     };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
             {actions.map((action, index) => (
-                <Card
+                <div
                     key={index}
                     onClick={() => handleActionClick(action.category)}
-                    className="group cursor-pointer border-none bg-white rounded-3xl shadow-sm hover:shadow-md transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+                    onMouseEnter={() => setHoveredIdx(index)}
+                    onMouseLeave={() => setHoveredIdx(null)}
+                    style={{
+                        background: '#fff',
+                        borderRadius: '20px',
+                        border: `1px solid ${hoveredIdx === index ? '#86efac' : '#e7f5ee'}`,
+                        boxShadow: hoveredIdx === index ? '0 12px 32px rgba(0,0,0,0.1)' : '0 2px 12px rgba(0,0,0,0.05)',
+                        padding: '28px',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        transform: hoveredIdx === index ? 'translateY(-6px)' : 'translateY(0)',
+                    }}
                 >
-                    <CardContent className="p-6">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-4 transition-colors ${action.color === 'emerald' ? 'bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100' :
-                                action.color === 'blue' ? 'bg-blue-50 text-blue-600 group-hover:bg-blue-100' :
-                                    'bg-purple-50 text-purple-600 group-hover:bg-purple-100'
-                            }`}>
-                            <action.icon size={24} />
-                        </div>
+                    <div style={{
+                        width: '48px', height: '48px', borderRadius: '14px', padding: '12px',
+                        background: action.iconBg, display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', marginBottom: '16px', color: action.iconColor,
+                    }}>
+                        <action.icon size={24} />
+                    </div>
 
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">{action.title}</h3>
-                        <p className="text-sm text-gray-500 leading-relaxed mb-6">
-                            {action.description}
-                        </p>
+                    <h3 style={{ fontSize: '17px', fontWeight: 600, color: '#111827', marginBottom: '8px' }}>{action.title}</h3>
+                    <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: 1.6, marginBottom: '20px' }}>
+                        {action.description}
+                    </p>
 
-                        <div className="flex items-center gap-2 text-sm font-medium text-emerald-600 group-hover:translate-x-1 transition-transform">
-                            Start Request
-                            <ArrowRight size={16} />
-                        </div>
-                    </CardContent>
-                </Card>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#16a34a', fontWeight: 600, fontSize: '13px' }}>
+                        Start Request →
+                    </div>
+                </div>
             ))}
         </div>
     );
 };
 
 export default QuickActions;
+
