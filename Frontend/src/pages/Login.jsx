@@ -91,113 +91,221 @@ function Login() {
   const currentSubmitHandler = isMagicLink ? handleMagicLink : handleLogin;
 
   return (
-    <div className="min-h-screen flex font-sans">
-      {/* Left Side Branding */}
-      <div className="hidden lg:flex w-1/2 bg-emerald-900 text-white items-center justify-center p-12 relative overflow-hidden">
-        {/* Background Patterns */}
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-        <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-emerald-500 rounded-full blur-3xl opacity-20"></div>
-        <div className="absolute top-24 right-24 w-64 h-64 bg-teal-400 rounded-full blur-3xl opacity-10"></div>
+    <div className="min-h-screen flex" style={{ fontFamily: "'Inter', sans-serif" }}>
+
+      {/* ── Left Panel ── */}
+      <div
+        className="hidden lg:flex w-1/2 items-center justify-center p-12 relative overflow-hidden"
+        style={{
+          background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)',
+        }}
+      >
+        {/* Radial glow */}
+        <div
+          className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none"
+          style={{
+            background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)',
+          }}
+        />
 
         <div className="relative z-10 max-w-lg">
-          <div className="bg-emerald-800/50 p-3 rounded-2xl w-fit mb-8 backdrop-blur-sm border border-emerald-700/50">
-            <BrainCircuit className="w-10 h-10 text-emerald-300" />
+          {/* Logo / Icon */}
+          <div
+            className="p-3 rounded-2xl w-fit mb-8"
+            style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }}
+          >
+            <BrainCircuit className="w-10 h-10" style={{ color: '#16a34a' }} />
           </div>
-          <h1 className="text-5xl font-extrabold mb-6 leading-tight">
-            Automate your <span className="text-emerald-400">IT Support</span>
+
+          {/* Headline */}
+          <h1
+            style={{
+              fontFamily: "'Syne', sans-serif",
+              fontSize: '48px',
+              fontWeight: 800,
+              color: '#0f1f12',
+              letterSpacing: '-0.03em',
+              lineHeight: 1.1,
+              marginBottom: '24px',
+            }}
+          >
+            Automate your{' '}
+            <span style={{ color: '#16a34a' }}>IT Support</span>
           </h1>
-          <p className="text-xl text-emerald-100/80 leading-relaxed mb-8">
+
+          {/* Subtext */}
+          <p style={{ color: '#374151', fontSize: '16px', lineHeight: 1.7, marginBottom: '32px' }}>
             Join thousands of IT teams using HelpDesk.ai to categorize, route, and resolve tickets instantly.
           </p>
 
-          <div className="bg-emerald-950/30 rounded-xl p-6 border border-emerald-800/50 backdrop-blur-md">
+          {/* System Status Badge */}
+          <div
+            style={{
+              background: '#ffffff',
+              border: '1px solid #d1fae5',
+              borderRadius: '14px',
+              padding: '14px 18px',
+              boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
+            }}
+          >
             <div className="flex gap-4 items-start">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                <div className="text-emerald-300 font-bold">AI</div>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ background: '#f0fdf4' }}>
+                <div style={{ color: '#0f1f12', fontWeight: 800, fontSize: '14px' }}>AI</div>
               </div>
               <div>
-                <p className="text-sm font-semibold text-emerald-200 uppercase tracking-wider mb-1">System Status</p>
-                <p className="text-white font-medium">All systems operational. 99.9% uptime this month.</p>
+                <p className="flex items-center gap-2" style={{ fontSize: '12px', fontWeight: 600, color: '#374151', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                  <span
+                    className="inline-block w-2 h-2 rounded-full animate-pulse"
+                    style={{ background: '#22c55e' }}
+                  />
+                  System Status
+                </p>
+                <p style={{ color: '#111827', fontWeight: 500, fontSize: '14px' }}>All systems operational. 99.9% uptime this month.</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex w-full lg:w-1/2 items-center justify-center bg-gray-50 p-6 relative">
+      {/* ── Right Panel ── */}
+      <div
+        className="flex w-full lg:w-1/2 items-center justify-center p-6 relative"
+        style={{ background: '#ffffff', borderLeft: '1px solid #f0fdf4' }}
+      >
         {/* Back Button */}
         <Link
           to="/"
-          className="absolute top-8 left-8 flex items-center gap-2 text-gray-500 hover:text-emerald-900 font-semibold transition-all group"
+          className="absolute top-8 left-8 flex items-center gap-2 transition-all group"
+          style={{ color: '#374151', fontWeight: 500, fontSize: '14px' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#16a34a'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#374151'}
         >
-          <div className="p-2 rounded-full bg-white border border-gray-100 shadow-sm group-hover:border-emerald-100 group-hover:shadow-md transition-all">
+          <div className="p-2 rounded-full transition-all" style={{ background: '#f9fafb', border: '1px solid #e5e7eb' }}>
             <ArrowLeft className="w-4 h-4" />
           </div>
           <span>Back to Home</span>
         </Link>
 
-        <div className="bg-white shadow-xl shadow-gray-200/50 rounded-3xl p-8 md:p-12 w-full max-w-md border border-gray-100 mt-8 lg:mt-0">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">Welcome Back</h2>
-            <p className="text-gray-500">Please sign in to continue</p>
+        <div className="w-full max-w-md mt-8 lg:mt-0" style={{ padding: '32px' }}>
+          {/* Header */}
+          <div className="text-center" style={{ marginBottom: '40px' }}>
+            <h2
+              style={{
+                fontFamily: "'Syne', sans-serif",
+                fontSize: '28px',
+                fontWeight: 800,
+                color: '#0f1f12',
+                letterSpacing: '-0.02em',
+                marginBottom: '8px',
+              }}
+            >
+              Welcome Back
+            </h2>
+            <p style={{ color: '#6b7280', fontSize: '14px' }}>Please sign in to continue</p>
           </div>
 
           {/* Role Toggle Removed */}
 
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-100 rounded-xl p-4 flex items-start gap-3">
-              <div className="bg-red-100 rounded-full p-1 mt-0.5">
+            <div className="mb-6 flex items-start gap-3" style={{ background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', padding: '14px 16px' }}>
+              <div className="rounded-full p-1 mt-0.5" style={{ background: '#fee2e2' }}>
                 <ArrowRight className="w-3 h-3 text-red-600 rotate-45" />
               </div>
-              <p className="text-red-700 text-sm font-medium">{error}</p>
+              <p className="text-sm font-medium" style={{ color: '#b91c1c' }}>{error}</p>
             </div>
           )}
 
           {magicLinkSent ? (
             <div className="text-center py-6">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center mx-auto mb-6">
-                <BrainCircuit className="w-8 h-8 text-emerald-600" />
+              <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
+                <BrainCircuit className="w-8 h-8" style={{ color: '#16a34a' }} />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Check your email</h3>
-              <p className="text-gray-500 mb-6">We've sent a magic link to <span className="font-semibold text-gray-800">{email}</span></p>
+              <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#0f1f12', marginBottom: '8px' }}>Check your email</h3>
+              <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '24px' }}>We've sent a magic link to <span style={{ fontWeight: 600, color: '#111827' }}>{email}</span></p>
               <button
                 onClick={() => setMagicLinkSent(false)}
-                className="text-emerald-700 font-bold hover:underline transition-all"
+                className="hover:underline transition-all"
+                style={{ color: '#16a34a', fontWeight: 700, fontSize: '14px', background: 'none', border: 'none', cursor: 'pointer' }}
               >
                 Try another email
               </button>
             </div>
           ) : (
-            <form onSubmit={currentSubmitHandler} className="space-y-6">
+            <form onSubmit={currentSubmitHandler} className="space-y-5">
+              {/* Email Field */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                <label
+                  className="block mb-2"
+                  style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+                >
+                  Email Address
+                </label>
                 <input
                   type="email"
                   placeholder="Enter your system email"
-                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium"
+                  style={{
+                    width: '100%',
+                    background: '#f9fafb',
+                    border: '1.5px solid #e5e7eb',
+                    borderRadius: '12px',
+                    padding: '13px 16px',
+                    fontSize: '15px',
+                    color: '#111827',
+                    outline: 'none',
+                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                  }}
+                  onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 0 3px rgba(34,160,69,0.1)'; }}
+                  onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 
+              {/* Password Field */}
               {!isMagicLink && (
                 <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} exit={{ opacity: 0, height: 0 }}>
                   <div className="flex justify-between items-center mb-2">
-                    <label className="block text-sm font-semibold text-gray-700">Password</label>
-                    <Link to="/forgot-password" title="Reset your password" className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 rounded-md px-1 transition-all">Forgot password?</Link>
+                    <label
+                      className="block"
+                      style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase' }}
+                    >
+                      Password
+                    </label>
+                    <Link
+                      to="/forgot-password"
+                      title="Reset your password"
+                      className="transition-all"
+                      style={{ fontSize: '12px', fontWeight: 600, color: '#16a34a' }}
+                    >
+                      Forgot password?
+                    </Link>
                   </div>
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium pr-10"
+                      style={{
+                        width: '100%',
+                        background: '#f9fafb',
+                        border: '1.5px solid #e5e7eb',
+                        borderRadius: '12px',
+                        padding: '13px 16px',
+                        paddingRight: '44px',
+                        fontSize: '15px',
+                        color: '#111827',
+                        outline: 'none',
+                        transition: 'border-color 0.2s, box-shadow 0.2s',
+                      }}
+                      onFocus={(e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 0 3px rgba(34,160,69,0.1)'; }}
+                      onBlur={(e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; }}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                      style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -205,32 +313,63 @@ function Login() {
                 </motion.div>
               )}
 
+              {/* Sign In Button */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-emerald-900 text-white rounded-xl py-3.5 font-bold hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+                style={{
+                  background: 'linear-gradient(135deg, #16a34a, #22c55e)',
+                  color: '#ffffff',
+                  borderRadius: '12px',
+                  padding: '14px',
+                  fontWeight: 600,
+                  fontSize: '15px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 20px rgba(34,160,69,0.3)',
+                  transition: 'transform 0.2s, box-shadow 0.2s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(34,160,69,0.35)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(34,160,69,0.3)'; }}
               >
                 {loading && <Loader2 className="w-5 h-5 animate-spin" />}
                 {!loading && (isMagicLink ? "Send Magic Link" : "Sign In")}
               </button>
 
+              {/* Divider */}
               <div className="relative flex items-center py-2">
-                <div className="flex-grow border-t border-gray-200"></div>
-                <span className="flex-shrink-0 mx-4 text-gray-400 text-sm font-medium">Or</span>
-                <div className="flex-grow border-t border-gray-200"></div>
+                <div className="flex-grow" style={{ borderTop: '1px solid #e5e7eb' }}></div>
+                <span className="flex-shrink-0 mx-4" style={{ color: '#9ca3af', fontSize: '13px', fontWeight: 500 }}>Or</span>
+                <div className="flex-grow" style={{ borderTop: '1px solid #e5e7eb' }}></div>
               </div>
 
+              {/* Magic Link Toggle */}
               <button
                 type="button"
                 onClick={() => { setIsMagicLink(!isMagicLink); setError(""); }}
-                className="w-full bg-white text-emerald-900 border-2 border-emerald-100 rounded-xl py-3.5 font-bold hover:bg-emerald-50 hover:border-emerald-200 transition-all flex items-center justify-center gap-2"
+                className="w-full flex items-center justify-center gap-2 transition-all"
+                style={{
+                  background: '#ffffff',
+                  border: '1.5px solid #d1fae5',
+                  color: '#15803d',
+                  borderRadius: '12px',
+                  padding: '13px',
+                  fontWeight: 500,
+                  fontSize: '15px',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
+                onMouseLeave={(e) => e.currentTarget.style.background = '#ffffff'}
               >
                 {isMagicLink ? "Sign in with Password" : "Sign in with Magic Link"}
               </button>
 
-              <p className="text-center text-sm text-gray-500 mt-8">
+              {/* Create Account */}
+              <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '32px' }}>
                 Don't have an account?{" "}
-                <Link to="/signup" className="text-emerald-700 font-bold hover:underline transition-all">
+                <Link to="/signup" className="hover:underline transition-all" style={{ color: '#16a34a', fontWeight: 600 }}>
                   Create Account
                 </Link>
               </p>
