@@ -18,9 +18,10 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
 
     const getPriorityStyle = (priority) => {
         const p = priority?.toLowerCase();
-        if (p === 'high' || p === 'critical') return 'bg-red-50 text-red-600 border-red-100 ring-red-500/10';
-        if (p === 'medium') return 'bg-amber-50 text-amber-600 border-amber-100 ring-amber-500/10';
-        return 'bg-emerald-50 text-emerald-600 border-emerald-100 ring-emerald-500/10';
+        if (p === 'critical') return { background: '#fff7ed', color: '#ea580c', border: '1px solid #ffedd5' };
+        if (p === 'high') return { background: '#fef2f2', color: '#dc2626', border: '1px solid #fee2e2' };
+        if (p === 'medium') return { background: '#fefce8', color: '#ca8a04', border: '1px solid #fef9c3' };
+        return { background: '#f0fdf4', color: '#16a34a', border: '1px solid #dcfce7' };
     };
 
     const getStatusStyle = (status) => {
@@ -50,7 +51,7 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
     );
 
     return (
-        <div className="overflow-x-auto custom-scrollbar rounded-3xl border border-slate-200/60 bg-white/50 backdrop-blur-sm shadow-xl shadow-slate-200/50">
+        <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full border-collapse">
                 <thead className="bg-[#f8fafc] border-b border-slate-200">
                     <tr>
@@ -76,8 +77,8 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 key={ticket.ticket_id}
                                 onClick={() => navigate(`/admin/ticket/${ticket.ticket_id}`)}
                                 className={`cursor-pointer group transition-all duration-300 ${ticket.status?.includes('Resolv')
-                                    ? 'bg-slate-50/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:bg-slate-100/80'
-                                    : 'hover:bg-indigo-50/40 relative'
+                                    ? 'bg-slate-50/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:bg-[#f0fdf4]'
+                                    : 'hover:bg-[#f0fdf4] relative'
                                     }`}
                             >
                                 <td className="px-8 py-6">
@@ -120,7 +121,12 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                     </div>
                                 </td>
                                 <td className="px-8 py-6">
-                                    <span className={`px-4 py-1.5 rounded-full text-[10px] font-black border ring-4 ring-opacity-10 border-opacity-30 uppercase tracking-[0.1em] shadow-sm ${getPriorityStyle(effectivePriority)}`}>
+                                    <span style={{
+                                        ...getPriorityStyle(effectivePriority),
+                                        padding: '6px 16px', borderRadius: '100px', fontSize: '10px',
+                                        fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'inline-block'
+                                    }}>
                                         {effectivePriority || 'NORMAL'}
                                     </span>
                                 </td>

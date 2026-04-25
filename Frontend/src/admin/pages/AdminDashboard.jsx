@@ -90,18 +90,24 @@ const AdminDashboard = () => {
     }, [tickets]);
 
     return (
-        <div className="space-y-10">
+        <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '40px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10">
             {/* 1. Header Area with Global Status */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">System Overview</h1>
-                    <p className="text-sm font-bold text-slate-400 mt-1 flex items-center gap-2">
-                        <Activity size={14} className="text-emerald-500" /> Real-time operational telemetry active.
+                    <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '26px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', margin: 0, textTransform: 'uppercase' }}>
+                        System Overview
+                    </h1>
+                    <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500 }}>
+                        <Activity size={14} color="#16a34a" /> Real-time operational telemetry active
                     </p>
                 </div>
-                <div className="flex items-center gap-2 px-4 py-2 bg-emerald-50 border border-emerald-100 rounded-2xl">
+                <div style={{
+                    display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 14px',
+                    background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0',
+                    borderRadius: '100px'
+                }}>
                     <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-                    <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Global Protocol Active</span>
+                    <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Global Protocol Active</span>
                 </div>
             </div>
 
@@ -165,57 +171,76 @@ const AdminDashboard = () => {
                 {/* 3. Recent Activity (8 cols) */}
                 <div className="lg:col-span-8 space-y-6">
                     <div className="flex items-center justify-between px-2">
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight italic uppercase flex items-center gap-3">
-                            <Activity size={24} className="text-indigo-600" /> Recent Ticket Activity
+                        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '17px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Activity size={20} color="#2563eb" /> RECENT TICKET ACTIVITY
                         </h2>
                     </div>
-                    <TicketTable tickets={tickets} limit={10} isLoading={isLoading} />
+                    <div style={{
+                        background: '#ffffff',
+                        borderRadius: '20px',
+                        border: '1px solid #f0fdf4',
+                        boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
+                        overflow: 'hidden'
+                    }}>
+                        <TicketTable tickets={tickets} limit={10} isLoading={isLoading} />
+                    </div>
                 </div>
 
                 {/* 4. AI System Health (4 cols) */}
                 <div className="lg:col-span-4 space-y-6">
                     <div className="px-2 flex items-center justify-between">
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight italic uppercase flex items-center gap-3">
-                            <Cpu size={24} className="text-emerald-600" /> AI System Health
+                        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '17px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Cpu size={20} color="#16a34a" /> AI SYSTEM HEALTH
                         </h2>
                         <div className="flex items-center gap-2">
                             <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping"></div>
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Sync</span>
+                            <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Live Sync</span>
                         </div>
                     </div>
-                    <Card className="border-none shadow-2xl shadow-slate-200/50 bg-white rounded-[2rem] overflow-hidden">
-                        <CardContent className="p-8 space-y-6">
+                    <div style={{
+                        background: '#ffffff',
+                        borderRadius: '20px',
+                        border: '1px solid #f0fdf4',
+                        padding: '32px'
+                    }}>
+                        <div className="space-y-6">
                             {aiSubsystems.map((sub, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100 group hover:bg-white hover:border-emerald-100 transition-all cursor-default">
+                                <div key={idx} className="flex items-center justify-between p-4 bg-gray-50/50 rounded-2xl border border-gray-100 transition-all cursor-default hover:bg-white hover:border-green-100">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 bg-white shadow-sm border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
+                                        <div className="w-10 h-10 bg-white shadow-sm border border-gray-200 rounded-xl flex items-center justify-center text-gray-500 transition-colors">
                                             <sub.icon size={20} />
                                         </div>
                                         <div>
-                                            <p className="text-sm font-black text-slate-800 tracking-tight uppercase italic">{sub.name}</p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mt-1">Status: {sub.latency}</p>
+                                            <p style={{ fontSize: '14px', fontWeight: 700, color: '#111827', margin: 0 }}>{sub.name}</p>
+                                            <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '2px', fontWeight: 500 }}>Status: {sub.latency}</p>
                                         </div>
                                     </div>
-                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full shadow-sm">
-                                        <div className={`w-1.5 h-1.5 rounded-full ${sub.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`}></div>
-                                        <span className={`text-[9px] font-black uppercase tracking-widest ${sub.status === 'Active' ? 'text-emerald-600' : 'text-slate-400'}`}>{sub.status}</span>
+                                    <div style={{
+                                        display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px',
+                                        background: sub.status === 'Active' ? '#dcfce7' : '#f3f4f6',
+                                        color: sub.status === 'Active' ? '#15803d' : '#6b7280',
+                                        border: sub.status === 'Active' ? '1px solid #bbf7d0' : '1px solid #e5e7eb',
+                                        borderRadius: '100px'
+                                    }}>
+                                        <div className={`w-1.5 h-1.5 rounded-full ${sub.status === 'Active' ? 'bg-emerald-500 animate-pulse' : 'bg-gray-400'}`}></div>
+                                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>{sub.status}</span>
                                     </div>
                                 </div>
                             ))}
 
-                            <div className="pt-4 mt-6 border-t border-slate-100 flex flex-col items-center gap-2">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] italic text-center">
+                            <div className="pt-4 mt-6 border-t border-gray-100 flex flex-col items-center gap-2">
+                                <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.14em', fontWeight: 600, textTransform: 'uppercase' }}>
                                     All AI Nodes Synchronized
                                 </p>
-                                <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
-                                    <Activity size={10} className="text-slate-400" />
-                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                <div className="flex items-center gap-1.5 px-3 py-1 bg-gray-50 rounded-full border border-gray-200 mt-1">
+                                    <Activity size={10} color="#9ca3af" />
+                                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                                         Last Telemetry Sync: {formatTimelineDate(new Date())}
                                     </span>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

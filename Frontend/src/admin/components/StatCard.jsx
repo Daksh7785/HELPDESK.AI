@@ -1,5 +1,4 @@
 import React from 'react';
-import { Card } from "../../components/ui/card";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 
 /**
@@ -9,32 +8,40 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
  * @param {string} subtitle - Secondary text
  * @param {React.ReactNode} icon - Lucide icon
  * @param {string} trend - Optional trend indicator (+ or -)
- * @param {string} color - Indigo, Emerald, Amber, Slate
+ * @param {string} color - Semantic color mapper
  */
 const StatCard = ({ label, value, subtitle, icon: Icon, trend, color = 'indigo' }) => {
-    const colorStyles = {
-        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-        emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-        amber: 'bg-amber-50 text-amber-600 border-amber-100',
-        red: 'bg-red-50 text-red-600 border-red-100',
-        slate: 'bg-slate-50 text-slate-500 border-slate-100'
+    // Map existing colors to requested semantic colors: network=green, warning=amber, success=teal, human=blue
+    const semanticColors = {
+        indigo: { bg: '#EDFAF3', text: '#16a34a' },  // network=green (Total Tickets)
+        amber: { bg: '#FFFBEB', text: '#d97706' },   // warning=amber (Active Incidents)
+        emerald: { bg: '#F0FDFA', text: '#0d9488' }, // success=teal (AI Auto-Resolved)
+        red: { bg: '#EFF6FF', text: '#2563eb' },     // human=blue (Human Escalations)
+        slate: { bg: '#F8FAFC', text: '#64748B' }
     };
 
-    const textStyles = {
-        indigo: 'text-indigo-600',
-        emerald: 'text-emerald-600',
-        amber: 'text-amber-600',
-        red: 'text-red-600',
-        slate: 'text-slate-600'
-    };
+    const currentStyle = semanticColors[color] || semanticColors.slate;
 
     return (
-        <Card className="p-6 border-none shadow-sm hover:shadow-md transition-all group bg-white rounded-2xl">
+        <div style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            border: '1px solid #f0fdf4',
+            boxShadow: '0 2px 12px rgba(0,0,0,0.05)',
+            padding: '24px',
+            transition: 'all 0.3s ease',
+            position: 'relative',
+            overflow: 'hidden'
+        }} className="hover:shadow-lg hover:-translate-y-1 group">
             <div className="flex items-start justify-between">
                 <div>
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">{label}</p>
+                    <p style={{ fontSize: '11px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase', marginBottom: '8px' }}>
+                        {label}
+                    </p>
                     <div className="flex items-baseline gap-2">
-                        <p className="text-4xl font-black text-slate-900 tracking-tight">{value}</p>
+                        <p style={{ fontFamily: 'Syne, sans-serif', fontSize: '32px', fontWeight: 800, color: '#0f1f12', lineHeight: 1 }}>
+                            {value}
+                        </p>
                         {trend && (
                             <span className={`text-[11px] font-bold flex items-center gap-0.5 ${trend.startsWith('+') ? 'text-emerald-500' : 'text-red-500'}`}>
                                 {trend.startsWith('+') ? <TrendingUp size={10} /> : <TrendingDown size={10} />}
@@ -42,16 +49,24 @@ const StatCard = ({ label, value, subtitle, icon: Icon, trend, color = 'indigo' 
                             </span>
                         )}
                     </div>
-                    {subtitle && <p className="text-xs text-slate-500 font-medium mt-2 flex items-center gap-1.5"><Minus size={10} className="text-slate-300" /> {subtitle}</p>}
+                    {subtitle && <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}><Minus size={10} color="#d1d5db" /> {subtitle}</p>}
                 </div>
-                <div className={`p-3 rounded-xl border-2 shadow-sm transition-transform group-hover:scale-110 duration-500 ${colorStyles[color]}`}>
+                <div style={{
+                    background: currentStyle.bg,
+                    color: currentStyle.text,
+                    padding: '12px',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'transform 0.5s ease'
+                }} className="group-hover:scale-110">
                     <Icon size={24} />
                 </div>
             </div>
-            {/* Visual background element */}
-            <div className="absolute bottom-0 right-0 w-24 h-24 bg-gradient-to-br from-transparent to-slate-50 rounded-br-2xl -z-10 group-hover:to-slate-100/50 transition-colors"></div>
-        </Card>
+        </div>
     );
 };
 
 export default StatCard;
+
