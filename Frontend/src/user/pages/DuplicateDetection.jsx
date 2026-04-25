@@ -73,43 +73,10 @@ const DuplicateDetection = () => {
         if (!aiTicket) return;
         setIsLoading(true);
         try {
-            const { user, profile } = useAuthStore.getState();
-            // Map AI Analysis into the TicketSaveRequest format
-            const savePayload = {
-                user_id: user?.id,
-                subject: aiTicket.summary,
-                description: aiTicket.originalIssue,
-                category: aiTicket.category,
-                subcategory: aiTicket.subcategory,
-                priority: aiTicket.priority,
-                assigned_team: aiTicket.assigned_team,
-                status: aiTicket.auto_resolve ? 'auto_resolved' : 'pending_human',
-                auto_resolve: aiTicket.auto_resolve,
-                is_duplicate: aiTicket.duplicate_ticket?.is_duplicate || false,
-                confidence: aiTicket.confidence,
-                image_url: aiTicket.image_url || null,
-                company: profile?.company || "System",
-                sla_breach_at: aiTicket.sla_breach_at,
-                metadata: {
-                    confidence: aiTicket.confidence,
-                    entities: aiTicket.entities,
-                    decision_factors: aiTicket.decision_factors,
-                    ocr_text: aiTicket.ocr_text,
-                    image_description: aiTicket.image_description
-                },
-                entities: aiTicket.entities,
-                solution_steps: resolutionSteps || [],
-                ocr_text: aiTicket.ocr_text || "",
-                needs_review: aiTicket.needs_review,
-                routing_confidence: aiTicket.confidence
-            };
-
-            const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload);
-            if (res.data?.ticket_id) {
-                navigate(`/ticket/${res.data.ticket_id}`);
-            }
+            // Forward user to TicketTracking to handle the actual creation
+            navigate('/ticket-tracking', { state: { resolutionSteps } });
         } catch (err) {
-            console.error("Failed to save ticket:", err);
+            console.error("Failed to navigate to tracking:", err);
             navigate('/create-ticket');
         } finally {
             setIsLoading(false);

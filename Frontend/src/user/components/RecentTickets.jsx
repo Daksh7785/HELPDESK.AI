@@ -82,9 +82,32 @@ const RecentTickets = () => {
 
             <CardContent className="px-8 pb-8">
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                        <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mb-4" />
-                        <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">Fetching Recent Records...</p>
+                    <div className="space-y-4 w-full">
+                        <style>{`@keyframes shimmer{100%{transform:translateX(100%)}}`}</style>
+                        {/* Header skeleton */}
+                        <div className="flex gap-4 pb-2 border-b border-gray-50 mb-4">
+                            <div className="h-3 w-10 bg-slate-100 rounded overflow-hidden relative"><div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" /></div>
+                            <div className="h-3 w-24 bg-slate-100 rounded overflow-hidden relative"><div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" /></div>
+                            <div className="h-3 w-16 bg-slate-100 rounded overflow-hidden relative"><div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" /></div>
+                            <div className="h-3 w-20 bg-slate-100 rounded overflow-hidden relative hidden sm:block"><div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" /></div>
+                        </div>
+                        {/* Rows skeleton */}
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="flex items-center gap-4 py-3">
+                                <div className="h-6 w-16 bg-slate-100 rounded-md relative overflow-hidden shrink-0">
+                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
+                                </div>
+                                <div className="h-5 flex-1 bg-slate-100 rounded-md relative overflow-hidden">
+                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
+                                </div>
+                                <div className="h-6 w-20 bg-slate-100 rounded-full relative overflow-hidden shrink-0">
+                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
+                                </div>
+                                <div className="h-8 w-24 bg-slate-100 rounded-md relative overflow-hidden hidden sm:block shrink-0">
+                                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/60 to-transparent animate-[shimmer_1.5s_infinite]" />
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 ) : error ? (
                     <div className="flex flex-col items-center justify-center py-12 text-center text-red-500 bg-red-50/50 rounded-2xl border border-dashed border-red-200">

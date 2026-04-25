@@ -45,6 +45,12 @@ const CreateTicket = () => {
     const [isTranslating, setIsTranslating] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
     const langRef = useRef(null);
+    
+    // Voice UI states
+    const [showVoiceModal, setShowVoiceModal] = useState(false);
+    const [voiceTranscript, setVoiceTranscript] = useState('');
+    const [interimVoice, setInterimVoice] = useState('');
+    const recognitionRef = useRef(null);
 
     // Close language dropdown on outside click
     useEffect(() => {
@@ -83,59 +89,86 @@ const CreateTicket = () => {
             return;
         }
 
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-
-        recognition.continuous = false;
-        recognition.interimResults = true;
-        recognition.lang = 'en-US';
-
-        recognition.onstart = () => {
-            setIsListening(true);
-            setError('');
-        };
-
-        recognition.onresult = (event) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
-
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
-                }
-            }
-
-            if (finalTranscript) {
-                setIssue(prev => {
-                    const newValue = prev ? prev + ' ' + finalTranscript : finalTranscript;
-                    return newValue.substring(0, MAX_CHARS);
-                });
-            }
-        };
-
-        recognition.onerror = (event) => {
-            console.error(event.error);
-            setIsListening(false);
-            if (event.error !== 'no-speech') {
-                setError(`Microphone error: ${event.error}`);
-            }
-        };
-
-        recognition.onend = () => {
-            setIsListening(false);
-        };
-
         if (isListening) {
-            recognition.stop();
-        } else {
-            try {
-                recognition.start();
-            } catch (e) {
-                console.error(e);
-            }
+            stopListening();
+            return;
         }
+
+        startListening();
+    };
+
+    const startListening = () => {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!recognitionRef.current) {
+            recognitionRef.current = new SpeechRecognition();
+            recognitionRef.current.continuous = true;
+            recognitionRef.current.interimResults = true;
+            recognitionRef.current.lang = 'en-US';
+
+            recognitionRef.current.onstart = () => {
+                setIsListening(true);
+                setShowVoiceModal(true);
+                setVoiceTranscript('');
+                setInterimVoice('');
+                setError('');
+            };
+
+            recognitionRef.current.onresult = (event) => {
+                let finalStr = '';
+                let interimStr = '';
+
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalStr += event.results[i][0].transcript;
+                    } else {
+                        interimStr += event.results[i][0].transcript;
+                    }
+                }
+
+                if (finalStr) {
+                    setVoiceTranscript(prev => prev + ' ' + finalStr);
+                }
+                setInterimVoice(interimStr);
+            };
+
+            recognitionRef.current.onerror = (event) => {
+                console.error("Mic Error:", event.error);
+                if (event.error !== 'no-speech') {
+                    setError(`Microphone error: ${event.error}`);
+                }
+            };
+
+            recognitionRef.current.onend = () => {
+                setIsListening(false);
+            };
+        }
+
+        try {
+            recognitionRef.current.start();
+        } catch (e) {
+            console.error("Start failed:", e);
+        }
+    };
+
+    const stopListening = () => {
+        if (recognitionRef.current) {
+            recognitionRef.current.stop();
+        }
+        setIsListening(false);
+    };
+
+    const handleSaveVoice = () => {
+        stopListening();
+        setIssue(prev => {
+            const combined = prev + ' ' + voiceTranscript + ' ' + interimVoice;
+            return combined.trim().substring(0, MAX_CHARS);
+        });
+        setShowVoiceModal(false);
+    };
+
+    const handleCancelVoice = () => {
+        stopListening();
+        setShowVoiceModal(false);
     };
 
     const handleFileChange = (e) => {
@@ -511,6 +544,107 @@ const CreateTicket = () => {
 
                 </div>
             </main>
+
+            {/* Premium Voice Modal Overlay */}
+            <AnimatePresence>
+                {showVoiceModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="w-full max-w-lg bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-100 flex flex-col"
+                        >
+                            <div className="p-6 bg-emerald-50/50 border-b border-emerald-100 flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <div className="relative flex items-center justify-center w-10 h-10 rounded-full bg-emerald-100 text-emerald-600">
+                                        {isListening && (
+                                            <span className="absolute inset-0 rounded-full border-2 border-emerald-400 animate-ping"></span>
+                                        )}
+                                        <Mic size={20} className={isListening ? "animate-pulse" : ""} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-bold text-gray-900 leading-tight">Live Dictation</h3>
+                                        <p className="text-xs text-emerald-600 font-medium">{isListening ? "Listening..." : "Paused"}</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={handleCancelVoice}
+                                    className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            <div className="p-8 min-h-[200px] max-h-[300px] overflow-y-auto">
+                                <p className="text-gray-800 text-lg leading-relaxed font-medium">
+                                    {voiceTranscript}
+                                    <span className="text-gray-400"> {interimVoice}</span>
+                                    {isListening && <span className="inline-block w-2 h-5 ml-1 align-middle bg-emerald-400 animate-pulse"></span>}
+                                </p>
+                                {!voiceTranscript && !interimVoice && (
+                                    <div className="h-full flex items-center justify-center text-gray-400 text-sm font-medium italic">
+                                        Start speaking... we're listening.
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Siri-style Wave Animation */}
+                            <AnimatePresence>
+                                {isListening && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 60 }}
+                                        exit={{ opacity: 0, height: 0 }}
+                                        className="flex items-center justify-center gap-1.5 overflow-hidden bg-gray-50 border-t border-gray-100"
+                                    >
+                                        {[...Array(16)].map((_, i) => (
+                                            <motion.div
+                                                key={i}
+                                                animate={{
+                                                    height: [15, 45, 15],
+                                                    backgroundColor: ['#34d399', '#10b981', '#34d399']
+                                                }}
+                                                transition={{
+                                                    duration: 0.8,
+                                                    repeat: Infinity,
+                                                    delay: i * 0.05,
+                                                    ease: "easeInOut"
+                                                }}
+                                                className="w-1.5 rounded-full bg-emerald-400"
+                                            />
+                                        ))}
+                                    </motion.div>
+                                )}
+                            </AnimatePresence>
+
+                            <div className="p-6 bg-gray-50 flex gap-4 border-t border-gray-100">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleCancelVoice}
+                                    className="flex-1 font-bold text-gray-600 border-gray-200 hover:bg-white h-12 rounded-xl"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleSaveVoice}
+                                    disabled={!voiceTranscript && !interimVoice}
+                                    className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-emerald-200"
+                                >
+                                    Insert Text
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

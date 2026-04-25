@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Activity, CheckCircle2, ShieldCheck, User,
     Clock, ArrowRight, Loader2, FileText, Zap
@@ -10,15 +10,19 @@ import { supabase } from "../../lib/supabaseClient";
 import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
 import { formatTicketId } from "../../utils/format";
+import axios from 'axios';
+import { API_CONFIG } from '../../config';
 
 const TicketTracking = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { aiTicket, setActiveTicket, addTicket } = useTicketStore();
     const { user, profile } = useAuthStore();
     const [isCreating, setIsCreating] = useState(true);
     const [error, setError] = useState(null);
     const [createdTicket, setCreatedTicket] = useState(null);
     const hasCreated = useRef(false);
+    const resolutionSteps = location.state?.resolutionSteps || [];
     useEffect(() => {
         if (!aiTicket) {
             navigate('/create-ticket');
@@ -30,22 +34,57 @@ const TicketTracking = () => {
             hasCreated.current = true;
 
             try {
-                // The ticket was ALREADY created in the backend during AI analysis.
-                // We just need to ensure our local store is synced.
-                if (aiTicket.id || aiTicket.ticket_id) {
-                    setCreatedTicket(aiTicket);
+                // Determine the correct status
+                const isAutoResolved = aiTicket.auto_resolve || false;
+                const status = isAutoResolved ? 'auto_resolved' : 'pending_human';
+
+                // Map AI Analysis into the TicketSaveRequest format
+                const savePayload = {
+                    user_id: user?.id,
+                    subject: aiTicket.summary,
+                    description: aiTicket.originalIssue || aiTicket.summary,
+                    category: aiTicket.category,
+                    subcategory: aiTicket.subcategory,
+                    priority: aiTicket.priority,
+                    assigned_team: aiTicket.assigned_team,
+                    status: status,
+                    auto_resolve: isAutoResolved,
+                    is_duplicate: aiTicket.duplicate_ticket?.is_duplicate || false,
+                    confidence: aiTicket.confidence,
+                    image_url: aiTicket.image_url || null,
+                    company: profile?.company || "System",
+                    sla_breach_at: aiTicket.sla_breach_at,
+                    metadata: {
+                        confidence: aiTicket.confidence,
+                        entities: aiTicket.entities,
+                        decision_factors: aiTicket.decision_factors,
+                        ocr_text: aiTicket.ocr_text,
+                        image_description: aiTicket.image_description
+                    },
+                    entities: aiTicket.entities,
+                    solution_steps: resolutionSteps,
+                    ocr_text: aiTicket.ocr_text || "",
+                    needs_review: aiTicket.needs_review,
+                    routing_confidence: aiTicket.confidence
+                };
+
+                const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload);
+
+                if (res.data?.ticket_id) {
+                    const newTicket = { ...aiTicket, id: res.data.ticket_id, ticket_id: res.data.ticket_id, status };
+                    setCreatedTicket(newTicket);
                     setIsCreating(false);
 
                     // Redirect to the detail page after a short confirmation pause
                     setTimeout(() => {
-                        navigate(`/ticket/${aiTicket.id || aiTicket.ticket_id}`);
+                        navigate(`/ticket/${res.data.ticket_id}`);
                     }, 2500);
                 } else {
-                    throw new Error("Missing ID from backend analysis.");
+                    throw new Error("Failed to retrieve ID from backend.");
                 }
             } catch (err) {
                 console.error("Tracking Error:", err);
-                setError(err.message);
+                setError(err.message || "Failed to create ticket.");
                 setIsCreating(false);
             }
         };
