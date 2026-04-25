@@ -1,45 +1,19 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
-    User,
-    Mail,
-    Shield,
-    Bell,
-    Lock,
-    Globe,
-    Camera,
-    ShieldCheck,
-    Key,
-    Smartphone,
-    History,
-    Activity,
-    CheckCircle2,
-    AlertCircle,
-    Copy,
-    LogOut,
-    Eye,
-    Save,
-    X,
-    Edit2,
-    Download
+    User, Mail, Shield, Bell, Lock, Globe, Camera, ShieldCheck, Key,
+    Smartphone, History, Activity, CheckCircle2, AlertCircle, Copy,
+    LogOut, Eye, Save, X, Edit2, Download
 } from 'lucide-react';
-import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from '../../store/authStore';
 import useToastStore from '../../store/toastStore';
 import { supabase } from "../../lib/supabaseClient";
 import BugReportWidget from "../../components/shared/BugReportWidget";
 
-/**
- * AdminProfile Page
- * Comprehensive terminal for monitoring system access and auditing operational history.
- * Sections: Admin Information, Security Settings, Admin Activity Log.
- */
 const AdminProfile = () => {
     const { user, profile: adminProfile } = useAuthStore();
     const { showToast } = useToastStore();
     const [isSaving, setIsSaving] = useState(false);
     const [uploading, setUploading] = useState(false);
-
-    // States for Profile Editing
     const [isEditingProfile, setIsEditingProfile] = useState(false);
     const [profileForm, setProfileForm] = useState({
         name: adminProfile?.full_name || '',
@@ -47,7 +21,6 @@ const AdminProfile = () => {
         profile_picture: adminProfile?.profile_picture || null
     });
 
-    // Update form when profile loads
     useEffect(() => {
         if (adminProfile) {
             setProfileForm({
@@ -58,19 +31,11 @@ const AdminProfile = () => {
         }
     }, [adminProfile]);
 
-    // States for Security Settings
     const [isAdmin2FAEnabled, setIsAdmin2FAEnabled] = useState(false);
     const [showPasswordModal, setShowPasswordModal] = useState(false);
-
-    const [passwordForm, setPasswordForm] = useState({
-        newPassword: '',
-        confirmPassword: ''
-    });
+    const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
     const [passwordLoading, setPasswordLoading] = useState(false);
-
     const fileInputRef = useRef(null);
-
-    // Dynamic Activity Log Data
     const [activityLog, setActivityLog] = useState([]);
 
     useEffect(() => {
@@ -83,9 +48,7 @@ const AdminProfile = () => {
                     .eq('company', adminProfile.company)
                     .order('created_at', { ascending: false })
                     .limit(5);
-
                 if (error) throw error;
-
                 const formatted = (data || []).map(t => ({
                     id: t.id,
                     action: `Ticket ${t.status?.toUpperCase() || 'UPDATED'}`,
@@ -101,161 +64,98 @@ const AdminProfile = () => {
         fetchActivity();
     }, [adminProfile?.company]);
 
-    // Handlers
     const handleImageUpload = async (e) => {
         const file = e.target.files?.[0];
-        if (!file) return; // Sequence aborted: No asset detected.
-
+        if (!file) return;
         setUploading(true);
         try {
             const userId = user?.id || adminProfile?.id;
             const fileExt = file.name.split('.').pop();
             const fileName = `${userId}/${Date.now()}.${fileExt}`;
-            const filePath = `${fileName}`;
-
-            // Upload to Supabase Storage (Assumes 'profile-pics' bucket exists)
             const { error: uploadError } = await supabase.storage
-                .from('profile-pics')
-                .upload(filePath, file, {
-                    upsert: true,
-                    contentType: file.type || 'image/jpeg'
-                });
-
+                .from('profile-pics').upload(fileName, file, { upsert: true, contentType: file.type || 'image/jpeg' });
             if (uploadError) throw uploadError;
-
-            // Get Public URL
-            const { data } = supabase.storage
-                .from('profile-pics')
-                .getPublicUrl(filePath);
-            const publicUrl = data?.publicUrl;
-
-            setProfileForm(prev => ({ ...prev, profile_picture: publicUrl }));
-
-            // Auto-save the URL to profile
-            await supabase
-                .from('profiles')
-                .update({ profile_picture: publicUrl })
-                .eq('id', userId);
-
+            const { data } = supabase.storage.from('profile-pics').getPublicUrl(fileName);
+            setProfileForm(prev => ({ ...prev, profile_picture: data?.publicUrl }));
+            await supabase.from('profiles').update({ profile_picture: data?.publicUrl }).eq('id', userId);
             await useAuthStore.getState().getProfile(user);
-            showToast("Digital avatar sequence synced.", "success");
+            showToast("Profile picture updated.", "success");
         } catch (err) {
-            console.error("Upload error:", err);
-            showToast(`SEQUENCE INTERRUPTED: ${err.message}`, "error");
-        } finally {
-            setUploading(false);
-        }
+            showToast(`Upload failed: ${err.message}`, "error");
+        } finally { setUploading(false); }
     };
 
     const handleSaveProfile = async () => {
         setIsSaving(true);
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    full_name: profileForm.name,
-                    email: profileForm.email,
-                    profile_picture: profileForm.profile_picture
-                })
-                .eq('id', adminProfile.id);
-
+            const { error } = await supabase.from('profiles').update({
+                full_name: profileForm.name, email: profileForm.email,
+                profile_picture: profileForm.profile_picture
+            }).eq('id', adminProfile.id);
             if (error) throw error;
             setIsEditingProfile(false);
-
             await useAuthStore.getState().getProfile(useAuthStore.getState().user);
-            showToast("Profile sequence updated successfully.", "success");
-        } catch (err) {
-            showToast("Save failed: " + err.message, "error");
-        } finally {
-            setIsSaving(false);
-        }
+            showToast("Profile updated successfully.", "success");
+        } catch (err) { showToast("Save failed: " + err.message, "error"); }
+        finally { setIsSaving(false); }
     };
 
     const handleDownloadArchive = () => {
-        const data = {
-            admin_id: adminProfile.id,
-            email: adminProfile.email,
-            role: adminProfile.role,
-            activity_logs: activityLog,
-        };
+        const data = { admin_id: adminProfile.id, email: adminProfile.email, role: adminProfile.role, activity_logs: activityLog };
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
+        const a = document.createElement('a'); a.href = url;
         a.download = `admin_archive_${adminProfile.id}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
 
     const handleLogout = async () => {
-        await logout();
-        navigate('/login');
+        await useAuthStore.getState().logout();
     };
 
     const handlePasswordChange = async () => {
         if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
-            showToast("Password must be at least 6 characters.", "error");
-            return;
+            showToast("Password must be at least 6 characters.", "error"); return;
         }
         if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-            showToast("Passwords do not match", "error");
-            return;
+            showToast("Passwords do not match", "error"); return;
         }
-
         setPasswordLoading(true);
         try {
-            const { error } = await supabase.auth.updateUser({
-                password: passwordForm.newPassword
-            });
-
+            const { error } = await supabase.auth.updateUser({ password: passwordForm.newPassword });
             if (error) throw error;
-
-            showToast("Security Sequence Updated Successfully", "success");
+            showToast("Password updated successfully", "success");
             setShowPasswordModal(false);
             setPasswordForm({ newPassword: '', confirmPassword: '' });
-        } catch (err) {
-            showToast("Sequence Interrupted: " + err.message, "error");
-        } finally {
-            setPasswordLoading(false);
-        }
+        } catch (err) { showToast("Failed: " + err.message, "error"); }
+        finally { setPasswordLoading(false); }
     };
 
-    return (
-        <div className="max-w-6xl mx-auto py-6 space-y-10 pb-20 animate-in fade-in duration-700">
-            {/* 1. Profile Hero Section */}
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-10 bg-white p-10 rounded-[3rem] border border-slate-200 shadow-2xl shadow-slate-200/50 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-600/5 rounded-full blur-3xl -mr-32 -mt-32"></div>
+    const cs = { card: { background: '#fff', borderRadius: '24px', border: '1px solid #f0fdf4', boxShadow: '0 4px 24px rgba(0,0,0,0.06)', padding: '36px 40px' } };
 
+    return (
+        <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '60px' }} className="max-w-6xl mx-auto py-6 space-y-10 -m-6 p-6 md:-m-10 md:p-10 animate-in fade-in duration-700">
+            {/* 1. Profile Hero */}
+            <div style={cs.card} className="flex flex-col md:flex-row items-center md:items-start gap-10 relative overflow-hidden">
                 <div className="relative group shrink-0">
-                    <div className="w-40 h-40 bg-slate-900 rounded-[2.5rem] flex items-center justify-center text-white font-black text-5xl shadow-2xl shadow-slate-900/30 border-[6px] border-white relative z-10 overflow-hidden transform group-hover:rotate-3 transition-transform duration-500">
+                    <div style={{ width: 140, height: 140, borderRadius: '50%', border: '3px solid #bbf7d0', boxShadow: '0 0 0 6px rgba(34,160,69,0.08)', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f0fdf4', fontSize: '48px', fontWeight: 800, color: '#16a34a' }}>
                         {isEditingProfile && profileForm.profile_picture ? (
-                            <img src={profileForm.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                            <img src={profileForm.profile_picture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : adminProfile?.profile_picture ? (
-                            <img src={adminProfile.profile_picture} alt="Profile" className="w-full h-full object-cover" />
+                            <img src={adminProfile.profile_picture} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                             isEditingProfile ? (profileForm.name?.charAt(0) || '?') : (adminProfile?.full_name?.charAt(0) || '?')
                         )}
                     </div>
                     {isEditingProfile && (
                         <>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleImageUpload}
-                                className="hidden"
-                                accept="image/*"
-                            />
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="absolute -bottom-2 -right-2 p-3 bg-white rounded-2xl shadow-xl border border-slate-100 text-indigo-600 hover:scale-110 active:scale-95 transition-all z-20"
-                            >
-                                <Camera size={20} />
+                            <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
+                            <button onClick={() => fileInputRef.current?.click()} style={{ position: 'absolute', bottom: -4, right: -4, background: '#fff', border: '1.5px solid #d1fae5', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#15803d', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', zIndex: 20 }}>
+                                <Camera size={18} />
                             </button>
                         </>
                     )}
-                    <div className="absolute inset-0 bg-indigo-600/20 rounded-[2.5rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
                 </div>
 
                 <div className="space-y-6 flex-1 text-center md:text-left">
@@ -263,64 +163,36 @@ const AdminProfile = () => {
                         <div className="flex-1">
                             {!isEditingProfile ? (
                                 <>
-                                    <h1 className="text-4xl font-black text-slate-900 tracking-tight italic uppercase flex flex-col md:flex-row md:items-center gap-3">
+                                    <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '26px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px' }}>
                                         {adminProfile?.full_name || 'Admin Agent'}
-                                        <span className="text-xs bg-indigo-600 text-white px-3 py-1 rounded-full not-italic tracking-widest font-black uppercase shadow-lg shadow-indigo-600/20 w-fit mx-auto md:mx-0">
+                                        <span style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', borderRadius: '100px', fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', padding: '6px 16px', textTransform: 'uppercase' }}>
                                             {adminProfile?.role === 'master_admin' ? 'Root Administrator' : 'Operating Admin'}
                                         </span>
                                     </h1>
-                                    <p className="text-slate-400 font-bold mt-2 uppercase tracking-[0.2em] text-xs flex items-center justify-center md:justify-start gap-2">
-                                        <ShieldCheck size={14} className="text-indigo-500" /> Operational Protocol ID: {adminProfile.id}
+                                    <p style={{ color: '#9ca3af', fontSize: '11px', fontFamily: 'monospace', marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }} className="md:justify-start">
+                                        <ShieldCheck size={14} color="#16a34a" /> Operational Protocol ID: {adminProfile?.id}
                                     </p>
                                 </>
                             ) : (
                                 <div className="space-y-4 max-w-sm mx-auto md:mx-0">
-                                    <input
-                                        type="text"
-                                        value={profileForm.name}
-                                        onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-lg font-black focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all outline-none"
-                                        placeholder="Admin Name"
-                                    />
-                                    <input
-                                        type="email"
-                                        value={profileForm.email}
-                                        onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })}
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all outline-none"
-                                        placeholder="Admin Email"
-                                    />
+                                    <input type="text" value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-lg font-bold focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" placeholder="Admin Name" />
+                                    <input type="email" value={profileForm.email} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none" placeholder="Admin Email" />
                                 </div>
                             )}
                         </div>
-
                         <div className="flex shrink-0 justify-center">
                             {!isEditingProfile ? (
-                                <button
-                                    onClick={() => {
-                                        setProfileForm({
-                                            name: adminProfile?.full_name || '',
-                                            email: adminProfile?.email || '',
-                                            profile_picture: adminProfile?.profile_picture
-                                        });
-                                        setIsEditingProfile(true);
-                                    }}
-                                    className="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-black rounded-2xl hover:bg-slate-50 hover:text-indigo-600 transition-all text-xs uppercase tracking-widest shadow-sm flex items-center gap-2"
-                                >
-                                    <Edit2 size={16} /> Edit Profile
+                                <button onClick={() => { setProfileForm({ name: adminProfile?.full_name || '', email: adminProfile?.email || '', profile_picture: adminProfile?.profile_picture }); setIsEditingProfile(true); }}
+                                    style={{ background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontWeight: 600, fontSize: '13px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                                    <Edit2 size={15} /> Edit Profile
                                 </button>
                             ) : (
                                 <div className="flex items-center gap-3">
-                                    <button
-                                        onClick={() => setIsEditingProfile(false)}
-                                        className="px-6 py-3 bg-slate-100 text-slate-500 font-black rounded-2xl hover:bg-slate-200 transition-all text-xs uppercase tracking-widest flex items-center gap-2"
-                                    >
-                                        <X size={16} /> Cancel
+                                    <button onClick={() => setIsEditingProfile(false)} style={{ background: '#f3f4f6', color: '#6b7280', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '13px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <X size={15} /> Cancel
                                     </button>
-                                    <button
-                                        onClick={handleSaveProfile}
-                                        className="px-6 py-3 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest flex items-center gap-2"
-                                    >
-                                        <Save size={16} /> Save Changes
+                                    <button onClick={handleSaveProfile} style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 600, fontSize: '13px', padding: '10px 20px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(22,163,74,0.3)' }}>
+                                        <Save size={15} /> Save Changes
                                     </button>
                                 </div>
                             )}
@@ -328,196 +200,140 @@ const AdminProfile = () => {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Email Terminal</label>
-                            <span className="text-sm font-bold text-slate-700">{adminProfile.email}</span>
-                        </div>
-                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Company / Organization</label>
-                            <span className="text-sm font-bold text-slate-700">{adminProfile?.company || 'Universal Hub'}</span>
-                        </div>
-                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
-                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Last Secure Login</label>
-                            <span className="text-sm font-bold text-slate-700">
-                                {user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Just Now'}
-                            </span>
-                        </div>
+                        {[
+                            { label: 'Email Terminal', val: adminProfile?.email },
+                            { label: 'Company', val: adminProfile?.company || 'Universal Hub' },
+                            { label: 'Last Secure Login', val: user?.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleString() : 'Just Now' }
+                        ].map((m, i) => (
+                            <div key={i} style={{ padding: '16px', background: '#f8faf9', border: '1px solid #f0fdf4', borderRadius: '14px' }}>
+                                <label style={{ fontSize: '10px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>{m.label}</label>
+                                <span style={{ color: '#111827', fontWeight: 500, fontSize: '14px' }}>{m.val}</span>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-                {/* 2. Security Station (Left - 5 cols) */}
+                {/* 2. Security */}
                 <div className="lg:col-span-5 space-y-10">
-                    <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2.5rem] overflow-hidden bg-white">
-                        <div className="px-10 py-8 bg-slate-900 text-white flex items-center justify-between">
-                            <h3 className="text-lg font-black uppercase italic tracking-tight flex items-center gap-3">
-                                <Lock size={22} className="text-indigo-400" /> Security Sequence
+                    <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                        <div style={{ background: '#0f1f12', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#fff', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                                <Lock size={16} color="#22c55e" /> SECURITY SEQUENCE
                             </h3>
-                            <Shield className="text-indigo-400 w-5 h-5 opacity-50" />
+                            <Shield size={16} color="#22c55e" style={{ opacity: 0.5 }} />
                         </div>
-                        <CardContent className="p-10 space-y-10">
-                            <div className="space-y-6">
-                                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 space-y-4">
-                                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                                        <Key size={16} className="text-indigo-600" /> Password Protocol
+                        <div style={{ padding: '32px' }} className="space-y-8">
+                            {/* Password */}
+                            <div style={{ background: '#f8faf9', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '20px' }} className="space-y-4">
+                                <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#111827', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Key size={14} color="#16a34a" /> Password Protocol
+                                </h4>
+                                <p style={{ fontSize: '12px', color: '#6b7280' }}>Update your administrative credentials for enhanced system integrity.</p>
+                                <button onClick={() => setShowPasswordModal(true)} style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', transition: 'all 0.2s' }}>
+                                    <Edit2 size={14} /> Initiate Override
+                                </button>
+                            </div>
+                            {/* 2FA */}
+                            <div style={{ background: '#f8faf9', borderRadius: '14px', border: '1px solid #e5e7eb', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                                <div className="space-y-1 flex-1">
+                                    <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#111827', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <Smartphone size={14} color="#16a34a" /> Two-Factor Logic
                                     </h4>
-                                    <p className="text-xs text-slate-500 font-medium">Update your administrative credentials sequence for enhanced system integrity.</p>
-                                    <button
-                                        onClick={() => setShowPasswordModal(true)}
-                                        className="w-full py-4 bg-white border-2 border-slate-200 text-slate-900 font-black rounded-2xl hover:bg-slate-900 hover:text-white hover:border-slate-900 transition-all text-xs uppercase tracking-widest shadow-sm flex items-center justify-center gap-2"
-                                    >
-                                        <Edit2 size={16} /> Initiate Override
+                                    <p style={{ fontSize: '11px', color: '#6b7280' }}>Enforce biometric or SMS verification for root actions.</p>
+                                </div>
+                                <button onClick={() => setIsAdmin2FAEnabled(!isAdmin2FAEnabled)} style={{ width: '52px', height: '28px', borderRadius: '100px', position: 'relative', transition: 'all 0.4s', background: isAdmin2FAEnabled ? '#22c55e' : '#d1d5db', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                                    <div style={{ position: 'absolute', top: '2px', width: '24px', height: '24px', background: '#fff', borderRadius: '50%', transition: 'all 0.4s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)', left: isAdmin2FAEnabled ? '26px' : '2px' }}></div>
+                                </button>
+                            </div>
+                            {/* Bug Report */}
+                            <div style={{ border: '1px solid #fee2e2', background: '#fff5f5', borderRadius: '14px', padding: '20px' }} className="space-y-4">
+                                <h4 style={{ fontSize: '11px', fontWeight: 700, color: '#991b1b', letterSpacing: '0.1em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <AlertCircle size={14} color="#dc2626" /> Advanced Bug Report
+                                </h4>
+                                <p style={{ fontSize: '11px', color: '#6b7280' }}>Submit detailed system bug reports with attachments.</p>
+                                <BugReportWidget advanced={true} customTrigger={
+                                    <button style={{ width: '100%', padding: '12px', background: '#fff', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: '10px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                        <AlertCircle size={14} /> Report Bug
                                     </button>
-                                </div>
-
-                                <div className="p-6 bg-indigo-50/50 rounded-3xl border border-indigo-100/50 flex items-center justify-between gap-6 overflow-hidden relative group">
-                                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-indigo-600/5 rounded-full transform group-hover:scale-110 transition-transform"></div>
-                                    <div className="space-y-2 flex-1 relative z-10">
-                                        <h4 className="text-xs font-black text-indigo-900 uppercase tracking-widest flex items-center gap-2">
-                                            <Smartphone size={16} className="text-indigo-600" /> Two-Factor Logic
-                                        </h4>
-                                        <p className="text-[10px] text-indigo-700/60 font-medium">Enforce biometric or SMS verification for all root actions.</p>
-                                    </div>
-                                    <button
-                                        onClick={() => setIsAdmin2FAEnabled(!isAdmin2FAEnabled)}
-                                        className={`w-14 h-8 rounded-full relative transition-all duration-500 overflow-hidden shadow-inner shrink-0 ${isAdmin2FAEnabled ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                                    >
-                                        <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-500 shadow-md ${isAdmin2FAEnabled ? 'right-1' : 'left-1'}`}></div>
-                                    </button>
-                                </div>
-
-                                {/* Bug Report Integration */}
-                                <div className="p-6 bg-red-50/50 rounded-3xl border border-red-100/50 space-y-4">
-                                    <h4 className="text-xs font-black text-red-900 uppercase tracking-widest flex items-center gap-2">
-                                        <AlertCircle size={16} className="text-red-600" /> Advanced Bug Report
-                                    </h4>
-                                    <p className="text-xs text-red-700/60 font-medium">Submit detailed system bug reports with attachments.</p>
-                                    <BugReportWidget
-                                        advanced={true}
-                                        customTrigger={
-                                            <button className="w-full py-4 bg-white border-2 border-red-200 text-red-900 font-black rounded-2xl hover:bg-red-600 hover:text-white hover:border-red-600 transition-all text-xs uppercase tracking-widest shadow-sm flex items-center justify-center gap-2">
-                                                <AlertCircle size={16} /> Report Bug
-                                            </button>
-                                        }
-                                    />
-                                </div>
+                                } />
                             </div>
 
-                            <button
-                                onClick={handleLogout} // Wired logout button
-                                className="w-full py-4 bg-red-50 text-red-600 font-black rounded-2xl hover:bg-red-600 hover:text-white transition-all text-xs uppercase tracking-[0.2em] border border-red-100 flex items-center justify-center gap-3"
-                            >
+                            <button onClick={handleLogout} style={{ width: '100%', padding: '14px', background: '#fff5f5', border: '1.5px solid #fecaca', color: '#dc2626', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', transition: 'all 0.2s', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
                                 <LogOut size={16} /> Finalize Session (Logout)
                             </button>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
 
-                {/* 3. Operational History (Right - 7 cols) */}
+                {/* 3. Activity Audit */}
                 <div className="lg:col-span-7">
-                    <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2.5rem] overflow-hidden bg-white h-full">
-                        <div className="px-10 py-8 bg-white border-b border-slate-100 flex items-center justify-between">
-                            <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-3">
-                                <History size={22} className="text-indigo-600" /> Admin Activity Audit
+                    <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ padding: '20px 28px', borderBottom: '1px solid #f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                                <History size={18} color="#16a34a" /> ADMIN ACTIVITY AUDIT
                             </h3>
-                            <button
-                                onClick={handleDownloadArchive}
-                                className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 text-[10px] font-black text-indigo-600 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition-all uppercase tracking-widest shadow-sm"
-                            >
-                                <Download size={14} /> Download Archive
+                            <button onClick={handleDownloadArchive} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#fff', border: '1.5px solid #d1fae5', color: '#15803d', borderRadius: '10px', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                <Download size={13} /> Download Archive
                             </button>
                         </div>
-                        <div className="p-0">
-                            <div className="overflow-x-auto">
-                                <table className="w-full border-collapse">
-                                    <thead>
-                                        <tr className="bg-slate-50/50">
-                                            <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocol Action</th>
-                                            <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Target</th>
-                                            <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Sync Time</th>
-                                            <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Result</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {activityLog.map((log) => (
-                                            <tr key={log.id} className="hover:bg-slate-50/30 transition-colors group">
-                                                <td className="px-8 py-6">
-                                                    <span className="text-[11px] font-black text-slate-800 uppercase italic tracking-tight">{log.action}</span>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <span className="font-mono text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">{log.target}</span>
-                                                </td>
-                                                <td className="px-8 py-6">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-[10px] font-black text-slate-400 uppercase">{log.timestamp}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-6 text-center">
-                                                    <div className="flex items-center justify-center gap-2 px-3 py-1 bg-emerald-50 border border-emerald-100 rounded-lg w-fit mx-auto">
-                                                        <CheckCircle2 size={12} className="text-emerald-500" />
-                                                        <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">{log.status}</span>
-                                                    </div>
-                                                </td>
-                                            </tr>
+                        <div className="flex-1 overflow-x-auto">
+                            <table className="w-full border-collapse">
+                                <thead>
+                                    <tr style={{ background: '#f8faf9' }}>
+                                        {['Protocol Action', 'Target', 'Sync Time', 'Result'].map((h, i) => (
+                                            <th key={i} style={{ padding: '14px 24px', textAlign: i === 3 ? 'center' : 'left', fontSize: '10px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
                                         ))}
-                                    </tbody>
-                                </table>
-                            </div>
-
-                            {/* Empty State / End of log */}
-                            <div className="p-10 text-center bg-slate-50/30">
-                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.3em] italic">...End of Recorded Sequence Activity...</p>
-                            </div>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {activityLog.map((log) => (
+                                        <tr key={log.id} className="hover:bg-[#f0fdf4] transition-colors">
+                                            <td style={{ padding: '16px 24px', fontSize: '13px', fontWeight: 600, color: '#111827' }}>{log.action}</td>
+                                            <td style={{ padding: '16px 24px' }}>
+                                                <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#16a34a', background: '#f0fdf4', padding: '4px 8px', borderRadius: '6px' }}>{log.target}</span>
+                                            </td>
+                                            <td style={{ padding: '16px 24px', fontSize: '11px', color: '#6b7280' }}>{log.timestamp}</td>
+                                            <td style={{ padding: '16px 24px', textAlign: 'center' }}>
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', background: '#dcfce7', color: '#15803d', borderRadius: '100px', padding: '4px 10px', fontSize: '10px', fontWeight: 700 }}>
+                                                    <CheckCircle2 size={12} /> {log.status}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
-                    </Card>
+                        <div style={{ padding: '24px', textAlign: 'center', background: '#f8faf9' }}>
+                            <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.14em', fontWeight: 600 }}>End of Recorded Activity</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            {/* Change Password Modal */}
+            {/* Password Modal */}
             {showPasswordModal && (
-                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
-                    <Card className="w-full max-w-sm bg-white rounded-[2.5rem] border-none shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="px-10 py-8 bg-slate-900 text-white flex items-center justify-between">
-                            <h3 className="font-black italic uppercase text-lg tracking-tight">Sequence Update</h3>
-                            <button onClick={() => setShowPasswordModal(false)} className="text-white hover:text-indigo-400 transition-colors">
-                                <X size={24} />
+                <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-6 animate-in fade-in duration-300">
+                    <div style={{ background: '#fff', borderRadius: '20px', boxShadow: '0 25px 50px rgba(0,0,0,0.15)', overflow: 'hidden', width: '100%', maxWidth: '400px' }} className="animate-in zoom-in-95 duration-300">
+                        <div style={{ background: '#0f1f12', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#fff', fontSize: '16px', margin: 0 }}>Update Password</h3>
+                            <button onClick={() => setShowPasswordModal(false)} style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                        </div>
+                        <div style={{ padding: '28px' }} className="space-y-5">
+                            {[{ label: 'New Password', key: 'newPassword', ph: 'Enter new password' }, { label: 'Confirm Password', key: 'confirmPassword', ph: 'Confirm password' }].map((f, i) => (
+                                <div key={i} className="space-y-1.5">
+                                    <label style={{ fontSize: '10px', fontWeight: 600, color: '#9ca3af', letterSpacing: '0.1em', textTransform: 'uppercase' }}>{f.label}</label>
+                                    <input type="password" placeholder={f.ph} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all outline-none"
+                                        value={passwordForm[f.key]} onChange={(e) => setPasswordForm({ ...passwordForm, [f.key]: e.target.value })} />
+                                </div>
+                            ))}
+                            <button onClick={handlePasswordChange} disabled={passwordLoading}
+                                style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(22,163,74,0.3)' }}>
+                                {passwordLoading ? 'Updating...' : <><Save size={15} /> Update Password</>}
                             </button>
                         </div>
-                        <div className="p-10 space-y-6">
-                            <div className="space-y-4">
-
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">New Sequence</label>
-                                    <input
-                                        type="password"
-                                        placeholder="New complexity required"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all outline-none"
-                                        value={passwordForm.newPassword}
-                                        onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Confirm Sequence</label>
-                                    <input
-                                        type="password"
-                                        placeholder="Re-enter sequence"
-                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 transition-all outline-none"
-                                        value={passwordForm.confirmPassword}
-                                        onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                                    />
-                                </div>
-                            </div>
-                            <button
-                                onClick={handlePasswordChange}
-                                disabled={passwordLoading}
-                                className="w-full py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-95 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
-                            >
-                                {passwordLoading ? <Loader2 className="animate-spin w-4 h-4" /> : <Save size={16} />}
-                                {passwordLoading ? "Syncing Sequence..." : "Hard Sync Sequence"}
-                            </button>
-                        </div>
-                    </Card>
+                    </div>
                 </div>
             )}
         </div>

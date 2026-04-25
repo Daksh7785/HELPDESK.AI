@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X } from 'lucide-react';
+import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';
@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
  * Features a solid white background, specific search placeholder, 
  * and a functional avatar dropdown menu.
  */
-const AdminHeader = ({ onMobileNavToggle }) => {
+const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar }) => {
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const dropdownRef = useRef(null);
@@ -61,6 +61,17 @@ const AdminHeader = ({ onMobileNavToggle }) => {
                 >
                     <Menu size={20} />
                 </button>
+
+                {/* Desktop Sidebar Toggle */}
+                {onToggleSidebar && (
+                    <button
+                        onClick={onToggleSidebar}
+                        className="hidden md:flex p-2 hover:bg-emerald-50 rounded-xl text-slate-400 hover:text-emerald-600 transition-all"
+                        title={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+                    >
+                        {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+                    </button>
+                )}
 
                 {/* Primary Search Terminal */}
                 <div className="flex-1 max-w-xl relative hidden md:block">

@@ -1,69 +1,70 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, ShieldCheck, Clock, User, ArrowRight, ExternalLink } from 'lucide-react';
+import { ShieldCheck, Clock, ExternalLink } from 'lucide-react';
 import { formatTimelineDate } from '../../utils/dateUtils';
+
+const categoryDotColors = {
+    'Hardware': '#f97316',
+    'Network': '#3b82f6',
+    'Access': '#8b5cf6',
+    'Software': '#16a34a',
+    'Human Resources': '#ec4899',
+    'Other': '#6b7280'
+};
 
 const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
     const navigate = useNavigate();
 
-    // Map categories to teams for fallback display
     const teamMap = {
-        'Network': 'Network Services',
-        'Hardware': 'IT Inventory',
-        'Software': 'Cloud Apps Team',
-        'Access': 'Security Ops',
-        'Human Resources': 'HR Systems',
-        'Other': 'IT Service Desk'
+        'Network': 'Network Services', 'Hardware': 'IT Inventory', 'Software': 'Cloud Apps Team',
+        'Access': 'Security Ops', 'Human Resources': 'HR Systems', 'Other': 'IT Service Desk'
     };
 
     const getPriorityStyle = (priority) => {
         const p = priority?.toLowerCase();
-        if (p === 'critical') return { background: '#fff7ed', color: '#ea580c', border: '1px solid #ffedd5' };
-        if (p === 'high') return { background: '#fef2f2', color: '#dc2626', border: '1px solid #fee2e2' };
-        if (p === 'medium') return { background: '#fefce8', color: '#ca8a04', border: '1px solid #fef9c3' };
-        return { background: '#f0fdf4', color: '#16a34a', border: '1px solid #dcfce7' };
+        if (p === 'critical') return { background: '#FEF2F2', color: '#DC2626', border: '1px solid #FECACA' };
+        if (p === 'high') return { background: '#FFF7ED', color: '#EA580C', border: '1px solid #FED7AA' };
+        if (p === 'medium') return { background: '#FEFCE8', color: '#CA8A04', border: '1px solid #FDE68A' };
+        return { background: '#F0FDF4', color: '#16A34A', border: '1px solid #BBF7D0' };
     };
 
     const getStatusStyle = (status) => {
         const s = status?.toLowerCase() || '';
-        if (s.includes('resolv')) return 'bg-slate-100 text-slate-500 border-slate-200';
-        if (s.includes('progress')) return 'bg-blue-50 text-blue-600 border-blue-200';
-        return 'bg-amber-50 text-amber-600 border-amber-200';
+        if (s.includes('resolv')) return { bg: '#f1f5f9', text: '#64748b', border: '#e2e8f0' };
+        if (s.includes('progress')) return { bg: '#eff6ff', text: '#2563eb', border: '#bfdbfe' };
+        return { bg: '#fffbeb', text: '#d97706', border: '#fde68a' };
     };
 
     const displayTickets = limit ? tickets.slice(0, limit) : tickets;
 
     if (isLoading) return (
         <div className="py-24 text-center">
-            <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Synchronizing System Data...</p>
+            <div style={{ width: 40, height: 40, border: '3px solid #16a34a', borderTopColor: 'transparent', borderRadius: '50%' }} className="animate-spin mx-auto mb-4"></div>
+            <p style={{ color: '#9ca3af', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Synchronizing System Data...</p>
         </div>
     );
 
     if (displayTickets.length === 0) return (
-        <div className="py-24 text-center border-2 border-dashed border-slate-200 rounded-3xl group transition-all hover:border-indigo-300">
-            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform duration-500 shadow-sm border border-slate-100 text-slate-300">
-                <ShieldCheck size={40} />
+        <div className="py-24 text-center" style={{ border: '2px dashed #e5e7eb', borderRadius: '16px', margin: '16px' }}>
+            <div style={{ width: 64, height: 64, background: '#f0fdf4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: '#bbf7d0' }}>
+                <ShieldCheck size={32} />
             </div>
-            <h3 className="text-xl font-black text-slate-900 tracking-tight leading-none mb-2 italic">Silent Operations</h3>
-            <p className="text-slate-400 font-medium max-w-xs mx-auto">All systems green. No active tickets require immediate human review.</p>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, color: '#111827', marginBottom: '4px' }}>No Active Tickets</h3>
+            <p style={{ fontSize: '13px', color: '#6b7280' }}>All systems green. No tickets require review.</p>
         </div>
     );
 
     return (
         <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full border-collapse">
-                <thead className="bg-[#f8fafc] border-b border-slate-200">
-                    <tr>
-                        <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-left">Request Identity</th>
-                        <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-left">Incident Context</th>
-                        <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-left">Category</th>
-                        <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-left">Risk Factor</th>
-                        <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-left">Assigned Ops</th>
-                        <th className="px-8 py-5 text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] text-left">Operating Status</th>
+                <thead>
+                    <tr style={{ background: '#f8faf9', borderBottom: '1px solid #f0fdf4' }}>
+                        {['Request Identity', 'Incident Context', 'Category', 'Risk Factor', 'Assigned Ops', 'Status'].map((h, i) => (
+                            <th key={i} style={{ padding: '14px 24px', textAlign: 'left', fontSize: '10px', color: '#9ca3af', letterSpacing: '0.1em', fontWeight: 600, textTransform: 'uppercase' }}>{h}</th>
+                        ))}
                     </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody>
                     {displayTickets.map((ticket) => {
                         const effectiveCategory = ticket.correction?.corrected_category || ticket.category;
                         const effectiveSubcategory = ticket.correction?.corrected_subcategory || ticket.subcategory;
@@ -71,77 +72,97 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                         const effectiveTeam = ticket.reassigned_at
                             ? ticket.assigned_team
                             : (teamMap[effectiveCategory] || ticket.assigned_team || 'L1 Helpdesk');
+                        const statusSt = getStatusStyle(ticket.status);
+
+                        // Truncated subject
+                        const subject = ticket.subject || ticket.summary || 'Untitled ticket';
+                        const truncSubject = subject.length > 28 ? subject.slice(0, 28) + '...' : subject;
+
+                        // Ticket ID truncated
+                        const tid = ticket.ticket_id || ticket.id || '';
+                        const truncId = tid.length > 8 ? tid.slice(0, 8) + '...' : tid;
+
+                        // User initial
+                        const userName = ticket.profiles?.full_name || ticket.user_name || 'User';
+                        const initial = userName.charAt(0).toUpperCase();
 
                         return (
                             <tr
-                                key={ticket.ticket_id}
-                                onClick={() => navigate(`/admin/ticket/${ticket.ticket_id}`)}
-                                className={`cursor-pointer group transition-all duration-300 ${ticket.status?.includes('Resolv')
-                                    ? 'bg-slate-50/50 opacity-60 grayscale hover:opacity-100 hover:grayscale-0 hover:bg-[#f0fdf4]'
-                                    : 'hover:bg-[#f0fdf4] relative'
-                                    }`}
+                                key={ticket.ticket_id || ticket.id}
+                                onClick={() => navigate(`/admin/ticket/${ticket.ticket_id || ticket.id}`)}
+                                className="cursor-pointer group transition-colors hover:bg-[#f0fdf4]"
+                                style={{ borderBottom: '1px solid #f9fafb' }}
                             >
-                                <td className="px-8 py-6">
-                                    <div className="flex flex-col gap-1.5 min-w-[120px]">
+                                {/* Request Identity */}
+                                <td style={{ padding: '14px 24px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-[13px] font-black text-indigo-700 tracking-tighter">#{ticket.ticket_id}</span>
-                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1 duration-300 text-indigo-400">
-                                                <ExternalLink size={14} />
+                                            <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 700, color: '#16a34a' }}>#{truncId}</span>
+                                            <div className="opacity-0 group-hover:opacity-100 transition-opacity text-emerald-400">
+                                                <ExternalLink size={12} />
                                             </div>
                                         </div>
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1.5 italic tracking-wide">
-                                            <Clock size={10} className="text-slate-300" />
+                                        <span style={{ fontSize: '11px', color: '#9ca3af', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <Clock size={10} color="#d1d5db" />
                                             {formatTimelineDate(ticket.created_at || ticket.createdAt || ticket.timestamp)}
                                         </span>
                                     </div>
                                 </td>
-                                <td className="px-8 py-6">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200 text-slate-500 group-hover:bg-white group-hover:shadow-md transition-all">
-                                            <User size={18} />
+
+                                {/* Incident Context - FIXED */}
+                                <td style={{ padding: '14px 24px' }}>
+                                    <div className="flex items-center gap-3">
+                                        <div style={{ width: 32, height: 32, background: '#f0fdf4', border: '1px solid #d1fae5', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                            <span style={{ color: '#16a34a', fontSize: '12px', fontWeight: 600 }}>{initial}</span>
                                         </div>
-                                        <div className="flex flex-col max-w-[280px]">
-                                            <span className="text-sm font-black text-slate-900 tracking-tight leading-tight line-clamp-1 group-hover:text-indigo-700 transition-colors uppercase italic">
-                                                {ticket.profiles?.full_name || ticket.user_name || 'System User'}
+                                        <div style={{ display: 'flex', flexDirection: 'column', maxWidth: '220px' }}>
+                                            <span style={{ fontSize: '13px', fontWeight: 500, color: '#111827', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                {truncSubject}
                                             </span>
-                                            <span className="text-xs text-slate-400 font-medium line-clamp-1 lowercase">
-                                                {ticket.profiles?.email || ticket.user_email || 'No email associated'}
+                                            <span style={{ fontSize: '11px', color: '#6b7280' }}>
+                                                {effectiveCategory || 'General'}
                                             </span>
-                                            <p className="text-[11px] font-bold text-slate-500 mt-1 line-clamp-1">{ticket.summary}</p>
                                         </div>
                                     </div>
                                 </td>
-                                <td className="px-8 py-6">
-                                    <div className="flex flex-col gap-1.5">
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100/80 text-slate-700 rounded-lg text-[10px] font-black group-hover:bg-white transition-colors border border-slate-200/50 w-fit uppercase tracking-wider">
-                                            <Activity size={12} className="text-indigo-500" />
+
+                                {/* Category with colored dot */}
+                                <td style={{ padding: '14px 24px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '4px 10px', fontSize: '11px', fontWeight: 600, color: '#475569', letterSpacing: '0.06em', textTransform: 'uppercase', width: 'fit-content' }}>
+                                            <span style={{ width: 4, height: 4, borderRadius: '50%', background: categoryDotColors[effectiveCategory] || '#6b7280', display: 'inline-block' }}></span>
                                             {effectiveCategory}
                                         </span>
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase ml-1 opacity-80">{effectiveSubcategory}</span>
+                                        {effectiveSubcategory && <span style={{ fontSize: '10px', color: '#9ca3af', marginLeft: '4px' }}>{effectiveSubcategory}</span>}
                                     </div>
                                 </td>
-                                <td className="px-8 py-6">
+
+                                {/* Risk Factor */}
+                                <td style={{ padding: '14px 24px' }}>
                                     <span style={{
                                         ...getPriorityStyle(effectivePriority),
-                                        padding: '6px 16px', borderRadius: '100px', fontSize: '10px',
-                                        fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em',
-                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)', display: 'inline-block'
+                                        padding: '3px 12px', borderRadius: '100px', fontSize: '11px',
+                                        fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', display: 'inline-block'
                                     }}>
                                         {effectivePriority || 'NORMAL'}
                                     </span>
                                 </td>
-                                <td className="px-8 py-6">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200 text-[11px] font-black text-slate-500 group-hover:bg-white transition-colors">
-                                            {effectiveTeam?.charAt(0)}
+
+                                {/* Assigned Ops */}
+                                <td style={{ padding: '14px 24px' }}>
+                                    <div className="flex items-center gap-2">
+                                        <div style={{ width: 28, height: 28, background: '#f0fdf4', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #d1fae5' }}>
+                                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#16a34a' }}>{effectiveTeam?.charAt(0)}</span>
                                         </div>
-                                        <span className="text-xs font-black text-slate-700 tracking-tight uppercase whitespace-nowrap">{effectiveTeam}</span>
+                                        <span style={{ fontSize: '12px', fontWeight: 500, color: '#374151', whiteSpace: 'nowrap' }}>{effectiveTeam}</span>
                                     </div>
                                 </td>
-                                <td className="px-8 py-6">
-                                    <span className={`px-4 py-1.5 rounded-lg text-[10px] font-black border uppercase tracking-wider shadow-sm flex items-center gap-2 w-fit ${getStatusStyle(ticket.status)}`}>
-                                        <div className={`w-1.5 h-1.5 rounded-full animate-pulse ${ticket.status?.includes('Resolv') ? 'bg-slate-400' : 'bg-current'}`}></div>
-                                        {ticket.status?.replace('by Human Support', '')}
+
+                                {/* Status */}
+                                <td style={{ padding: '14px 24px' }}>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '100px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: statusSt.bg, color: statusSt.text, border: `1px solid ${statusSt.border}` }}>
+                                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', opacity: ticket.status?.includes('Resolv') ? 0.4 : 1 }}></span>
+                                        {ticket.status?.replace('by Human Support', '').trim()}
                                     </span>
                                 </td>
                             </tr>

@@ -11,18 +11,26 @@ import NotificationToast from '../../user/components/NotificationToast';
  */
 const AdminLayout = () => {
     const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
     return (
-        <div className="flex h-screen bg-[#f8fafc] overflow-hidden font-sans">
+        <div className="flex h-screen bg-[#f8faf9] overflow-hidden font-sans">
             {/* Master Navigation Column (Responsive) */}
-            <div className="hidden md:block md:w-20 lg:w-[260px] flex-shrink-0 relative z-40 transition-all duration-300">
-                <AdminSidebar />
+            <div 
+                className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
+                style={{ width: isSidebarCollapsed ? '80px' : '260px' }}
+            >
+                <AdminSidebar isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
             </div>
 
             {/* Viewport Execution Layer */}
             <div className="flex-1 flex flex-col min-w-0 relative h-full">
                 {/* Global Command Header */}
-                <AdminHeader onMobileNavToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} />
+                <AdminHeader 
+                    onMobileNavToggle={() => setIsMobileNavOpen(!isMobileNavOpen)} 
+                    isSidebarCollapsed={isSidebarCollapsed}
+                    onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                />
 
                 {/* Operational Workspace */}
                 <main className="flex-1 overflow-x-hidden overflow-y-auto custom-scrollbar relative">
