@@ -181,15 +181,25 @@ function Signup() {
   // Render Success State
   if (successMsg) {
     return (
-      <div className="min-h-screen flex items-center justify-center font-sans bg-emerald-900 relative overflow-hidden p-6">
-        <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-        <div className="w-full max-w-md bg-white shadow-2xl rounded-3xl p-8 border border-gray-100 relative z-10 text-center">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle2 className="w-8 h-8 text-emerald-600" />
+      <div
+        className="min-h-screen flex items-center justify-center relative overflow-hidden p-6"
+        style={{ fontFamily: "'Inter', sans-serif", background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}
+      >
+        <div
+          className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }}
+        />
+        <div className="w-full max-w-md bg-white rounded-3xl p-8 relative z-10 text-center" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.08)', border: '1px solid #f0fdf4' }}>
+          <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: '#f0fdf4', border: '1px solid #d1fae5' }}>
+            <CheckCircle2 className="w-8 h-8" style={{ color: '#16a34a' }} />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Registration Successful</h2>
-          <p className="text-gray-600 leading-relaxed mb-8">{successMsg}</p>
-          <Link to="/login" className="inline-flex items-center justify-center w-full px-6 py-3 bg-emerald-900 text-white rounded-xl font-bold hover:bg-emerald-800 transition-colors">
+          <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '24px', fontWeight: 800, color: '#0f1f12', marginBottom: '16px' }}>Registration Successful</h2>
+          <p style={{ color: '#374151', fontSize: '14px', lineHeight: 1.7, marginBottom: '32px' }}>{successMsg}</p>
+          <Link
+            to="/login"
+            className="inline-flex items-center justify-center w-full px-6 py-3.5 rounded-xl transition-all"
+            style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#ffffff', fontWeight: 600, fontSize: '15px', boxShadow: '0 4px 20px rgba(34,160,69,0.3)' }}
+          >
             Return to Login
           </Link>
         </div>
@@ -197,109 +207,90 @@ function Signup() {
     );
   }
 
+  const inputStyle = {
+    width: '100%', background: '#f9fafb', border: '1.5px solid #e5e7eb', borderRadius: '12px',
+    padding: '13px 16px', fontSize: '15px', color: '#111827', outline: 'none',
+    transition: 'border-color 0.2s, box-shadow 0.2s',
+  };
+  const inputFocus = (e) => { e.target.style.borderColor = '#22c55e'; e.target.style.boxShadow = '0 0 0 3px rgba(34,160,69,0.1)'; };
+  const inputBlur = (e) => { e.target.style.borderColor = '#e5e7eb'; e.target.style.boxShadow = 'none'; };
+  const labelStyle = { fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.05em', textTransform: 'uppercase' };
+
   return (
-    <div className="min-h-screen flex items-center justify-center font-sans bg-emerald-900 relative overflow-hidden p-6 py-12">
-      {/* Background Patterns */}
-      <div className="absolute top-0 left-0 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-      <div className="absolute -top-24 -right-24 w-96 h-96 bg-emerald-500 rounded-full blur-[120px] opacity-20 pointer-events-none"></div>
-      <div className="absolute bottom-0 left-0 w-80 h-80 bg-teal-400 rounded-full blur-[120px] opacity-10 pointer-events-none"></div>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-6 py-12" style={{ fontFamily: "'Inter', sans-serif", background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
+      <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
 
       <div className="w-full max-w-md relative z-10">
         {/* Back Button */}
-        <Link
-          to="/"
-          className="absolute -top-12 left-0 flex items-center gap-2 text-emerald-100/70 hover:text-white font-semibold transition-all group"
-        >
+        <Link to="/" className="absolute -top-12 left-0 flex items-center gap-2 transition-all group" style={{ color: '#374151', fontWeight: 500, fontSize: '14px' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#16a34a'} onMouseLeave={(e) => e.currentTarget.style.color = '#374151'}>
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
           <span>Back to Home</span>
         </Link>
 
         {/* Logo Header */}
         <div className="flex justify-center mb-8">
-          <Link to="/" className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 transition hover:bg-white/20">
-            <BrainCircuit className="w-5 h-5 text-emerald-300" />
-            <span className="font-bold text-lg text-white">HelpDesk.ai</span>
+          <Link to="/" className="flex items-center gap-2 px-4 py-2 rounded-full transition" style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }}>
+            <BrainCircuit className="w-5 h-5" style={{ color: '#16a34a' }} />
+            <span style={{ fontWeight: 800, fontSize: '18px', color: '#0f1f12' }}>HelpDesk.ai</span>
           </Link>
         </div>
 
-        <div className="bg-white shadow-2xl shadow-emerald-900/50 rounded-3xl p-6 sm:p-8 border border-gray-100">
-          <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Create Account</h2>
-            <p className="text-gray-500 mt-1">Start automating your IT support today</p>
+        <div className="bg-white rounded-3xl p-6 sm:p-8" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.08)', border: '1px solid #f0fdf4' }}>
+          <div className="text-center" style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '28px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', marginBottom: '8px' }}>Create Account</h2>
+            <p style={{ color: '#6b7280', fontSize: '14px' }}>Start automating your IT support today</p>
           </div>
 
           {error && (
-            <div className="mb-6 bg-red-50 border border-red-100 rounded-xl p-4 flex items-start gap-3">
-              <div className="bg-red-100 rounded-full p-1 mt-0.5">
-                <ArrowRight className="w-3 h-3 text-red-600 rotate-45" />
-              </div>
-              <p className="text-red-700 text-sm font-medium">{error}</p>
+            <div className="mb-6 flex items-start gap-3" style={{ background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', padding: '14px 16px' }}>
+              <div className="rounded-full p-1 mt-0.5" style={{ background: '#fee2e2' }}><ArrowRight className="w-3 h-3 text-red-600 rotate-45" /></div>
+              <p className="text-sm font-medium" style={{ color: '#b91c1c' }}>{error}</p>
             </div>
           )}
 
           <form onSubmit={handleSignup} className="space-y-5">
-            {/* Company Dropdown Selection */}
+            {/* Company Dropdown */}
             <div className="relative" ref={dropdownRef}>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Company</label>
-
-              <div
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className={`w-full px-4 py-3 rounded-xl border ${isDropdownOpen ? 'border-emerald-500 ring-4 ring-emerald-500/10' : 'border-gray-200 hover:border-emerald-300'} transition-all cursor-pointer bg-white flex items-center justify-between`}
-              >
+              <label className="block mb-2" style={labelStyle}>Company</label>
+              <div onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: isDropdownOpen ? '#22c55e' : '#e5e7eb', boxShadow: isDropdownOpen ? '0 0 0 3px rgba(34,160,69,0.1)' : 'none' }}>
                 {selectedCompany ? (
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-md bg-emerald-100 flex items-center justify-center shrink-0">
-                      <Building2 className="w-3.5 h-3.5 text-emerald-700" />
-                    </div>
-                    <span className="font-semibold text-gray-900">{selectedCompany.name}</span>
+                    <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: '#f0fdf4' }}><Building2 className="w-3.5 h-3.5" style={{ color: '#16a34a' }} /></div>
+                    <span style={{ fontWeight: 600, color: '#111827' }}>{selectedCompany.name}</span>
                   </div>
-                ) : (
-                  <span className="text-gray-400 font-medium">Select your company...</span>
-                )}
-                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                ) : (<span style={{ color: '#9ca3af', fontWeight: 500 }}>Select your company...</span>)}
+                <ChevronDown className={`w-5 h-5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} style={{ color: '#9ca3af' }} />
               </div>
 
-              {/* Dropdown Menu */}
               {isDropdownOpen && (
-                <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white rounded-xl border border-gray-100 shadow-xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="p-2 border-b border-gray-50 flex items-center gap-2 bg-gray-50/50">
-                    <Search className="w-4 h-4 text-gray-400 ml-2" />
-                    <input
-                      type="text"
-                      placeholder="Search companies..."
-                      className="w-full bg-transparent border-none outline-none text-sm py-1 font-medium"
-                      value={companySearch}
-                      onChange={(e) => setCompanySearch(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                    />
+                <div className="absolute z-50 top-full left-0 right-0 mt-2 bg-white overflow-hidden" style={{ borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
+                  <div className="p-2 flex items-center gap-2" style={{ borderBottom: '1px solid #f3f4f6', background: '#f9fafb' }}>
+                    <Search className="w-4 h-4 ml-2" style={{ color: '#9ca3af' }} />
+                    <input type="text" placeholder="Search companies..." style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: '14px', padding: '4px 0', color: '#111827' }}
+                      value={companySearch} onChange={(e) => setCompanySearch(e.target.value)} onClick={(e) => e.stopPropagation()} />
                   </div>
                   <div className="max-h-60 overflow-y-auto p-1">
                     {isLoadingCompanies ? (
                       <div className="py-6 flex flex-col items-center justify-center gap-2 opacity-50">
-                        <div className="w-5 h-5 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-                        <span className="text-xs font-semibold text-gray-400">Loading companies...</span>
+                        <div className="w-5 h-5 border-2 border-t-transparent rounded-full animate-spin" style={{ borderColor: '#22c55e', borderTopColor: 'transparent' }}></div>
+                        <span style={{ fontSize: '12px', fontWeight: 600, color: '#9ca3af' }}>Loading companies...</span>
                       </div>
                     ) : filteredCompanies.length > 0 ? (
                       filteredCompanies.map((c) => (
-                        <div
-                          key={c.id}
-                          onClick={() => {
-                            setSelectedCompany(c);
-                            setIsDropdownOpen(false);
-                            setCompanySearch("");
-                          }}
-                          className="px-3 py-2.5 hover:bg-emerald-50 rounded-lg cursor-pointer flex items-center gap-3 transition-colors group"
-                        >
-                          <div className="w-8 h-8 rounded-lg border border-gray-100 bg-white flex items-center justify-center group-hover:border-emerald-200">
-                            <Building2 className="w-4 h-4 text-gray-400 group-hover:text-emerald-600 transition-colors" />
+                        <div key={c.id} onClick={() => { setSelectedCompany(c); setIsDropdownOpen(false); setCompanySearch(""); }}
+                          className="px-3 py-2.5 rounded-lg cursor-pointer flex items-center gap-3 transition-colors hover:bg-green-50 group">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ border: '1px solid #e5e7eb', background: '#fff' }}>
+                            <Building2 className="w-4 h-4 transition-colors" style={{ color: '#9ca3af' }} />
                           </div>
-                          <span className="font-semibold text-gray-700 group-hover:text-emerald-900">{c.name}</span>
+                          <span style={{ fontWeight: 600, color: '#374151' }}>{c.name}</span>
                         </div>
                       ))
                     ) : (
-                      <div className="px-4 py-6 text-center text-sm font-medium text-gray-500 bg-gray-50/50 rounded-lg mx-1 my-1 border border-gray-100 border-dashed">
+                      <div className="px-4 py-6 text-center rounded-lg mx-1 my-1" style={{ fontSize: '14px', fontWeight: 500, color: '#6b7280', background: '#f9fafb', border: '1px dashed #e5e7eb' }}>
                         No companies found.<br />
-                        <span className="text-xs text-gray-400 mt-1 block font-normal">Ask your IT Admin to register your company first.</span>
+                        <span style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', display: 'block', fontWeight: 400 }}>Ask your IT Admin to register your company first.</span>
                       </div>
                     )}
                   </div>
@@ -307,83 +298,57 @@ function Signup() {
               )}
             </div>
 
+            {/* Full Name */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Full Name</label>
-              <input
-                type="text"
-                placeholder="Enter your name"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium"
-                value={fullName}
-                onChange={(e) => { setFullName(e.target.value); setError(""); }}
-              />
+              <label className="block mb-2" style={labelStyle}>Full Name</label>
+              <input type="text" placeholder="Enter your name" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
+                value={fullName} onChange={(e) => { setFullName(e.target.value); setError(""); }} />
             </div>
 
+            {/* Email */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
-              <input
-                type="email"
-                placeholder="Enter your system email"
-                className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium"
-                value={email}
-                onChange={(e) => { setEmail(e.target.value); setError(""); }}
-              />
+              <label className="block mb-2" style={labelStyle}>Email Address</label>
+              <input type="email" placeholder="Enter your system email" style={inputStyle} onFocus={inputFocus} onBlur={inputBlur}
+                value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }} />
             </div>
 
+            {/* Passwords */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                <label className="block mb-2" style={labelStyle}>Password</label>
                 <div className="relative">
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Min 6 chars"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium pr-10"
-                    value={password}
-                    onChange={(e) => { setPassword(e.target.value); setError(""); }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
+                  <input type={showPassword ? "text" : "password"} placeholder="Min 6 chars" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
+                    value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
               <div className="relative">
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Confirm</label>
+                <label className="block mb-2" style={labelStyle}>Confirm</label>
                 <div className="relative">
-                  <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    placeholder="Repeat"
-                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none text-gray-800 placeholder:text-gray-400 font-medium pr-10"
-                    value={confirmPassword}
-                    onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
+                  <input type={showConfirmPassword ? "text" : "password"} placeholder="Repeat" style={{ ...inputStyle, paddingRight: '44px' }} onFocus={inputFocus} onBlur={inputBlur}
+                    value={confirmPassword} onChange={(e) => { setConfirmPassword(e.target.value); setError(""); }} />
+                  <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}>
                     {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
                 </div>
               </div>
             </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-emerald-900 text-white rounded-xl py-3.5 font-bold hover:bg-emerald-800 transition-all shadow-lg shadow-emerald-900/20 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 mt-2"
-            >
+            {/* Submit */}
+            <button type="submit" disabled={isSubmitting}
+              className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', borderRadius: '12px', padding: '14px', fontWeight: 600, fontSize: '15px', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(34,160,69,0.3)', transition: 'transform 0.2s, box-shadow 0.2s', marginTop: '8px' }}
+              onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 24px rgba(34,160,69,0.35)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 20px rgba(34,160,69,0.3)'; }}>
               {isSubmitting ? <Loader2 className="w-5 h-5 animate-spin" /> : null}
               {isSubmitting ? "Creating Profile..." : "Submit Registration"}
             </button>
 
-            <p className="text-center text-sm mt-6 text-gray-500">
+            <p className="text-center" style={{ fontSize: '14px', color: '#6b7280', marginTop: '24px' }}>
               Already have an account?{" "}
-              <Link to="/login" className="text-emerald-700 font-bold hover:underline transition-all">
-                Login here
-              </Link>
+              <Link to="/login" className="hover:underline transition-all" style={{ color: '#16a34a', fontWeight: 600 }}>Login here</Link>
             </p>
           </form>
         </div>
