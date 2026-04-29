@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "HelpDesk.ai",
+    "slug": "helpdesk-ai",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.ritesh.helpdeskai",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "@logrocket/react-native"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a5830464-58a7-4737-9cc9-e5ecad2e4acf"
+      }
+    },
+    "owner": "ritesh1918"
+  }
+}

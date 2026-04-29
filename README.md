@@ -27,6 +27,10 @@ pinned: false
     <img src="https://img.shields.io/badge/🚀_LAUNCH_APPLICATION-111827?style=for-the-badge&logo=vercel&logoColor=white&labelColor=6366f1" height="42" alt="Launch Application" />
   </a>
   &nbsp;&nbsp;
+  <a href="./MobileApp/application-2d277b36-4dbd-41c8-806d-cb2f19acf38a.apk">
+    <img src="https://img.shields.io/badge/📱_DOWNLOAD_ANDROID_APK-111827?style=for-the-badge&logo=android&logoColor=white&labelColor=a4c639" height="42" alt="Download APK" />
+  </a>
+  &nbsp;&nbsp;
   <a href="https://helpdeskaiv1.vercel.app/contact-sales">
     <img src="https://img.shields.io/badge/✉️_CONTACT_ENTERPRISE-111827?style=for-the-badge&logo=minutemailer&logoColor=white&labelColor=10b981" height="42" alt="Contact Enterprise" />
   </a>
@@ -157,6 +161,19 @@ npm run dev
 - [x] **Phase 3**: GitHub Models integration for generative knowledge-base articles.
 - [ ] **Phase 4**: SAP / ServiceNow direct bidirectional sync.
 - [ ] **Phase 5**: AI Voice Support Agent via Twilio.
+
+---
+
+<h2 id="mobile-ecosystem">📱 Mobile Ecosystem (V1)</h2>
+
+Helpdesk.ai is now available as a native Android application. It features a complete mobile-first experience for employees and admins.
+
+- **Real-time Status Tracking**: Instant updates on ticket progress with custom in-app notifications.
+- **Biometric Ready**: Secure access with enterprise-grade authentication.
+- **Smart Onboarding**: Dynamic routing for new users and pending registrations.
+- **Session Replay**: Integrated with **LogRocket** for proactive debugging and user support.
+
+[**📥 Download HelpDesk.ai V1 APK**](./MobileApp/application-2d277b36-4dbd-41c8-806d-cb2f19acf38a.apk)
 
 ---
 
