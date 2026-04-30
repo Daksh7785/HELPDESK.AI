@@ -35,7 +35,7 @@ const TicketDetailScreen = ({ route }) => {
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
-        table: 'messages',
+        table: 'ticket_messages',
         filter: `ticket_id=eq.${ticketId}`
       }, (payload) => {
         setMessages(prev => [...prev, payload.new]);
@@ -60,7 +60,7 @@ const TicketDetailScreen = ({ route }) => {
   const fetchMessages = async () => {
     try {
       const { data, error } = await supabase
-        .from('messages')
+        .from('ticket_messages')
         .select('*')
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
@@ -82,13 +82,16 @@ const TicketDetailScreen = ({ route }) => {
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase.from('profiles').select('full_name').eq('id', user.id).single();
+      
       const { error } = await supabase
-        .from('messages')
+        .from('ticket_messages')
         .insert({
           ticket_id: ticketId,
-          user_id: user.id,
-          content: userMessage,
-          sender_type: 'user'
+          sender_id: user.id,
+          sender_name: profile?.full_name || 'User',
+          message: userMessage,
+          sender_role: 'user'
         });
 
       if (error) throw error;
@@ -98,8 +101,8 @@ const TicketDetailScreen = ({ route }) => {
   };
 
   const renderMessage = ({ item }) => {
-    const isUser = item.sender_type === 'user';
-    const isAI = item.sender_type === 'ai';
+    const isUser = item.sender_role === 'user';
+    const isAI = item.sender_role === 'ai';
 
     return (
       <View style={[
@@ -110,11 +113,11 @@ const TicketDetailScreen = ({ route }) => {
         {!isUser && (
           <View style={styles.senderHeader}>
             {isAI ? <Bot size={14} color={COLORS.primary} /> : <User size={14} color={COLORS.textLight} />}
-            <Text style={styles.senderName}>{isAI ? 'AI Assistant' : 'Admin Support'}</Text>
+            <Text style={styles.senderName}>{isAI ? 'AI Assistant' : item.sender_name || 'Support'}</Text>
           </View>
         )}
         <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-          {item.content}
+          {item.message}
         </Text>
         <Text style={[styles.messageTime, isUser && styles.userTimeText]}>
           {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}

@@ -13,6 +13,7 @@ import {
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
+import { decode } from 'base64-arraybuffer';
 import { useFocusEffect } from '@react-navigation/native';
 import { useNotification } from '../../components/NotificationProvider';
 
@@ -81,6 +82,7 @@ const ProfileScreen = () => {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
+        base64: true, // Needed for robust mobile uploads
       });
 
       if (result.canceled) return;
@@ -88,22 +90,24 @@ const ProfileScreen = () => {
       setUploading(true);
       const photo = result.assets[0];
       
-      const fileExt = photo.uri.split('.').pop();
-      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const fileExt = photo.uri.split('.').pop().toLowerCase();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = fileName; // Simplified path
 
-      const formData = new FormData();
-      formData.append('file', {
-        uri: photo.uri,
-        name: fileName,
-        type: `image/${fileExt}`,
-      });
-
-      const { data, error: uploadError } = await supabase.storage
+      // Use base64 for more reliable upload on mobile
+      const { error: uploadError } = await supabase.storage
         .from('avatars')
-        .upload(filePath, formData);
+        .upload(filePath, decode(photo.base64), {
+          contentType: `image/${fileExt}`,
+          upsert: true
+        });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        if (uploadError.message.includes('bucket not found')) {
+          throw new Error('Supabase Storage bucket "avatars" not found. Please create a public bucket named "avatars" in your Supabase dashboard.');
+        }
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
@@ -118,7 +122,9 @@ const ProfileScreen = () => {
 
       setProfile({ ...profile, avatar_url: publicUrl });
       success('Success', 'Profile picture updated!');
+      fetchAll(); // Refresh everything
     } catch (e) {
+      console.error('Avatar Upload Error:', e);
       notifyError('Upload Failed', e.message);
     } finally {
       setUploading(false);
