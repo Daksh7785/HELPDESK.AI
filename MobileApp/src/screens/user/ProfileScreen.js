@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
-  ScrollView, StatusBar, ActivityIndicator, Modal, Alert,
+  ScrollView, StatusBar, ActivityIndicator, Modal, Alert, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
@@ -9,9 +9,11 @@ import { COLORS, SHADOWS } from '../../styles/theme';
 import {
   User, Mail, Building2, ShieldCheck, Calendar, Ticket, Zap,
   Lock, LogOut, ChevronRight, Pencil, Check, X, Phone, Briefcase,
-  ArrowUpRight, Eye, EyeOff,
+  ArrowUpRight, Eye, EyeOff, Camera,
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect } from '@react-navigation/native';
 import { useNotification } from '../../components/NotificationProvider';
 
 const ProfileScreen = () => {
@@ -25,6 +27,7 @@ const ProfileScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({ full_name: '', job_title: '', phone: '' });
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [newPassword, setNewPassword] = useState('');
@@ -32,41 +35,95 @@ const ProfileScreen = () => {
   const [showPass, setShowPass] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
-        if (!authUser) return;
-        setUser(authUser);
+  const fetchAll = React.useCallback(async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+      setUser(authUser);
 
-        const { data: profileData } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', authUser.id)
-          .single();
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', authUser.id)
+        .single();
 
-        if (profileData) {
-          setProfile(profileData);
-          setFormData({
-            full_name: profileData.full_name || '',
-            job_title: profileData.job_title || '',
-            phone: profileData.phone || '',
-          });
-        }
-
-        const { data: ticketData } = await supabase
-          .from('tickets')
-          .select('*')
-          .eq('user_id', authUser.id);
-        setTickets(ticketData || []);
-      } catch (e) {
-        console.error('Profile fetch error:', e);
-      } finally {
-        setLoading(false);
+      if (profileData) {
+        setProfile(profileData);
+        setFormData({
+          full_name: profileData.full_name || '',
+          job_title: profileData.job_title || '',
+          phone: profileData.phone || '',
+        });
       }
-    };
-    fetchAll();
+
+      const { data: ticketData } = await supabase
+        .from('tickets')
+        .select('*')
+        .eq('user_id', authUser.id);
+      setTickets(ticketData || []);
+    } catch (e) {
+      console.error('Profile fetch error:', e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchAll();
+    }, [fetchAll])
+  );
+
+  const uploadAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+      });
+
+      if (result.canceled) return;
+
+      setUploading(true);
+      const photo = result.assets[0];
+      
+      const fileExt = photo.uri.split('.').pop();
+      const fileName = `${user.id}-${Math.random()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      const formData = new FormData();
+      formData.append('file', {
+        uri: photo.uri,
+        name: fileName,
+        type: `image/${fileExt}`,
+      });
+
+      const { data, error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, formData);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: publicUrl })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile({ ...profile, avatar_url: publicUrl });
+      success('Success', 'Profile picture updated!');
+    } catch (e) {
+      notifyError('Upload Failed', e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSave = async () => {
     if (!formData.full_name.trim()) {
@@ -158,9 +215,18 @@ const ProfileScreen = () => {
 
         {/* Profile Card */}
         <View style={styles.profileCard}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          <TouchableOpacity style={styles.avatarContainer} onPress={uploadAvatar} disabled={uploading}>
+            {profile?.avatar_url ? (
+              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+            )}
+            <View style={styles.cameraIcon}>
+              {uploading ? <ActivityIndicator size="small" color="#fff" /> : <Camera size={14} color="#fff" />}
+            </View>
+          </TouchableOpacity>
 
           {!isEditing ? (
             <View style={styles.profileInfo}>
@@ -368,12 +434,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff', borderRadius: 28, padding: 24,
     ...SHADOWS.soft, borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)', marginBottom: 20,
   },
-  avatar: {
-    width: 72, height: 72, borderRadius: 22,
+  avatarContainer: {
+    width: 84, height: 84, borderRadius: 28,
     backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center',
-    marginBottom: 20, ...SHADOWS.medium,
+    marginBottom: 20, ...SHADOWS.medium, position: 'relative'
   },
-  avatarText: { fontSize: 28, fontWeight: '900', color: '#fff' },
+  avatarImage: { width: '100%', height: '100%', borderRadius: 28 },
+  avatarPlaceholder: { width: '100%', height: '100%', justifyContent: 'center', alignItems: 'center' },
+  cameraIcon: {
+    position: 'absolute', bottom: -4, right: -4,
+    width: 28, height: 28, borderRadius: 10,
+    backgroundColor: COLORS.primary, borderWidth: 2, borderColor: '#fff',
+    justifyContent: 'center', alignItems: 'center'
+  },
+  avatarText: { fontSize: 32, fontWeight: '900', color: '#fff' },
   profileInfo: { gap: 8 },
   profileName: { fontSize: 24, fontWeight: '900', color: COLORS.text, marginBottom: 4 },
   metaRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },

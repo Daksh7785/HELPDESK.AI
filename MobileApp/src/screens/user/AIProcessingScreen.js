@@ -206,7 +206,13 @@ const AIProcessingScreen = () => {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.cancelBtn} onPress={() => navigation.goBack()}>
+        <TouchableOpacity 
+          style={styles.cancelBtn} 
+          onPress={() => {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            navigation.goBack();
+          }}
+        >
           <Text style={styles.cancelText}>Edit Request</Text>
         </TouchableOpacity>
       </ScrollView>
@@ -243,8 +249,17 @@ const styles = StyleSheet.create({
   confidenceText: { fontSize: 13, fontWeight: '700', color: COLORS.success },
   confirmBtn: { backgroundColor: COLORS.primary, height: 64, borderRadius: 20, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, ...SHADOWS.medium },
   confirmText: { color: '#fff', fontSize: 18, fontWeight: '800' },
-  cancelBtn: { marginTop: 20, height: 50, alignItems: 'center', justifyContent: 'center' },
-  cancelText: { color: COLORS.textMuted, fontSize: 15, fontWeight: '700', textDecorationLine: 'underline' },
+  cancelBtn: { 
+    marginTop: 16, 
+    height: 60, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: COLORS.border,
+    marginBottom: 40
+  },
+  cancelText: { color: COLORS.textLight, fontSize: 16, fontWeight: '700' },
 });
 
 export default AIProcessingScreen;
