@@ -709,11 +709,9 @@ async def save_ticket(request_body: TicketSaveRequest):
 @app.post("/ai/analyze_ticket")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
-    BACKWARD COMPATIBILITY: Keeps the old endpoint functional but warns of deprecation.
+    BACKWARD COMPATIBILITY: Strictly performs analysis only. 
+    Does NOT persist to DB to avoid foreign key violations.
     """
-    # This just routes to the new combined logic if still needed, 
-    # but I'll leave the original implementation if space permits or just keep it minimal.
-    # Refactoring for now to keep the file size manageable and clean.
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze-v2")

@@ -66,33 +66,46 @@ const AIProcessingScreen = () => {
   };
 
   const handleConfirm = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
+      setError(null);
       const { data: { user } } = await supabase.auth.getUser();
       
+      if (!user) throw new Error('User session expired. Please log in again.');
+
       // Save to Supabase
-      const { error: saveError } = await supabase.from('tickets').insert({
+      const ticketData = {
         user_id: user.id,
-        subject: result.summary,
+        subject: result.summary || "New Support Request",
         description: text,
         category: result.category,
-        subcategory: result.subcategory,
         priority: result.priority,
         status: 'pending',
-        assigned_team: result.assigned_team,
-        metadata: {
-          confidence: result.confidence,
-          ai_version: result.version,
-          ocr_text: result.ocr_text
-        }
-      });
+        created_at: new Date().toISOString()
+      };
+
+      const { data, error: saveError } = await supabase
+        .from('tickets')
+        .insert(ticketData)
+        .select()
+        .single();
 
       if (saveError) throw saveError;
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      navigation.navigate('MainTabs'); // Go back to dashboard
+      
+      // Navigate to tracking for the new ticket
+      navigation.reset({
+        index: 0,
+        routes: [
+          { name: 'MainTabs' },
+          { name: 'TicketTracking', params: { ticketId: data.id } }
+        ],
+      });
     } catch (err) {
-      setError('Failed to save ticket: ' + err.message);
+      console.error('Final Submission Error:', err);
+      setError('Failed to create ticket: ' + (err.message || 'Unknown error'));
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
       setLoading(false);
     }
