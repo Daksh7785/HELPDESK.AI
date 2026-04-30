@@ -19,6 +19,8 @@ const DashboardScreen = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
+  const [unreadCount, setUnreadCount] = useState(0);
+
   const fetchData = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -39,6 +41,15 @@ const DashboardScreen = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
       setTickets(ticketData || []);
+
+      // Fetch unread notifications count
+      const { count } = await supabase
+        .from('notifications')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .eq('read', false);
+      setUnreadCount(count || 0);
+
     } catch (e) {
       console.error('Dashboard fetch error:', e);
     } finally {
@@ -51,18 +62,29 @@ const DashboardScreen = () => {
     fetchData(); 
 
     // Subscribe to ticket changes
-    const channel = supabase
-      .channel('dashboard_sync')
+    const ticketsChannel = supabase
+      .channel('dashboard_tickets')
       .on('postgres_changes', { 
         event: '*', 
         schema: 'public', 
         table: 'tickets' 
-      }, () => {
-        fetchData(); // Refresh data on any change
-      })
+      }, () => fetchData())
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
+    // Subscribe to notifications changes
+    const notificationsChannel = supabase
+      .channel('dashboard_notifications')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'notifications' 
+      }, () => fetchData())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ticketsChannel);
+      supabase.removeChannel(notificationsChannel);
+    };
   }, [fetchData]);
 
   const onRefresh = () => { setRefreshing(true); fetchData(); };
@@ -137,7 +159,11 @@ const DashboardScreen = () => {
           >
             <View style={[styles.actionIcon, { backgroundColor: '#fff7ed' }]}>
               <Zap size={20} color="#f59e0b" />
-              <View style={styles.notifBadge} />
+              {unreadCount > 0 && (
+                <View style={styles.notifBadge}>
+                  <Text style={styles.notifBadgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
             </View>
             <Text style={styles.actionLabel}>Alerts</Text>
           </TouchableOpacity>
@@ -267,8 +293,24 @@ const styles = StyleSheet.create({
   actionIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', position: 'relative' },
   actionLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text },
   notifBadge: { 
-    position: 'absolute', top: 0, right: 0, width: 8, height: 8, 
-    borderRadius: 4, backgroundColor: '#ef4444', borderWidth: 1.5, borderColor: '#fff' 
+    position: 'absolute', 
+    top: -4, 
+    right: -4, 
+    minWidth: 18, 
+    height: 18, 
+    borderRadius: 9, 
+    backgroundColor: '#ef4444', 
+    borderWidth: 1.5, 
+    borderColor: '#fff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 2
+  },
+  notifBadgeText: {
+    color: '#fff',
+    fontSize: 9,
+    fontWeight: '900',
+    textAlign: 'center'
   },
   // CTA
   ctaCard: {
