@@ -30,7 +30,7 @@ const CreateTicketScreen = () => {
   const pickImage = async () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ImagePicker.MediaType.Images,
       allowsEditing: true,
       quality: 0.8,
     });

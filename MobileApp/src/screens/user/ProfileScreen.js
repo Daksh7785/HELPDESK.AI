@@ -78,11 +78,11 @@ const ProfileScreen = () => {
   const uploadAvatar = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
-        base64: true, // Needed for robust mobile uploads
+        base64: true, 
       });
 
       if (result.canceled) return;
