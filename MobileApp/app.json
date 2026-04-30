@@ -28,8 +28,15 @@
     },
     "plugins": [
       "expo-secure-store",
-      "@logrocket/react-native"
+      "@logrocket/react-native",
+      "expo-build-properties"
     ],
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a5830464-58a7-4737-9cc9-e5ecad2e4acf"
+    },
     "extra": {
       "eas": {
         "projectId": "a5830464-58a7-4737-9cc9-e5ecad2e4acf"
