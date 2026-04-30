@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
-import { Lock, Mail, Eye, EyeOff, Zap, ArrowRight } from 'lucide-react-native';
+import { Lock, Mail, Eye, EyeOff, Zap, ArrowRight, ShieldCheck } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
 import { useNotification } from '../../components/NotificationProvider';
@@ -207,22 +208,39 @@ const LoginScreen = () => {
                   <View style={styles.dividerLine} />
                 </View>
 
-                <TouchableOpacity style={styles.altBtn} onPress={toggleMode} activeOpacity={0.8}>
-                  {isMagicLink ? <Lock size={18} color={COLORS.primary} /> : <Zap size={18} color={COLORS.primary} />}
-                  <Text style={styles.altBtnText}>
-                    {isMagicLink ? 'Sign in with Password' : 'Sign in with Magic Link'}
-                  </Text>
+                <TouchableOpacity 
+                  style={styles.magicLinkBtn} 
+                  onPress={toggleMode} 
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={[COLORS.primary, '#0ea5e9']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.magicLinkGradient}
+                  >
+                    {isMagicLink ? <Lock size={18} color="#fff" /> : <Zap size={18} color="#fff" />}
+                    <Text style={styles.magicLinkText}>
+                      {isMagicLink ? 'Sign in with Password' : 'Sign in with Magic Link'}
+                    </Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </>
             )}
           </Animated.View>
 
           {/* Footer */}
-          <Animated.View style={[styles.footer, { opacity: fadeAnim }]}>
+          <Animated.View style={[styles.footer, { opacity: fadeAnim, paddingBottom: insets.bottom + 40 }]}>
             <Text style={styles.footerText}>Don't have an account? </Text>
             <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
               <Text style={styles.footerLink}>Create Account</Text>
             </TouchableOpacity>
+            
+            <View style={{ width: '100%', alignItems: 'center', marginTop: 24 }}>
+              <TouchableOpacity onPress={() => navigation.navigate('AdminSignup')}>
+                <Text style={styles.adminLink}>Access Admin Terminal</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -252,11 +270,13 @@ const styles = StyleSheet.create({
   divider: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   dividerLine: { flex: 1, height: 1, backgroundColor: 'rgba(255,255,255,0.1)' },
   dividerText: { color: 'rgba(255,255,255,0.35)', fontSize: 13, fontWeight: '600' },
-  altBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, height: 56, borderRadius: 18, borderWidth: 1.5, borderColor: COLORS.primary + '60', backgroundColor: COLORS.primary + '10' },
-  altBtnText: { color: COLORS.primary, fontSize: 15, fontWeight: '700' },
-  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 32, flexWrap: 'wrap' },
+  footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 40, flexWrap: 'wrap' },
   footerText: { color: 'rgba(255,255,255,0.45)', fontSize: 14 },
   footerLink: { color: COLORS.primary, fontSize: 14, fontWeight: '800' },
+  adminLink: { color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' },
+  magicLinkBtn: { height: 56, borderRadius: 18, overflow: 'hidden', ...SHADOWS.small },
+  magicLinkGradient: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+  magicLinkText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   sentState: { alignItems: 'center', gap: 16, paddingVertical: 20 },
   sentIcon: { width: 80, height: 80, borderRadius: 24, backgroundColor: COLORS.primary + '20', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: COLORS.primary + '40' },
   sentTitle: { fontSize: 22, fontWeight: '900', color: '#fff' },

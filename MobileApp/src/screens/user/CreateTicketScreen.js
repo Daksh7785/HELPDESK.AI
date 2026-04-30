@@ -9,19 +9,50 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SPACING, SHADOWS } from '../../styles/theme';
-import { ArrowLeft, Sparkles, Send } from 'lucide-react-native';
+import { ArrowLeft, Sparkles, Send, Mic, Image as ImageIcon, X } from 'lucide-react-native';
 import { useNavigation } from '@react-navigation/native';
 import { useNotification } from '../../components/NotificationProvider';
+import * as ImagePicker from 'expo-image-picker';
+import * as Haptics from 'expo-haptics';
 
 const CreateTicketScreen = () => {
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
+  const [image, setImage] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
   const navigation = useNavigation();
   const { success, error: notifyError } = useNotification();
+
+  const pickImage = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.7,
+    });
+
+    if (!result.canceled) {
+      setImage(result.assets[0].uri);
+    }
+  };
+
+  const toggleVoice = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsRecording(!isRecording);
+    // Placeholder for actual voice-to-text
+    if (!isRecording) {
+      setTimeout(() => {
+        setIsRecording(false);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      }, 3000);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!description.trim()) {
@@ -31,16 +62,22 @@ const CreateTicketScreen = () => {
     
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      const { error } = await supabase.from('tickets').insert({
-        user_id: user.id,
-        subject: description.substring(0, 50) + (description.length > 50 ? '...' : ''),
-        description,
-        status: 'pending',
+      let base64 = null;
+      if (image) {
+        const response = await fetch(image);
+        const blob = await response.blob();
+        base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.readAsDataURL(blob);
+        });
+      }
+
+      navigation.navigate('AIProcessing', {
+        text: description,
+        image_base64: base64,
+        image_text: "" 
       });
-      if (error) throw error;
-      success('Ticket Created', 'Your request has been submitted.');
-      navigation.goBack();
     } catch (e) {
       notifyError('Error', e.message);
     } finally {
@@ -63,15 +100,21 @@ const CreateTicketScreen = () => {
           <View style={styles.aiBanner}>
             <Sparkles size={20} color={COLORS.primary} />
             <Text style={styles.aiBannerText}>
-              Describe your issue naturally. Our AI will automatically categorize and prioritize it.
+              Describe your issue naturally. Use voice or upload a screenshot for faster resolution.
             </Text>
           </View>
 
           <View style={styles.inputCard}>
-            <Text style={styles.inputLabel}>Issue Details</Text>
+            <View style={styles.inputHeader}>
+              <Text style={styles.inputLabel}>Issue Details</Text>
+              <TouchableOpacity onPress={toggleVoice} style={[styles.voiceBtn, isRecording && styles.voiceBtnActive]}>
+                <Mic size={20} color={isRecording ? COLORS.white : COLORS.primary} />
+              </TouchableOpacity>
+            </View>
+            
             <TextInput
               style={styles.input}
-              placeholder="E.g., I can't access my email account since this morning..."
+              placeholder="What can we help you with today?"
               placeholderTextColor={COLORS.textMuted}
               multiline
               value={description}
@@ -79,6 +122,22 @@ const CreateTicketScreen = () => {
               numberOfLines={8}
               textAlignVertical="top"
             />
+
+            {image && (
+              <View style={styles.imagePreviewContainer}>
+                <Image source={{ uri: image }} style={styles.imagePreview} />
+                <TouchableOpacity onPress={() => setImage(null)} style={styles.removeImageBtn}>
+                  <X size={16} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            )}
+
+            <View style={styles.actionRow}>
+              <TouchableOpacity style={styles.attachmentBtn} onPress={pickImage}>
+                <ImageIcon size={20} color={COLORS.textMuted} />
+                <Text style={styles.attachmentText}>{image ? 'Change Screenshot' : 'Attach Screenshot'}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           <TouchableOpacity 
@@ -151,32 +210,89 @@ const styles = StyleSheet.create({
   },
   inputCard: {
     backgroundColor: COLORS.white,
-    borderRadius: 20,
+    borderRadius: 24,
     padding: 20,
-    marginBottom: 24,
+    marginBottom: 32,
     ...SHADOWS.soft,
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.03)'
+  },
+  inputHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12
   },
   inputLabel: {
     fontSize: 14,
     fontWeight: '700',
     color: COLORS.text,
-    marginBottom: 12
+  },
+  voiceBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  voiceBtnActive: {
+    backgroundColor: COLORS.error
   },
   input: { 
     backgroundColor: COLORS.background, 
-    borderRadius: 12, 
+    borderRadius: 16, 
     padding: 16, 
     minHeight: 150, 
     fontSize: 16, 
     color: COLORS.text,
     lineHeight: 24
   },
+  imagePreviewContainer: {
+    marginTop: 16,
+    position: 'relative',
+    borderRadius: 16,
+    overflow: 'hidden',
+    height: 180,
+    borderWidth: 1,
+    borderColor: COLORS.border
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  removeImageBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  actionRow: {
+    flexDirection: 'row',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border
+  },
+  attachmentBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8
+  },
+  attachmentText: {
+    fontSize: 14,
+    color: COLORS.textMuted,
+    fontWeight: '600'
+  },
   btn: { 
     backgroundColor: COLORS.primary, 
-    height: 60, 
-    borderRadius: 16, 
+    height: 64, 
+    borderRadius: 20, 
     flexDirection: 'row',
     alignItems: 'center', 
     justifyContent: 'center',
@@ -190,7 +306,7 @@ const styles = StyleSheet.create({
   },
   btnText: { 
     color: COLORS.white, 
-    fontSize: 16, 
+    fontSize: 17, 
     fontWeight: '800' 
   }
 });

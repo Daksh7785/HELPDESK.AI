@@ -30,6 +30,7 @@ import TicketDetailScreen from './src/screens/user/TicketDetailScreen';
 import ProfileScreen from './src/screens/user/ProfileScreen';
 import TicketsListScreen from './src/screens/user/TicketsListScreen';
 import TicketTrackingScreen from './src/screens/user/TicketTrackingScreen';
+import AIProcessingScreen from './src/screens/user/AIProcessingScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -188,8 +189,9 @@ const AppContent = () => {
           ) : (
             // ─── Active user ───
             <>
-              <Stack.Screen name="MainTabs" component={TabNavigator} />
+               <Stack.Screen name="MainTabs" component={TabNavigator} />
               <Stack.Screen name="CreateTicket" component={CreateTicketScreen} options={{ animation: 'slide_from_bottom' }} />
+              <Stack.Screen name="AIProcessing" component={AIProcessingScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TicketTracking" component={TicketTrackingScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TicketDetail" component={TicketDetailScreen} options={{ animation: 'slide_from_right' }} />
             </>
