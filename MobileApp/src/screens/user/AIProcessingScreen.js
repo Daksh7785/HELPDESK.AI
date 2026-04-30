@@ -24,34 +24,62 @@ const AIProcessingScreen = () => {
   const [loading, setLoading] = useState(true);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
+  const [currentStep, setCurrentStep] = useState(0);
+
+  const steps = [
+    "Initializing AI Core...",
+    "Scanning for OCR Data...",
+    "Neural Classification...",
+    "Searching Knowledge Base...",
+    "Extracting Technical Entities...",
+    "Checking for Duplicates..."
+  ];
   
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.1, duration: 1000, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 1000, useNativeDriver: true }),
+      ])
+    ).start();
+
+    // Start analysis immediately
     analyzeTicket();
   }, []);
 
+  // Animation for step progression
+  useEffect(() => {
+    let stepTimer;
+    if (loading && currentStep < steps.length) {
+      stepTimer = setTimeout(() => {
+        setCurrentStep(prev => prev + 1);
+      }, 1000);
+    }
+    return () => clearTimeout(stepTimer);
+  }, [currentStep, loading]);
+
   const analyzeTicket = async (retries = 3) => {
     try {
-      setLoading(true);
       setError(null);
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: profile } = await supabase.from('profiles').select('company').eq('id', user.id).single();
+
       const response = await axios.post(`${BACKEND_URL}/ai/analyze_ticket`, {
         text,
         image_base64: image_base64 || "",
         image_text: image_text || "",
+        user_id: user?.id,
+        company: profile?.company || 'Default'
       });
       
       setResult(response.data);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.spring(scaleAnim, { toValue: 1, damping: 12, useNativeDriver: true }),
-      ]).start();
     } catch (err) {
       if (err.response?.status === 503 && retries > 0) {
-        // Backend is waking up, wait 4 seconds and retry
         setTimeout(() => analyzeTicket(retries - 1), 4000);
         return;
       }
@@ -59,11 +87,24 @@ const AIProcessingScreen = () => {
       setError(err.response?.status === 503 
         ? 'The AI engine is waking up. Please wait a moment...'
         : (err.message || 'AI engine is currently busy. Please try again.'));
+      setLoading(false);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
-      if (!retries || !error) setLoading(false);
     }
   };
+
+  // Switch from loading to result screen when steps are done AND result is back
+  useEffect(() => {
+    if (currentStep === steps.length && result) {
+      const timer = setTimeout(() => {
+        setLoading(false);
+        Animated.parallel([
+          Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+          Animated.spring(scaleAnim, { toValue: 1, damping: 12, useNativeDriver: true }),
+        ]).start();
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, result]);
 
   const handleConfirm = async () => {
     try {
@@ -94,7 +135,6 @@ const AIProcessingScreen = () => {
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       
-      // Navigate to tracking for the new ticket
       navigation.reset({
         index: 0,
         routes: [
@@ -105,28 +145,71 @@ const AIProcessingScreen = () => {
     } catch (err) {
       console.error('Final Submission Error:', err);
       setError('Failed to create ticket: ' + (err.message || 'Unknown error'));
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-    } finally {
       setLoading(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     }
   };
 
-  if (loading && !result) {
+  const StepItem = ({ title, index }) => {
+    const isCompleted = currentStep > index;
+    const isActive = currentStep === index;
+    const isPending = currentStep < index;
+
     return (
-      <View style={styles.loadingContainer}>
-        <StatusBar barStyle="light-content" />
-        <BrainCircuit size={60} color={COLORS.primary} style={styles.brainIcon} />
-        <Text style={styles.loadingTitle}>AI Engine Analyzing...</Text>
-        <Text style={styles.loadingSubtitle}>Categorizing your issue and identifying priority.</Text>
-        <ActivityIndicator size="large" color={COLORS.primary} style={{ marginTop: 30 }} />
+      <View style={[styles.stepItem, isPending && { opacity: 0.3 }]}>
+        <View style={styles.stepIconWrap}>
+          {isCompleted ? (
+            <CheckCircle2 size={18} color={COLORS.success} />
+          ) : isActive ? (
+            <ActivityIndicator size="small" color={COLORS.primary} />
+          ) : (
+            <View style={styles.stepCircle} />
+          )}
+        </View>
+        <Text style={[
+          styles.stepText, 
+          isActive && { color: COLORS.primary, fontWeight: '800' },
+          isCompleted && { color: '#fff', fontWeight: '700' }
+        ]}>
+          {title}
+        </Text>
       </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <StatusBar barStyle="light-content" />
+        <View style={styles.loadingHeader}>
+          <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+            <BrainCircuit size={60} color={COLORS.primary} strokeWidth={1.5} />
+          </Animated.View>
+          <Text style={styles.loadingTitle}>Neural Processing</Text>
+          <Text style={styles.loadingSubtitle}>HelpDesk.ai is orchestrating your request</Text>
+        </View>
+
+        <View style={styles.stepsList}>
+          {steps.map((step, i) => (
+            <StepItem key={i} title={step} index={i} />
+          ))}
+        </View>
+
+        {/* Progress Bar */}
+        <View style={styles.progressBarBg}>
+          <View style={[
+            styles.progressBarFill, 
+            { width: `${(currentStep / steps.length) * 100}%` }
+          ]} />
+        </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
       <View style={styles.errorContainer}>
-        <AlertCircle size={60} color={COLORS.error} />
+        <AlertCircle size={60} color="#ef4444" />
         <Text style={styles.errorTitle}>Analysis Failed</Text>
         <Text style={styles.errorSubtitle}>{error}</Text>
         <TouchableOpacity style={styles.retryBtn} onPress={() => navigation.goBack()}>
@@ -223,15 +306,26 @@ const AIProcessingScreen = () => {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   scroll: { padding: 24 },
-  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0b1120', padding: 40 },
-  brainIcon: { marginBottom: 20 },
-  loadingTitle: { fontSize: 24, fontWeight: '900', color: '#fff', textAlign: 'center' },
-  loadingSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 10, lineHeight: 20 },
-  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 },
+  loadingContainer: { flex: 1, backgroundColor: '#0b1120', padding: 30, justifyContent: 'center' },
+  loadingHeader: { alignItems: 'center', marginBottom: 40 },
+  loadingTitle: { fontSize: 26, fontWeight: '900', color: '#fff', textAlign: 'center', marginTop: 20 },
+  loadingSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.5)', textAlign: 'center', marginTop: 8, fontWeight: '600' },
+  
+  stepsList: { gap: 16, marginBottom: 40, paddingHorizontal: 10 },
+  stepItem: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  stepIconWrap: { width: 24, alignItems: 'center' },
+  stepCircle: { width: 8, height: 8, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.1)' },
+  stepText: { fontSize: 15, color: 'rgba(255,255,255,0.4)', fontWeight: '600' },
+
+  progressBarBg: { height: 4, backgroundColor: 'rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden' },
+  progressBarFill: { height: '100%', backgroundColor: COLORS.primary },
+
+  errorContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, backgroundColor: COLORS.background },
   errorTitle: { fontSize: 22, fontWeight: '900', color: COLORS.text, marginTop: 20 },
   errorSubtitle: { fontSize: 14, color: COLORS.textMuted, textAlign: 'center', marginTop: 10, lineHeight: 20 },
   retryBtn: { marginTop: 30, backgroundColor: COLORS.primary, paddingHorizontal: 30, paddingVertical: 15, borderRadius: 12 },
   retryText: { color: '#fff', fontWeight: '700' },
+  
   header: { marginBottom: 30 },
   aiBadge: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: COLORS.primaryLight, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 100, alignSelf: 'flex-start', marginBottom: 16 },
   aiBadgeText: { fontSize: 10, fontWeight: '900', color: COLORS.primary, letterSpacing: 1 },
