@@ -1,12 +1,3 @@
----
-title: HelpDesk AI Backend
-emoji: 🤖
-colorFrom: green
-colorTo: blue
-sdk: docker
-pinned: false
----
-
 
 <div align="center">
 
