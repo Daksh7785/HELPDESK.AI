@@ -47,7 +47,23 @@ const DashboardScreen = () => {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { 
+    fetchData(); 
+
+    // Subscribe to ticket changes
+    const channel = supabase
+      .channel('dashboard_sync')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'tickets' 
+      }, () => {
+        fetchData(); // Refresh data on any change
+      })
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [fetchData]);
 
   const onRefresh = () => { setRefreshing(true); fetchData(); };
 
@@ -101,6 +117,30 @@ const DashboardScreen = () => {
             style={styles.headerLogo}
             resizeMode="contain"
           />
+        </View>
+
+        {/* Quick Actions */}
+        <View style={styles.quickActions}>
+          <TouchableOpacity 
+            style={styles.actionItem} 
+            onPress={() => navigation.navigate('KnowledgeBase')}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: '#f0f9ff' }]}>
+              <BarChart3 size={20} color="#0284c7" />
+            </View>
+            <Text style={styles.actionLabel}>Help Center</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity 
+            style={styles.actionItem} 
+            onPress={() => navigation.navigate('Notifications')}
+          >
+            <View style={[styles.actionIcon, { backgroundColor: '#fff7ed' }]}>
+              <Zap size={20} color="#f59e0b" />
+              <View style={styles.notifBadge} />
+            </View>
+            <Text style={styles.actionLabel}>Alerts</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Report Ticket CTA */}
@@ -217,6 +257,19 @@ const styles = StyleSheet.create({
   greeting: { fontSize: 14, fontWeight: '600', color: COLORS.textLight, marginBottom: 4 },
   userName: { fontSize: 28, fontWeight: '900', color: COLORS.text, letterSpacing: -0.8 },
   headerLogo: { width: 44, height: 44, borderRadius: 14 },
+  // Quick Actions
+  quickActions: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, marginBottom: 20 },
+  actionItem: { 
+    flex: 1, backgroundColor: '#fff', borderRadius: 20, padding: 12, 
+    flexDirection: 'row', alignItems: 'center', gap: 12, ...SHADOWS.soft,
+    borderWidth: 1, borderColor: 'rgba(0,0,0,0.03)'
+  },
+  actionIcon: { width: 36, height: 36, borderRadius: 10, justifyContent: 'center', alignItems: 'center', position: 'relative' },
+  actionLabel: { fontSize: 13, fontWeight: '700', color: COLORS.text },
+  notifBadge: { 
+    position: 'absolute', top: 0, right: 0, width: 8, height: 8, 
+    borderRadius: 4, backgroundColor: '#ef4444', borderWidth: 1.5, borderColor: '#fff' 
+  },
   // CTA
   ctaCard: {
     flexDirection: 'row', alignItems: 'center',

@@ -31,6 +31,8 @@ import ProfileScreen from './src/screens/user/ProfileScreen';
 import TicketsListScreen from './src/screens/user/TicketsListScreen';
 import TicketTrackingScreen from './src/screens/user/TicketTrackingScreen';
 import AIProcessingScreen from './src/screens/user/AIProcessingScreen';
+import NotificationsScreen from './src/screens/user/NotificationsScreen';
+import KnowledgeBaseScreen from './src/screens/user/KnowledgeBaseScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -194,6 +196,8 @@ const AppContent = () => {
               <Stack.Screen name="AIProcessing" component={AIProcessingScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TicketTracking" component={TicketTrackingScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TicketDetail" component={TicketDetailScreen} options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ animation: 'slide_from_right' }} />
+              <Stack.Screen name="KnowledgeBase" component={KnowledgeBaseScreen} options={{ animation: 'slide_from_right' }} />
             </>
           )}
         </Stack.Navigator>
