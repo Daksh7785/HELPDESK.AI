@@ -29,7 +29,14 @@
     "plugins": [
       "expo-secure-store",
       "@logrocket/react-native",
-      "expo-build-properties"
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 25
+          }
+        }
+      ]
     ],
     "runtimeVersion": {
       "policy": "sdkVersion"
