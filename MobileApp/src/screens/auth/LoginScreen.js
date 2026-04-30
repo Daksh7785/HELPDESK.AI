@@ -125,7 +125,7 @@ const LoginScreen = () => {
           {/* Logo */}
           <Animated.View style={[styles.header, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
             <View style={styles.logoWrap}>
-              <Image source={require('../../../assets/icon.png')} style={styles.logo} resizeMode="contain" />
+              <Image source={require('../../../assets/logo_v1.png')} style={styles.logo} resizeMode="contain" />
             </View>
             <Text style={styles.title}>HelpDesk<Text style={{ color: COLORS.primary }}>.ai</Text></Text>
             <Text style={styles.subtitle}>

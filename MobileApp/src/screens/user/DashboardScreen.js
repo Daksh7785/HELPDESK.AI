@@ -97,7 +97,7 @@ const DashboardScreen = () => {
             <Text style={styles.userName}>{profile?.full_name || 'User'}</Text>
           </View>
           <Image
-            source={require('../../../assets/icon.png')}
+            source={require('../../../assets/logo_v1.png')}
             style={styles.headerLogo}
             resizeMode="contain"
           />

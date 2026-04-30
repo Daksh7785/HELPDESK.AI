@@ -32,8 +32,10 @@ const AIProcessingScreen = () => {
     analyzeTicket();
   }, []);
 
-  const analyzeTicket = async () => {
+  const analyzeTicket = async (retries = 3) => {
     try {
+      setLoading(true);
+      setError(null);
       const response = await axios.post(`${BACKEND_URL}/ai/analyze_ticket`, {
         text,
         image_base64: image_base64 || "",
@@ -48,11 +50,18 @@ const AIProcessingScreen = () => {
         Animated.spring(scaleAnim, { toValue: 1, damping: 12, useNativeDriver: true }),
       ]).start();
     } catch (err) {
+      if (err.response?.status === 503 && retries > 0) {
+        // Backend is waking up, wait 4 seconds and retry
+        setTimeout(() => analyzeTicket(retries - 1), 4000);
+        return;
+      }
       console.error('AI Analysis Error:', err);
-      setError(err.message || 'AI engine is currently busy. Please try again.');
+      setError(err.response?.status === 503 
+        ? 'The AI engine is waking up. Please wait a moment...'
+        : (err.message || 'AI engine is currently busy. Please try again.'));
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } finally {
-      setLoading(false);
+      if (!retries || !error) setLoading(false);
     }
   };
 
