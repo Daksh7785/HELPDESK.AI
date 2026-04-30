@@ -21,7 +21,14 @@ const NotificationsScreen = () => {
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        if (error.code === 'PGRST205') {
+          console.warn('Notifications table not found in Supabase. Showing empty state.');
+          setNotifications([]);
+          return;
+        }
+        throw error;
+      }
       setNotifications(data || []);
     } catch (error) {
       console.error('Error fetching notifications:', error);

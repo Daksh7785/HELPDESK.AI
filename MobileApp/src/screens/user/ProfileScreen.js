@@ -92,26 +92,25 @@ const ProfileScreen = () => {
       
       const fileExt = photo.uri.split('.').pop().toLowerCase();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = fileName; // Simplified path
 
       // Use base64 for more reliable upload on mobile
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, decode(photo.base64), {
+        .from('profile-pics')
+        .upload(fileName, decode(photo.base64), {
           contentType: `image/${fileExt}`,
           upsert: true
         });
 
       if (uploadError) {
         if (uploadError.message.includes('bucket not found')) {
-          throw new Error('Supabase Storage bucket "avatars" not found. Please create a public bucket named "avatars" in your Supabase dashboard.');
+          throw new Error('Supabase Storage bucket "profile-pics" not found. Please create a public bucket named "profile-pics" in your Supabase dashboard.');
         }
         throw uploadError;
       }
 
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filePath);
+        .from('profile-pics')
+        .getPublicUrl(fileName);
 
       const { error: updateError } = await supabase
         .from('profiles')

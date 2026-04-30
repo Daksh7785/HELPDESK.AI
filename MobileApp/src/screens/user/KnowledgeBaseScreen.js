@@ -38,7 +38,14 @@ const KnowledgeBaseScreen = ({ navigation }) => {
           .select('*')
           .limit(20);
         
-        if (error) throw error;
+        if (error) {
+          if (error.code === 'PGRST205') {
+            console.warn('Knowledge base table not found in Supabase. Showing empty state.');
+            setArticles([]);
+            return;
+          }
+          throw error;
+        }
         setArticles(data || []);
       }
     } catch (e) {
