@@ -623,7 +623,29 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Classification ---
     try:
-        classification = classifier_v3.predict(text)
+        classification_v3_res = classifier_v3.predict(text)
+        if "error" in classification_v3_res:
+            # Fallback to V1
+            classification = classifier_service.predict(text)
+        else:
+            # Parse V3 output
+            cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
+            sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
+            pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
+            conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
+            
+            from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
+            assigned_team = TEAM_MAP.get(cat, "General Support")
+            auto_resolve = sub in AUTO_RESOLVE_SUBS
+            
+            classification = {
+                "category": cat,
+                "subcategory": sub,
+                "priority": pri,
+                "auto_resolve": auto_resolve,
+                "assigned_team": assigned_team,
+                "confidence": float(conf)
+            }
     except Exception as e:
         traceback.print_exc()
         classification = {
@@ -753,7 +775,27 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            classification = classifier_v3.predict(text)
+            classification_v3_res = classifier_v3.predict(text)
+            if "error" in classification_v3_res:
+                classification = classifier_service.predict(text)
+            else:
+                cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
+                sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
+                pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
+                conf = classification_v3_res.get("Category", {}).get("confidence", 0.0)
+                
+                from backend.services.classifier_service import TEAM_MAP, AUTO_RESOLVE_SUBS
+                assigned_team = TEAM_MAP.get(cat, "General Support")
+                auto_resolve = sub in AUTO_RESOLVE_SUBS
+                
+                classification = {
+                    "category": cat,
+                    "subcategory": sub,
+                    "priority": pri,
+                    "auto_resolve": auto_resolve,
+                    "assigned_team": assigned_team,
+                    "confidence": float(conf)
+                }
         except Exception as e:
             classification = {
                 "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
