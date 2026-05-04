@@ -23,6 +23,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.encoders import jsonable_encoder
 from supabase import create_client, Client
 import asyncio
 from pathlib import Path
@@ -828,7 +829,7 @@ async def analyze_stream(request_body: TicketRequest):
         }
 
         # 6. Final Result
-        yield f"data: {json.dumps({'step': 'done', 'result': ticket_response_dict})}\n\n"
+        yield f"data: {json.dumps({'step': 'done', 'result': jsonable_encoder(ticket_response_dict)})}\n\n"
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
