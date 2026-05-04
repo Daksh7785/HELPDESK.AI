@@ -1,16 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { CheckCircle2, Loader2, Circle } from 'lucide-react';
 
-const AIProcessingSteps = ({ steps = [], onComplete, delay = 1200 }) => {
-    const [currentStep, setCurrentStep] = useState(0);
+const AIProcessingSteps = ({ steps = [], onComplete, delay = 1200, activeStep = null }) => {
+    const [internalStep, setInternalStep] = useState(0);
+
+    const currentStep = activeStep !== null ? activeStep : internalStep;
 
     useEffect(() => {
-        if (currentStep < steps.length) {
+        if (activeStep !== null) return; // Disable internal timer if controlled externally
+
+        if (internalStep < steps.length) {
             const timer = setTimeout(() => {
-                setCurrentStep(prev => prev + 1);
+                setInternalStep(prev => prev + 1);
             }, delay);
             return () => clearTimeout(timer);
-        } else if (currentStep === steps.length) {
+        } else if (internalStep === steps.length) {
             if (onComplete) {
                 const timer = setTimeout(() => {
                     onComplete();

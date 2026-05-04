@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import { Bot } from 'lucide-react';
@@ -26,6 +26,7 @@ const AIProcessing = () => {
     const setAITicket = useTicketStore((state) => state.setAITicket);
     const { showToast } = useToastStore();
     const hasCalledAPI = useRef(false);
+    const [activeStep, setActiveStep] = useState(0);
 
     useEffect(() => {
         if (!text) {
@@ -79,7 +80,7 @@ const AIProcessing = () => {
                     }
                 }
 
-                const response = await axios.post(`${API_CONFIG.BACKEND_URL}/ai/analyze_ticket`, {
+                const payload = {
                     text: text,
                     image_text: image_text || "",
                     image_base64: image_base64 || "",
@@ -88,21 +89,56 @@ const AIProcessing = () => {
                     image_url: uploadedImageUrl,
                     confidence_threshold: settings.aiConfidenceThreshold,
                     duplicate_sensitivity: settings.duplicateSensitivity
+                };
+
+                const response = await fetch(`${API_CONFIG.BACKEND_URL}/ai/analyze_stream`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
                 });
 
-                console.log("[AIProcessing] Backend Success:", response.data);
+                if (!response.ok) {
+                    throw new Error("Backend streaming failed");
+                }
 
-                // === Validate response format (Hugging Face sometimes returns HTML if Space is starting) ===
-                if (typeof response.data !== 'object' || response.data === null || (typeof response.data === 'string' && response.data.trim().startsWith('<!DOCTYPE'))) {
-                    console.warn("[AIProcessing] Backend returned non-JSON (likely HF startup page). Falling back.");
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                let done = false;
+                let finalTicket = null;
+
+                while (!done) {
+                    const { value, done: readerDone } = await reader.read();
+                    done = readerDone;
+                    if (value) {
+                        const chunk = decoder.decode(value, { stream: true });
+                        const lines = chunk.split('\n');
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.substring(6));
+                                    if (data.step === 'done') {
+                                        setActiveStep(steps.length); // Mark all steps complete
+                                        finalTicket = data.result;
+                                    } else {
+                                        const stepIndex = steps.indexOf(data.step);
+                                        if (stepIndex !== -1) {
+                                            setActiveStep(stepIndex);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error("Error parsing stream data", e);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!finalTicket) {
                     throw new Error("BACKEND_STARTUP");
                 }
 
-                const analysis = response.data;
-
-                // === Build the ticket object — trust backend for everything ===
                 const aiTicketObject = {
-                    ...analysis,
+                    ...finalTicket,
                     status: 'analyzing',
                     originalIssue: text,
                     capturedFileBase64: image_base64,
@@ -111,7 +147,6 @@ const AIProcessing = () => {
 
                 setAITicket(aiTicketObject);
 
-                // Slight delay to let animation finish
                 setTimeout(() => navigate('/ai-understanding'), 1000);
 
             } catch (error) {
@@ -177,7 +212,7 @@ const AIProcessing = () => {
                         Our AI is understanding your request and checking for solutions.
                     </p>
 
-                    <AIProcessingSteps steps={steps} />
+                    <AIProcessingSteps steps={steps} activeStep={activeStep} />
                 </div>
             </Card>
         </div>

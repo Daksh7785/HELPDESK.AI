@@ -22,8 +22,9 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from supabase import create_client, Client
+import asyncio
 from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -469,6 +470,43 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
+@app.post("/tickets/save")
+async def save_ticket(request_body: TicketSaveRequest):
+    """
+    OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
+    This is called AFTER the user confirms the analysis results.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
+
+    try:
+        final_data = request_body.dict()
+        res = supabase.table("tickets").insert(final_data).execute()
+        
+        if not res.data:
+            raise Exception("Failed to insert ticket into database.")
+            
+        ticket_id = res.data[0]["id"]
+        
+        # Add initial system diagnostic message
+        msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
+        if final_data["auto_resolve"]:
+            msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps."
+
+        supabase.table("ticket_messages").insert({
+            "ticket_id": ticket_id,
+            "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
+            "sender_name": "AI Assistant",
+            "sender_role": "admin",
+            "message": msg
+        }).execute()
+        
+        return {"status": "success", "ticket_id": ticket_id}
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/tickets/{ticket_id}")
 async def get_ticket_by_id(ticket_id: str):
     """Fetch single persistent ticket."""
@@ -669,42 +707,130 @@ async def analyze_only(request_body: TicketRequest):
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
 
-@app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+@app.post("/ai/analyze_stream")
+async def analyze_stream(request_body: TicketRequest):
     """
-    OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
-    This is called AFTER the user confirms the analysis results.
+    REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
     """
-    if not supabase:
-        raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
+    import datetime
+    def get_now_ist():
+        return datetime.datetime.utcnow().isoformat() + "Z"
 
-    try:
-        final_data = request_body.dict()
-        res = supabase.table("tickets").insert(final_data).execute()
-        
-        if not res.data:
-            raise Exception("Failed to insert ticket into database.")
-            
-        ticket_id = res.data[0]["id"]
-        
-        # Add initial system diagnostic message
-        msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
-        if final_data["auto_resolve"]:
-            msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps."
+    async def event_generator():
+        text = request_body.text
+        env_metadata = {
+            "timestamp": get_now_ist(),
+            "model_version": "3.0.0-PRO",
+            "api_endpoint": "/ai/analyze_stream"
+        }
+        timeline = {"received": get_now_ist()}
 
-        supabase.table("ticket_messages").insert({
-            "ticket_id": ticket_id,
-            "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
-            "sender_name": "AI Assistant",
-            "sender_role": "admin",
-            "message": msg
-        }).execute()
-        
-        return {"status": "success", "ticket_id": ticket_id}
+        # 1. Reading
+        yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.5)
 
-    except Exception as e:
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
+        if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+            try:
+                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                gemini_analysis.update(vision_result)
+            except Exception as e:
+                pass
+
+        summary = text[:100] + ("…" if len(text) > 100 else "") 
+
+        # 2. NER
+        yield f"data: {json.dumps({'step': 'Extracting technical entities', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.2)
+        try:
+            entities = ner_service.extract_entities(text)
+        except Exception:
+            entities = []
+        timeline["metadata_harvested"] = get_now_ist()
+
+        # 3. Classification
+        yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.2)
+        try:
+            classification = classifier_v3.predict(text)
+        except Exception as e:
+            classification = {
+                "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
+                "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+            }
+        timeline["ai_analyzed"] = get_now_ist()
+        timeline["triaged"] = get_now_ist()
+
+        # 4. Duplicates
+        yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.2)
+        try:
+            dup_result = duplicate_service.check_duplicate(text, threshold=request_body.duplicate_sensitivity)
+        except Exception:
+            dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+
+        # 5. RAG / Solutions
+        yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
+        await asyncio.sleep(0.2)
+        rag_match = None
+        try:
+            rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+            if rag_match:
+                classification["auto_resolve"] = True
+                classification["assigned_team"] = "Auto-Resolve AI"
+                classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
+        except Exception as e:
+            pass
+
+        decision_factors = []
+        if classification["confidence"] > request_body.confidence_threshold:
+            decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
+        if entities:
+            decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
+        if dup_result["is_duplicate"]:
+            decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
+        if rag_match:
+            decision_factors.append(f"Found solution article: '{rag_match['title']}'")
+
+        reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
+        if classification["auto_resolve"]:
+            reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
+        
+        timeline["routed"] = get_now_ist()
+
+        if gemini_service and gemini_service._initialized:
+            summary = gemini_service.get_summary(text)
+        
+        hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
+        sla_hours = hours_map.get(classification["priority"], 72)
+        sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+
+        ticket_response_dict = {
+            "ticket_id": str(uuid.uuid4()),
+            "summary": summary,
+            "category": classification["category"],
+            "subcategory": classification["subcategory"],
+            "priority": classification["priority"],
+            "auto_resolve": classification["auto_resolve"],
+            "assigned_team": classification["assigned_team"],
+            "entities": [e for e in entities],
+            "duplicate_ticket": dup_result,
+            "confidence": classification["confidence"],
+            "needs_review": classification["confidence"] < 0.20,
+            "reasoning": reasoning,
+            "decision_factors": decision_factors,
+            "image_description": gemini_analysis["image_description"],
+            "ocr_text": gemini_analysis["ocr_text"],
+            "highlights": entities,
+            "timeline": timeline,
+            "env_metadata": env_metadata,
+            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+        }
+
+        # 6. Final Result
+        yield f"data: {json.dumps({'step': 'done', 'result': ticket_response_dict})}\n\n"
+
+    return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/ai/analyze_ticket")
 async def legacy_analyze_and_save(request_body: TicketRequest):
