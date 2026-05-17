@@ -24,7 +24,6 @@ from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
-from supabase import create_client, Client
 import asyncio
 from pathlib import Path
 from pydantic import BaseModel
@@ -35,13 +34,19 @@ env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
 # Initialize Supabase Client (Service Role for backend bypass)
-url = os.environ.get("SUPABASE_URL")
-key = os.environ.get("SUPABASE_SERVICE_KEY")
-if not url or not key:
-    print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
-    supabase: Client = None
-else:
-    supabase: Client = create_client(url, key)
+try:
+    from supabase import create_client, Client
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+        supabase = None
+    else:
+        supabase = create_client(url, key)
+except (ImportError, Exception) as e:
+    print(f"[WARNING] Supabase initialization failed: {e}")
+    supabase = None
+    Client = None
 
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -488,6 +493,23 @@ async def save_ticket(request_body: TicketSaveRequest):
             raise Exception("Failed to insert ticket into database.")
             
         ticket_id = res.data[0]["id"]
+
+        duplicate_indexed = True
+        duplicate_index_warning = None
+        description_text = (request_body.description or "").strip()
+        subject_text = (request_body.subject or "").strip()
+        duplicate_text = description_text or subject_text
+        if duplicate_text:
+            try:
+                duplicate_service.add_ticket(str(ticket_id), duplicate_text)
+            except Exception as index_error:
+                duplicate_indexed = False
+                duplicate_index_warning = "Duplicate index update failed."
+                print(f"[WARNING] {duplicate_index_warning} ticket_id={ticket_id} error={index_error}")
+        else:
+            duplicate_indexed = False
+            duplicate_index_warning = "Duplicate index update skipped: no description or subject text was provided."
+            print(f"[WARNING] {duplicate_index_warning}")
         
         # Add initial system diagnostic message
         msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
@@ -502,7 +524,10 @@ async def save_ticket(request_body: TicketSaveRequest):
             "message": msg
         }).execute()
         
-        return {"status": "success", "ticket_id": ticket_id}
+        response = {"status": "success", "ticket_id": ticket_id, "duplicate_indexed": duplicate_indexed}
+        if duplicate_index_warning:
+            response["duplicate_index_warning"] = duplicate_index_warning
+        return response
 
     except Exception as e:
         traceback.print_exc()
