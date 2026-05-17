@@ -18,6 +18,14 @@ pinned: false
 
 <br/>
 
+<img src="https://img.shields.io/badge/GirlScript_Summer_Of_Code-2026-F37021?style=for-the-badge&logo=girlscript&logoColor=white" height="42" alt="GSSoC 2026">
+&nbsp;&nbsp;
+<a href="https://github.com/ritesh-1918/HELPDESK.AI/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22">
+<img src="https://img.shields.io/badge/Good_First_Issues-Available-10B981?style=for-the-badge&logo=github&logoColor=white" height="42" alt="Good First Issues">
+</a>
+
+<br/><br/>
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Vercel Deployment](https://img.shields.io/badge/Production-Live-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://helpdeskaiv1.vercel.app/)
 

@@ -62,6 +62,16 @@ We welcome ideas that improve the AI's precision or user experience.
 
 ---
 
+## 🌟 GirlScript Summer of Code (GSSoC 2026)
+
+We are proudly participating in **GSSoC 2026**! If you are a contributor from GSSoC, please ensure you follow these steps so that your PR is scored correctly:
+1. **Approval Label**: Once your PR is reviewed and approved, we will add the `gssoc:approved` label. 
+2. **Difficulty Level**: We will assign a difficulty label (`level:beginner`, `level:intermediate`, `level:advanced`, `level:critical`).
+3. **Mentor Assignment**: We will add the `mentor:ritesh-1918` label to track review points.
+4. Make sure your PR resolves an assigned issue and is linked properly in the PR description (e.g. `Fixes #28`).
+
+---
+
 ## 💻 Pull Request Process
 
 We follow a strict "Production Ready" workflow. All PRs must meet the following criteria:
