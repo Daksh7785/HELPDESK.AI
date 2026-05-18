@@ -9,6 +9,7 @@ import useAdminStore from '../../admin/store/adminStore';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
 import { API_CONFIG } from '../../config';
+import { analyzeTicketWithAI } from '../../services/aiAssistant';
 
 const steps = [
     "Reading your message",
@@ -136,6 +137,27 @@ const AIProcessing = () => {
                     throw new Error("BACKEND_STARTUP");
                 }
 
+                // Override the backend summary using the robust frontend multi-provider failover
+                try {
+                    const aiResult = await analyzeTicketWithAI(text, image_text, image_base64);
+                    finalTicket.summary = aiResult.summary || finalTicket.summary;
+                    if (aiResult.image_description) {
+                        finalTicket.image_description = aiResult.image_description;
+                    }
+                    
+                    // The local ML model is weak with regional languages (e.g., Telugu).
+                    // If the LLM returned classification fields, we trust it more than a low-confidence ML prediction.
+                    if (aiResult.category && (finalTicket.confidence < 0.6 || finalTicket.category === 'Unknown' || finalTicket.category === 'Access')) {
+                        finalTicket.category = aiResult.category;
+                        finalTicket.subcategory = aiResult.subcategory || finalTicket.subcategory;
+                        finalTicket.priority = aiResult.priority || finalTicket.priority;
+                        finalTicket.assigned_team = aiResult.assigned_team || finalTicket.assigned_team;
+                        finalTicket.confidence = aiResult.confidence || 0.95;
+                    }
+                } catch (aiErr) {
+                    console.warn("[AIProcessing] Frontend summary generation failed:", aiErr);
+                }
+
                 const aiTicketObject = {
                     ...finalTicket,
                     status: 'analyzing',
@@ -156,23 +178,43 @@ const AIProcessing = () => {
                 if (error.code === 'ERR_NETWORK' || error.message === 'BACKEND_STARTUP' || error.message?.includes('Network Error')) {
                     console.warn("[AIProcessing] Backend unreachable or preparing. Using local fallback.");
 
-                    const summary = (text.charAt(0).toUpperCase() + text.slice(1)).substring(0, 100)
+                    let summary = (text.charAt(0).toUpperCase() + text.slice(1)).substring(0, 100)
                         + (text.length > 100 ? '…' : '');
+                    let image_description = "";
+                    let fallbackCategory = "General";
+                    let fallbackSub = "General Support";
+                    let fallbackPriority = "Medium";
+                    let fallbackTeam = "General Support";
+
+                    try {
+                        const aiResult = await analyzeTicketWithAI(text, image_text, image_base64);
+                        summary = aiResult.summary || summary;
+                        image_description = aiResult.image_description || "";
+                        
+                        if (aiResult.category) {
+                            fallbackCategory = aiResult.category;
+                            fallbackSub = aiResult.subcategory || fallbackSub;
+                            fallbackPriority = aiResult.priority || fallbackPriority;
+                            fallbackTeam = aiResult.assigned_team || fallbackTeam;
+                        }
+                    } catch (aiErr) {
+                        console.warn("[AIProcessing] Fallback AI summary failed:", aiErr);
+                    }
 
                     const fallbackTicket = {
                         summary,
                         status: 'analyzing',
-                        category: "General",
-                        subcategory: "General Support",
-                        priority: "Medium",
+                        category: fallbackCategory,
+                        subcategory: fallbackSub,
+                        priority: fallbackPriority,
                         auto_resolve: false,
-                        assigned_team: "General Support",
+                        assigned_team: fallbackTeam,
                         entities: [],
                         duplicate_ticket: { is_duplicate: false, similarity: 0 },
-                        confidence: 0.5,
+                        confidence: 0.9,
                         needs_review: true,
-                        reasoning: "Analyzed locally — backend was unreachable.",
-                        image_description: "",
+                        reasoning: "Analyzed via AI Fallback — backend ML model was unreachable.",
+                        image_description,
                         ocr_text: image_text || "",
                         highlights: [],
                         originalIssue: text,

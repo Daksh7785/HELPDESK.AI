@@ -198,14 +198,20 @@ export const analyzeTicketWithAI = async (issueText, ocrText = '', image = null)
         ? '\nAn image has also been provided. Analyze it and describe the visible error or issue.'
         : '';
 
-    const prompt = `You are an enterprise IT analyst. Given the following user-reported issue, do two things:
+    const prompt = `You are an enterprise IT analyst. Given the following user-reported issue, do three things:
 1. Write a concise one-line summary (max 100 chars) of the core technical problem.
 2. If an image is provided, describe the visible error/UI state in one sentence.
+3. Classify the ticket accurately, regardless of the language it is written in (translate internally if needed).
 
 Respond in this EXACT JSON format (no markdown, just raw JSON):
 {
   "summary": "...",
-  "image_description": "..."
+  "image_description": "...",
+  "category": "...",
+  "subcategory": "...",
+  "priority": "...",
+  "assigned_team": "...",
+  "confidence": 0.95
 }
 
 User Issue: "${issueText}"${imageNote}${imageInstruction}`;
@@ -219,7 +225,12 @@ User Issue: "${issueText}"${imageNote}${imageInstruction}`;
 
         return {
             summary: parsed.summary || issueText.substring(0, 100),
-            image_description: parsed.image_description || ''
+            image_description: parsed.image_description || '',
+            category: parsed.category,
+            subcategory: parsed.subcategory,
+            priority: parsed.priority,
+            assigned_team: parsed.assigned_team,
+            confidence: parsed.confidence || 0.9
         };
     } catch (err) {
         // All providers failed — use smart local fallback so ticket flow never breaks
