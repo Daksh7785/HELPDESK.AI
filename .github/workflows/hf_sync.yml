@@ -24,6 +24,9 @@ jobs:
           # Copy backend contents to the root of the deployment directory
           cp -r backend/* deploy_dir/
           
+          # Copy .gitattributes so Git LFS knows about the large models
+          cp .gitattributes deploy_dir/
+          
           # Ensure README and Dockerfile are in the root of the deployment directory
           # (They are already in backend/, but this ensures they stay in the root of the Space)
           cd deploy_dir
@@ -35,6 +38,7 @@ jobs:
           
           # Initialize a fresh git repo for the Space
           git init
+          git lfs install
           git config user.name github-actions
           git config user.email github-actions@github.com
           git checkout -b main || git branch -M main
