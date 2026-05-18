@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-// eslint-disable-next-line no-unused-vars
 import { motion, AnimatePresence } from "framer-motion";
 import {
     Eye, EyeOff, BrainCircuit, ArrowRight,

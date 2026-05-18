@@ -17,7 +17,7 @@ import {
     Globe,
     ChevronDown
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from "../../components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../components/ui/card";
 import { Textarea } from "../../components/ui/textarea";

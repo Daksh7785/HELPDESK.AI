@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { BrainCircuit, Upload, X, ImageIcon, ArrowRight, AlertCircle, Sparkles, ChevronRight, Bell, Mic, CheckCircle2 } from "lucide-react";
-// eslint-disable-next-line no-unused-vars
+ 
 import { motion, AnimatePresence } from "framer-motion";
 import useTicketStore from "../store/ticketStore";
 import { api } from "../services/api";

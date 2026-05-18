@@ -7,7 +7,7 @@ import {
     Plus, Search, ListChecks, ArrowUpRight, Loader2,
     LifeBuoy
 } from 'lucide-react';
-import { AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import useTicketStore from '../../store/ticketStore';

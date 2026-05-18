@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-// eslint-disable-next-line no-unused-vars
+ 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bug, X, Info, Send, AlertTriangle, ScreenShare, ShieldAlert, Camera, Trash2, Crop, MousePointer2, ChevronDown, Check } from 'lucide-react';
 import html2canvas from 'html2canvas';
