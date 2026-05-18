@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronRight, Inbox, Loader2, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { supabase } from '../../lib/supabaseClient';
-// eslint-disable-next-line no-unused-vars
-import { formatTimelineDate, formatRelativeTime } from '../../utils/dateUtils';
+import { formatTimelineDate } from '../../utils/dateUtils';
 
 const RecentTickets = () => {
     const navigate = useNavigate();
