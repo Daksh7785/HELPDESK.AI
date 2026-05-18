@@ -164,6 +164,11 @@ class HealthResponse(BaseModel):
     ner_loaded: bool
 
 
+class ReadinessResponse(BaseModel):
+    status: str
+    checks: dict[str, bool]
+
+
 # ---------------------------------------------------------------------------
 # Service singletons
 # ---------------------------------------------------------------------------
@@ -340,6 +345,25 @@ async def health_check():
         status="ok",
         classifier_loaded=classifier_service._loaded,
         ner_loaded=ner_service._loaded,
+    )
+
+
+@app.get("/ready", response_model=ReadinessResponse)
+async def readiness_check():
+    checks = {
+        "api": True,
+        "classifier_loaded": classifier_service._loaded,
+        "ner_loaded": ner_service._loaded,
+        "duplicate_index_loaded": duplicate_service._loaded,
+        "rag_loaded": rag_service._loaded,
+        "supabase_configured": supabase is not None,
+    }
+    if all(checks.values()):
+        return ReadinessResponse(status="ready", checks=checks)
+
+    raise HTTPException(
+        status_code=503,
+        detail=jsonable_encoder(ReadinessResponse(status="not_ready", checks=checks)),
     )
 
 
