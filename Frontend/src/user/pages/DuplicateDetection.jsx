@@ -67,6 +67,24 @@ const DuplicateDetection = () => {
         return () => clearInterval(interval);
     }, [isLoading, aiTicket, isDuplicate]);
 
+    const duplicate = aiTicket?.duplicate_ticket || {};
+    const similarity = duplicate.similarity ? Math.round(duplicate.similarity * 100) : 0;
+
+    // ── Dynamic solution steps — from AI data, no hardcoding ──────────────────
+    const resolutionSteps = (() => {
+        const raw =
+            aiTicket?.resolution_steps ||
+            aiTicket?.suggested_solution ||
+            aiTicket?.solution_steps ||
+            duplicate.solution_steps ||
+            null;
+        if (Array.isArray(raw) && raw.length > 0) return raw;
+        if (typeof raw === 'string' && raw.trim()) {
+            return raw.split(/\n+/).map(s => s.replace(/^\d+[.)]/,'').trim()).filter(Boolean);
+        }
+        return null; // hide section entirely if no steps
+    })();
+
     const handleCreateTicket = useCallback(async () => {
         if (!aiTicket) return;
         setIsLoading(true);
@@ -90,24 +108,6 @@ const DuplicateDetection = () => {
 
     if (isLoading) return <SkeletonLoader />;
     if (!aiTicket) return null;
-
-    const duplicate = aiTicket.duplicate_ticket || {};
-    const similarity = duplicate.similarity ? Math.round(duplicate.similarity * 100) : 0;
-
-    // ── Dynamic solution steps — from AI data, no hardcoding ──────────────────
-    const resolutionSteps = (() => {
-        const raw =
-            aiTicket.resolution_steps ||
-            aiTicket.suggested_solution ||
-            aiTicket.solution_steps ||
-            duplicate.solution_steps ||
-            null;
-        if (Array.isArray(raw) && raw.length > 0) return raw;
-        if (typeof raw === 'string' && raw.trim()) {
-            return raw.split(/\n+/).map(s => s.replace(/^\d+[.)]/,'').trim()).filter(Boolean);
-        }
-        return null; // hide section entirely if no steps
-    })();
 
     return (
         <div className="min-h-screen bg-[#f6f8f7] pb-20 pt-28 px-6">
