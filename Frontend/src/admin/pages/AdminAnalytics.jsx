@@ -24,14 +24,31 @@ const AdminAnalytics = () => {
     const fetchAnalytics = async () => {
         setLoading(true);
         try {
-            let query = supabase.from('tickets').select('*, profiles(full_name, email)');
+            let query = supabase
+                .from('tickets')
+                .select(`
+                    *,
+                    creator:profiles!tickets_user_id_fkey(full_name, email)
+                `);
+            
             if (profile?.role === 'admin' && profile?.company) {
                 query = query.eq('company', profile.company);
             }
+            
             const { data, error: sbError } = await query.order('created_at', { ascending: false });
 
-            if (sbError) throw sbError;
-            setTickets(data || []);
+            if (sbError) {
+                console.warn("Analytics relationship join failed, retrying simple select...", sbError);
+                const { data: basicData, error: basicError } = await supabase
+                    .from('tickets')
+                    .select('*')
+                    .eq('company', profile?.company)
+                    .order('created_at', { ascending: false });
+                if (basicError) throw basicError;
+                setTickets(basicData || []);
+            } else {
+                setTickets(data || []);
+            }
         } catch (err) {
             console.error("Analytics fetch error:", err);
         } finally {
@@ -97,7 +114,7 @@ const AdminAnalytics = () => {
         // 5. Live Activity Feed (Latest 10)
         const liveFeed = tickets.slice(0, 10).map(t => ({
             ticket_id: t.id,
-            user: t.profiles?.full_name || (t.user_id ? `User ${t.user_id.slice(0, 5)}` : 'Anonymous'),
+            user: t.creator?.full_name || t.profiles?.full_name || (t.user_id ? `User ${t.user_id.slice(0, 5)}` : 'Anonymous'),
             action: `Ticket ${t.status || 'Updated'}`,
             type: t.status === 'open' ? 'create' : t.status === 'resolved' ? 'resolve' : 'assign',
             timeFormatted: formatTimelineDate(t.created_at),
