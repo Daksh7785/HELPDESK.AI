@@ -772,7 +772,13 @@ async def analyze_only(request_body: TicketRequest):
         decision_factors.append(f"Found solution article: '{rag_match['title']}'")
 
     reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
-    if not enable_auto_resolve:
+    if (
+        enable_auto_resolve
+        and classification["confidence"] >= confidence_threshold
+        and classification["auto_resolve"]
+    ):
+        classification["auto_resolve"] = True
+    else:
         classification["auto_resolve"] = False
     if classification["auto_resolve"]:
         reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
