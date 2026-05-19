@@ -41,7 +41,7 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
 
             if (upError) throw upError;
             setSubmitted(true);
-            setTimeout(() => { onSubmit?.(); }, 1800);
+            setTimeout(() => { onSubmit?.(selected); }, 1800);
         } catch (err) {
             setError('Failed to submit. Please try again.');
             console.error(err);

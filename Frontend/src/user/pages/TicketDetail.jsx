@@ -21,6 +21,7 @@ const TicketDetail = () => {
     const [loading, setLoading] = useState(true);
     const [isReopening, setIsReopening] = useState(false);
     const [showCsat, setShowCsat] = useState(false);
+    const [csatHasBeenDismissed, setCsatHasBeenDismissed] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -81,13 +82,15 @@ const TicketDetail = () => {
         };
     }, [ticket_id]);
 
-    // Show CSAT modal if ticket is resolved and not yet rated
+    // Show CSAT modal if ticket is resolved, not yet rated, and not dismissed in this session
     useEffect(() => {
-        if (ticket?.status?.toLowerCase()?.includes('resolv') && !ticket.csat_rating) {
+        if (ticket?.status?.toLowerCase()?.includes('resolv') && !ticket.csat_rating && !csatHasBeenDismissed) {
             const timer = setTimeout(() => setShowCsat(true), 1200);
             return () => clearTimeout(timer);
+        } else {
+            setShowCsat(false);
         }
-    }, [ticket?.status, ticket?.csat_rating]);
+    }, [ticket?.status, ticket?.csat_rating, csatHasBeenDismissed]);
 
     if (loading) {
         return (
@@ -377,11 +380,15 @@ const TicketDetail = () => {
             {showCsat && (
                 <CSATModal
                     ticketId={ticket.ticket_id}
-                    onSubmit={() => {
+                    onSubmit={(rating) => {
                         setShowCsat(false);
-                        setTicket(prev => ({ ...prev, csat_rating: 1 })); // dummy, prevents re-showing
+                        setCsatHasBeenDismissed(true);
+                        setTicket(prev => ({ ...prev, csat_rating: rating }));
                     }}
-                    onDismiss={() => setShowCsat(false)}
+                    onDismiss={() => {
+                        setShowCsat(false);
+                        setCsatHasBeenDismissed(true);
+                    }}
                 />
             )}
         </main>
