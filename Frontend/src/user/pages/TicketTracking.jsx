@@ -14,7 +14,7 @@ import { API_CONFIG } from '../../config';
 const TicketTracking = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { aiTicket } = useTicketStore();
+    const { aiTicket, addTicket } = useTicketStore();
     const { user, profile } = useAuthStore();
     const [isCreating, setIsCreating] = useState(true);
     const [error, setError] = useState(null);
@@ -71,6 +71,7 @@ const TicketTracking = () => {
 
                 if (res.data?.ticket_id) {
                     const newTicket = { ...aiTicket, id: res.data.ticket_id, ticket_id: res.data.ticket_id, status };
+                    addTicket(newTicket);
                     setCreatedTicket(newTicket);
                     setIsCreating(false);
 

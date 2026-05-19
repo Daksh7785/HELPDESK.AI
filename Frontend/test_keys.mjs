@@ -23,14 +23,14 @@ const env = { ...envConfig2, ...envConfig };
 
 async function testGemini(key) {
     try {
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ contents: [{ parts: [{ text: "hi" }] }] })
         });
         if (!res.ok) {
             const err = await res.text();
-            return `FAILED (${res.status}: ${err.substring(0, 50)})`;
+            return `FAILED (${res.status}: ${err.substring(0, 500)})`;
         }
         return 'WORKING \u2705';
     } catch(e) { return `FAILED (${e.message})`; }
@@ -41,11 +41,11 @@ async function testOpenRouter(key) {
         const res = await fetch(`https://openrouter.ai/api/v1/chat/completions`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${key}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model: 'google/gemma-2-9b-it:free', messages: [{role: "user", content: "hi"}] })
+            body: JSON.stringify({ model: 'meta-llama/llama-3-8b-instruct:free', messages: [{role: "user", content: "hi"}] })
         });
         if (!res.ok) {
             const err = await res.text();
-            return `FAILED (${res.status}: ${err.substring(0, 50)})`;
+            return `FAILED (${res.status}: ${err.substring(0, 500)})`;
         }
         return 'WORKING \u2705';
     } catch(e) { return `FAILED (${e.message})`; }
@@ -60,7 +60,7 @@ async function testGroq(key) {
         });
         if (!res.ok) {
             const err = await res.text();
-            return `FAILED (${res.status}: ${err.substring(0, 50)})`;
+            return `FAILED (${res.status}: ${err.substring(0, 500)})`;
         }
         return 'WORKING \u2705';
     } catch(e) { return `FAILED (${e.message})`; }

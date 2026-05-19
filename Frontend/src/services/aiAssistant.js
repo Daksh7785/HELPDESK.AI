@@ -11,14 +11,15 @@ const buildConfigList = () => {
     const env = import.meta.env;
     const configs = [];
 
-    // Priority 1: Native Gemini — try flash models (generous free tier)
+    // Priority 1: Native Gemini — try modern flash models
     const geminiKeys = [
         env.VITE_GEMINI_API_KEY_1, env.VITE_GEMINI_API_KEY_2,
         env.VITE_GEMINI_API_KEY_3, env.VITE_GEMINI_API_KEY_4
     ].filter(Boolean);
-    // Try each key with gemini-1.5-flash first (higher quota), then gemini-2.0-flash
+    // Try each key with gemini-2.5-flash first (most robust, active free tier), then gemini-2.5-flash-lite
     geminiKeys.forEach(key => {
-        configs.push({ provider: 'gemini', key, model: 'gemini-1.5-flash' });
+        configs.push({ provider: 'gemini', key, model: 'gemini-2.5-flash' });
+        configs.push({ provider: 'gemini', key, model: 'gemini-2.5-flash-lite' });
         configs.push({ provider: 'gemini', key, model: 'gemini-2.0-flash' });
     });
 
