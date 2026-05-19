@@ -320,10 +320,10 @@ const AdminTickets = () => {
                                             </div>
                                             <div className="flex flex-col">
                                                 <span className="text-xs font-black text-slate-800 tracking-tight italic uppercase truncate max-w-[120px]">
-                                                    {ticket.profiles?.full_name || 'System'}
+                                                    {ticket.creator?.full_name || ticket.profiles?.full_name || 'System'}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-slate-400 lowercase truncate max-w-[120px]">
-                                                    {ticket.profiles?.email || '—'}
+                                                    {ticket.creator?.email || ticket.profiles?.email || '—'}
                                                 </span>
                                             </div>
                                         </div>

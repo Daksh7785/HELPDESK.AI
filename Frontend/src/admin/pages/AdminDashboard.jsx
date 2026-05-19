@@ -76,11 +76,18 @@ const AdminDashboard = () => {
     const fetchStats = async () => {
         setIsLoading(true);
         try {
-            let query = supabase.from('tickets').select('*').order('created_at', { ascending: false });
+            let query = supabase.from('tickets').select('*, profiles(full_name, email)').order('created_at', { ascending: false });
             if (profile?.role === 'admin' && profile?.company) query = query.eq('company', profile.company);
             const { data, error } = await query;
-            if (error) throw error;
-            setTickets(data || []);
+            if (error) {
+                // Secondary check: If the relation fails, try a simpler select
+                console.warn("Retrying dashboard fetch without relation...");
+                const { data: basicData, error: basicError } = await supabase.from('tickets').select('*').eq('company', profile?.company).order('created_at', { ascending: false });
+                if (basicError) throw basicError;
+                setTickets(basicData || []);
+            } else {
+                setTickets(data || []);
+            }
         } catch (err) { console.error("Dashboard fetch error:", err); }
         finally { setIsLoading(false); }
     };
