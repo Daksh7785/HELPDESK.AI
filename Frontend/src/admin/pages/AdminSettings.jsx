@@ -120,6 +120,7 @@ const AdminSettings = () => {
                             <Select
                                 value={settings.autoCloseDays}
                                 onChange={(e) => handleChange('autoCloseDays', parseInt(e.target.value))}
+                                className="w-full md:w-auto"
                                 buttonClassName="w-full md:w-auto min-w-[140px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-700 uppercase outline-none focus:border-indigo-600 transition-colors flex justify-between items-center"
                                 options={[
                                     { value: 3, label: "3 Days" },
