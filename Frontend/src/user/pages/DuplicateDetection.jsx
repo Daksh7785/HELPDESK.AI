@@ -71,19 +71,14 @@ const DuplicateDetection = () => {
     const similarity = duplicate.similarity ? Math.round(duplicate.similarity * 100) : 0;
 
     // ── Dynamic solution steps — from AI data, no hardcoding ──────────────────
-    const resolutionSteps = (() => {
-        const raw =
-            aiTicket?.resolution_steps ||
-            aiTicket?.suggested_solution ||
-            aiTicket?.solution_steps ||
-            duplicate.solution_steps ||
-            null;
-        if (Array.isArray(raw) && raw.length > 0) return raw;
-        if (typeof raw === 'string' && raw.trim()) {
-            return raw.split(/\n+/).map(s => s.replace(/^\d+[.)]/,'').trim()).filter(Boolean);
-        }
-        return null; // hide section entirely if no steps
-    })();
+    let resolutionSteps = null;
+    const rawSteps = aiTicket?.resolution_steps || aiTicket?.suggested_solution || aiTicket?.solution_steps || duplicate.solution_steps || null;
+    
+    if (Array.isArray(rawSteps) && rawSteps.length > 0) {
+        resolutionSteps = rawSteps;
+    } else if (typeof rawSteps === 'string' && rawSteps.trim()) {
+        resolutionSteps = rawSteps.split(/\n+/).map(s => s.replace(/^\d+[.)]/,'').trim()).filter(Boolean);
+    }
 
     const handleCreateTicket = useCallback(async () => {
         if (!aiTicket) return;

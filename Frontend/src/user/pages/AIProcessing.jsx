@@ -105,15 +105,18 @@ const AIProcessing = () => {
                 const decoder = new TextDecoder("utf-8");
                 let done = false;
                 let finalTicket = null;
+                let buffer = '';
 
                 while (!done) {
                     const { value, done: readerDone } = await reader.read();
                     done = readerDone;
                     if (value) {
-                        const chunk = decoder.decode(value, { stream: true });
-                        const lines = chunk.split('\n');
+                        buffer += decoder.decode(value, { stream: true });
+                        const lines = buffer.split('\n');
+                        buffer = lines.pop(); // Keep the last potentially incomplete line in the buffer
+                        
                         for (const line of lines) {
-                            if (line.startsWith('data: ')) {
+                            if (line.trim().startsWith('data: ')) {
                                 try {
                                     const data = JSON.parse(line.substring(6));
                                     if (data.step === 'done') {
@@ -126,7 +129,7 @@ const AIProcessing = () => {
                                         }
                                     }
                                 } catch (e) {
-                                    console.error("Error parsing stream data", e);
+                                    console.error("Error parsing stream data", e, line);
                                 }
                             }
                         }
