@@ -60,7 +60,9 @@ function AdminSignup() {
         if (/[A-Z]/.test(pw)) strength += 25;
         if (/[0-9]/.test(pw)) strength += 25;
         if (/[^A-Za-z0-9]/.test(pw)) strength += 25;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPasswordStrength(strength);
+ 
     }, [formData.password]);
 
     const handleChange = (e) => {
@@ -343,7 +345,7 @@ function AdminSignup() {
                                                 type="text"
                                                 name="fullName"
                                                 required
-                                                placeholder="John Doe"
+                                                placeholder="Alex Mercer"
                                                 value={formData.fullName}
                                                 onChange={handleChange}
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
@@ -357,7 +359,7 @@ function AdminSignup() {
                                                 type="email"
                                                 name="email"
                                                 required
-                                                placeholder="john@company.com"
+                                                placeholder="alex.mercer@acmecorp.com"
                                                 value={formData.email}
                                                 onChange={handleChange}
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
@@ -370,7 +372,7 @@ function AdminSignup() {
                                             <input
                                                 type="tel"
                                                 name="phone"
-                                                placeholder="+1 (555) 000-0000"
+                                                placeholder="+1 (415) 555-0198"
                                                 value={formData.phone}
                                                 onChange={handleChange}
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
@@ -383,7 +385,7 @@ function AdminSignup() {
                                             <input
                                                 type="text"
                                                 name="jobTitle"
-                                                placeholder="IT Manager"
+                                                placeholder="Director of Operations"
                                                 value={formData.jobTitle}
                                                 onChange={handleChange}
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"

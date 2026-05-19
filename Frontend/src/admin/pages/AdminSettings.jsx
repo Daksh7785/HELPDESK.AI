@@ -29,10 +29,10 @@ const AdminSettings = () => {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase flex items-center gap-3">
-                        <Settings size={28} className="text-indigo-600" /> System Configuration
+                        <Settings size={28} className="text-indigo-600" /> Settings
                     </h1>
                     <p className="text-sm font-bold text-slate-400 mt-1 flex items-center gap-2 uppercase tracking-[0.2em]">
-                        <ShieldCheck size={14} className="text-emerald-500" /> Root Access Granted
+                        <ShieldCheck size={14} className="text-emerald-500" /> Administrator Account
                     </p>
                 </div>
             </div>
@@ -42,7 +42,7 @@ const AdminSettings = () => {
                 <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
                     <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
                         <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-3">
-                            <Cpu size={18} className="text-indigo-400" /> AI Subsystem Settings
+                            <Cpu size={18} className="text-indigo-400" /> AI Settings
                         </h3>
                     </div>
                     <CardContent className="p-8 space-y-8">
@@ -71,7 +71,7 @@ const AdminSettings = () => {
                         <div className="space-y-4 pt-4 border-t border-slate-100">
                             <div className="flex justify-between items-center">
                                 <label className="text-xs font-black text-slate-700 uppercase tracking-widest">
-                                    Duplicate Sensitivity (<span className="text-indigo-600">{(settings.duplicateSensitivity * 100).toFixed(0)}%</span>)
+                                    Duplicate Detection (<span className="text-indigo-600">{(settings.duplicateSensitivity * 100).toFixed(0)}%</span>)
                                 </label>
                             </div>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest max-w-lg mb-2">
@@ -108,18 +108,19 @@ const AdminSettings = () => {
                 <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
                     <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                         <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-3">
-                            <Inbox size={18} className="text-emerald-500" /> Ticket Operations
+                            <Inbox size={18} className="text-emerald-500" /> Ticket Settings
                         </h3>
                     </div>
                     <CardContent className="p-8 space-y-6">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                             <div>
-                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Auto-Close Incidents</h4>
+                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Auto-Close Tickets</h4>
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Automatically archive resolved tickets after inactivity.</p>
                             </div>
                             <Select
                                 value={settings.autoCloseDays}
                                 onChange={(e) => handleChange('autoCloseDays', parseInt(e.target.value))}
+                                className="w-full md:w-auto"
                                 buttonClassName="w-full md:w-auto min-w-[140px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-700 uppercase outline-none focus:border-indigo-600 transition-colors flex justify-between items-center"
                                 options={[
                                     { value: 3, label: "3 Days" },
@@ -135,7 +136,7 @@ const AdminSettings = () => {
                 <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
                     <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                         <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-3">
-                            <Bell size={18} className="text-amber-500" /> Telemetry & Alerts
+                            <Bell size={18} className="text-amber-500" /> Notifications
                         </h3>
                     </div>
                     <CardContent className="p-8 space-y-6">

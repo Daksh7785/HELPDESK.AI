@@ -12,6 +12,7 @@ import { Card } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
 
 const AdminUsers = () => {
+// eslint-disable-next-line no-unused-vars
     const navigate = useNavigate();
     const { user: currentUser, profile: currentProfile } = useAuthStore();
     const { showToast } = useToastStore();
@@ -19,7 +20,8 @@ const AdminUsers = () => {
     // Data State
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [_error, setError] = useState(null);
+ 
     const [isProcessing, setIsProcessing] = useState(null); // ID of user being updated
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -111,25 +113,8 @@ const AdminUsers = () => {
             if (sbError) throw sbError;
             setUsers(data || []);
 
-            // 2. Fetch PENDING entities
+            // 2. Fetch PENDING entities (Profile-based status lookup below handles all pending users)
             let allPending = [];
-            if (activeCompanyId) {
-                try {
-                    const { data: reqData, error: reqError } = await supabase
-                        .from('user_requests')
-                        .select(`
-                            id, user_id, company_id, status, created_at,
-                            user:profiles!user_id (id, full_name, email, company, profile_picture, status)
-                        `)
-                        .eq('company_id', activeCompanyId)
-                        .eq('status', 'pending')
-                        .order('created_at', { ascending: false });
-
-                    if (!reqError && reqData) allPending = [...reqData];
-                } catch (_) {
-                    // user_requests table may not exist — profile-based fallback below handles pending users
-                }
-            }
 
             // Path B: Direct profile lookup (Ensure Anjali is visible even if request row failed)
             let profileQuery = supabase.from('profiles')
@@ -174,8 +159,10 @@ const AdminUsers = () => {
 
     useEffect(() => {
         fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+ 
     const handleUpdateRole = async (userId, newRole) => {
         setIsProcessing(userId);
         try {
@@ -229,9 +216,10 @@ const AdminUsers = () => {
             // Deep fetch if still missing — ensures we aren't blocked by stale local state
             if (!targetCompanyId && currentUser) {
                 console.log("⚠️ Target Company ID missing in state, reaching out to database...");
-                const { data: freshProfile, error: profileFetchErr } = await supabase
+                const { data: freshProfile, error: _profileFetchErr } = await supabase
                     .from('profiles')
                     .select('company_id, company')
+ 
                     .eq('id', currentUser.id)
                     .single();
 
@@ -371,7 +359,7 @@ const AdminUsers = () => {
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[400px]">
             <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-            <p className="text-slate-400 font-black uppercase tracking-widest italic">Scanning Identity Grid...</p>
+            <p className="text-slate-400 font-black uppercase tracking-widest italic">Loading directory...</p>
         </div>
     );
 
@@ -381,10 +369,10 @@ const AdminUsers = () => {
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                     <h2 className="text-[12px] font-black text-indigo-600 uppercase tracking-[0.3em] mb-2 flex items-center gap-2">
-                        <ShieldCheck size={12} /> Access Protocol Control
+                        <ShieldCheck size={12} /> Access Control
                     </h2>
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none uppercase italic">User Registry.</h1>
-                    <p className="text-slate-500 font-medium mt-2">Managing {stats.total} authorized entities across the mission network.</p>
+                    <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none uppercase italic">User Directory.</h1>
+                    <p className="text-slate-500 font-medium mt-2">Manage your team members and their roles here.</p>
                 </div>
                 <div className="flex gap-2">
                     <button
@@ -401,23 +389,23 @@ const AdminUsers = () => {
             {/* Metrics Dashboard */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <StatCard
-                    label="Total Entities"
+                    label="Total Users"
                     value={stats.total}
-                    subtitle="Registered system records"
+                    subtitle="Registered system accounts"
                     icon={Users}
                     color="slate"
                 />
                 <StatCard
-                    label="System Controllers"
+                    label="Administrators"
                     value={stats.admins}
-                    subtitle="Full administrative root"
+                    subtitle="Full administrative access"
                     icon={ShieldCheck}
                     color="indigo"
                 />
                 <StatCard
-                    label="Pending Approvals"
+                    label="Pending Requests"
                     value={stats.pending}
-                    subtitle="Requires review"
+                    subtitle="New signup requests"
                     icon={Clock}
                     color={stats.pending > 0 ? "amber" : "slate"}
                 />
@@ -429,13 +417,13 @@ const AdminUsers = () => {
                     className={`pb-3 px-4 font-bold text-sm tracking-wide transition-colors border-b-2 ${activeTab === 'active' ? 'text-indigo-600 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
                     onClick={() => setActiveTab('active')}
                 >
-                    System Directory
+                    All Users
                 </button>
                 <button
                     className={`pb-3 px-4 font-bold text-sm tracking-wide transition-colors border-b-2 flex items-center gap-2 ${activeTab === 'pending' ? 'text-amber-600 border-amber-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
                     onClick={() => setActiveTab('pending')}
                 >
-                    Pending Approvals
+                    Pending Requests
                     {stats.pending > 0 && <span className="bg-amber-100 text-amber-600 text-[10px] px-2 py-0.5 rounded-full">{stats.pending}</span>}
                 </button>
             </div>
@@ -461,11 +449,11 @@ const AdminUsers = () => {
                             <table className="w-full border-collapse">
                                 <thead>
                                     <tr className="bg-slate-50/50">
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">ID / Hash</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Identity</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Protocol Role</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Joined</th>
-                                        <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Lifecycle</th>
+                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User ID</th>
+                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User</th>
+                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Role</th>
+                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Joined On</th>
+                                        <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
@@ -481,11 +469,19 @@ const AdminUsers = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-black text-sm group-hover:bg-white group-hover:shadow-sm transition-all border border-transparent group-hover:border-slate-100">
-                                                        {user.full_name?.charAt(0) || '?'}
-                                                    </div>
+                                                    {user.profile_picture ? (
+                                                        <img
+                                                            src={user.profile_picture}
+                                                            alt={user.full_name || 'User'}
+                                                            className="w-10 h-10 rounded-xl object-cover border border-slate-100 shadow-sm"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-black text-sm group-hover:bg-white group-hover:shadow-sm transition-all border border-transparent group-hover:border-slate-100">
+                                                            {user.full_name?.charAt(0) || '?'}
+                                                        </div>
+                                                    )}
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-slate-800 tracking-tight italic uppercase">{user.full_name || 'Incognito Entity'}</span>
+                                                        <span className="text-sm font-black text-slate-800 tracking-tight italic uppercase">{user.full_name || 'Unnamed User'}</span>
                                                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 lowercase">
                                                             <Mail size={10} /> {user.email}
                                                         </div>
@@ -540,8 +536,8 @@ const AdminUsers = () => {
                                 <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-200 mx-auto mb-4">
                                     <Users size={32} />
                                 </div>
-                                <h3 className="text-lg font-black text-slate-900 uppercase italic">No entities found</h3>
-                                <p className="text-sm text-slate-400 font-medium italic mt-1">Adjust search metrics to locate the target user.</p>
+                                <h3 className="text-lg font-black text-slate-900 uppercase italic">No users found</h3>
+                                <p className="text-sm text-slate-400 font-medium italic mt-1">Adjust search query to find who you're looking for.</p>
                             </div>
                         )}
                     </>
@@ -553,7 +549,7 @@ const AdminUsers = () => {
                                 <thead>
                                     <tr className="bg-slate-50/50">
                                         <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Request ID</th>
-                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User Identity</th>
+                                        <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">User</th>
                                         <th className="px-8 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Requested On</th>
                                         <th className="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">Actions</th>
                                     </tr>
@@ -571,11 +567,19 @@ const AdminUsers = () => {
                                             </td>
                                             <td className="px-8 py-6">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 font-black text-sm group-hover:bg-white border border-transparent group-hover:border-amber-200 transition-all">
-                                                        {request.user?.full_name?.charAt(0) || '?'}
-                                                    </div>
+                                                    {request.user?.profile_picture ? (
+                                                        <img
+                                                            src={request.user.profile_picture}
+                                                            alt={request.user.full_name || 'User'}
+                                                            className="w-10 h-10 rounded-xl object-cover border border-slate-100 shadow-sm"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 font-black text-sm group-hover:bg-white border border-transparent group-hover:border-amber-200 transition-all">
+                                                            {request.user?.full_name?.charAt(0) || '?'}
+                                                        </div>
+                                                    )}
                                                     <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-slate-800 tracking-tight italic uppercase">{request.user?.full_name || 'Incognito Entity'}</span>
+                                                        <span className="text-sm font-black text-slate-800 tracking-tight italic uppercase">{request.user?.full_name || 'Unnamed User'}</span>
                                                         <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 lowercase">
                                                             <Mail size={10} /> {request.user?.email}
                                                         </div>

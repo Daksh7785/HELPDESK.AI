@@ -6,22 +6,21 @@ import {
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import useAuthStore from "../../store/authStore";
-import { supabase } from "../../lib/supabaseClient";
 import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
-import { formatTicketId } from "../../utils/format";
 import axios from 'axios';
 import { API_CONFIG } from '../../config';
 
 const TicketTracking = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { aiTicket, setActiveTicket, addTicket } = useTicketStore();
+    const { aiTicket, addTicket } = useTicketStore();
     const { user, profile } = useAuthStore();
     const [isCreating, setIsCreating] = useState(true);
     const [error, setError] = useState(null);
     const [createdTicket, setCreatedTicket] = useState(null);
     const hasCreated = useRef(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const resolutionSteps = location.state?.resolutionSteps || [];
     useEffect(() => {
         if (!aiTicket) {
@@ -72,6 +71,7 @@ const TicketTracking = () => {
 
                 if (res.data?.ticket_id) {
                     const newTicket = { ...aiTicket, id: res.data.ticket_id, ticket_id: res.data.ticket_id, status };
+                    addTicket(newTicket);
                     setCreatedTicket(newTicket);
                     setIsCreating(false);
 
@@ -90,7 +90,7 @@ const TicketTracking = () => {
         };
 
         finalizeTracking();
-    }, [aiTicket, navigate, user]);
+    }, [aiTicket, navigate, user, profile?.company, resolutionSteps]);
 
     if (!aiTicket) return null;
 

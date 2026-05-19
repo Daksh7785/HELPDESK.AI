@@ -1,13 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
     FileText, Database, Zap,
     CheckCircle2, AlertTriangle, ArrowRight,
     Lightbulb, SearchX, TicketCheck, Search
 } from 'lucide-react';
-import axios from 'axios';
 import useTicketStore from "../../store/ticketStore";
-import useAuthStore from "../../store/authStore";
 import { API_CONFIG } from "../../config";
 
 // ─── Animated Step Pipeline ───────────────────────────────────────────────────
@@ -69,7 +67,20 @@ const DuplicateDetection = () => {
         return () => clearInterval(interval);
     }, [isLoading, aiTicket, isDuplicate]);
 
-    const handleCreateTicket = async () => {
+    const duplicate = aiTicket?.duplicate_ticket || {};
+    const similarity = duplicate.similarity ? Math.round(duplicate.similarity * 100) : 0;
+
+    // ── Dynamic solution steps — from AI data, no hardcoding ──────────────────
+    let resolutionSteps = null;
+    const rawSteps = aiTicket?.resolution_steps || aiTicket?.suggested_solution || aiTicket?.solution_steps || duplicate.solution_steps || null;
+    
+    if (Array.isArray(rawSteps) && rawSteps.length > 0) {
+        resolutionSteps = rawSteps;
+    } else if (typeof rawSteps === 'string' && rawSteps.trim()) {
+        resolutionSteps = rawSteps.split(/\n+/).map(s => s.replace(/^\d+[.)]/,'').trim()).filter(Boolean);
+    }
+
+    const handleCreateTicket = useCallback(async () => {
         if (!aiTicket) return;
         setIsLoading(true);
         try {
@@ -81,35 +92,17 @@ const DuplicateDetection = () => {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [aiTicket, navigate, resolutionSteps]);
 
     // Navigate when countdown reaches 0
     useEffect(() => {
         if (countdown === 0 && !isDuplicate && aiTicket) {
             handleCreateTicket();
         }
-    }, [countdown, isDuplicate, aiTicket]);
+    }, [countdown, isDuplicate, aiTicket, handleCreateTicket]);
 
     if (isLoading) return <SkeletonLoader />;
     if (!aiTicket) return null;
-
-    const duplicate = aiTicket.duplicate_ticket || {};
-    const similarity = duplicate.similarity ? Math.round(duplicate.similarity * 100) : 0;
-
-    // ── Dynamic solution steps — from AI data, no hardcoding ──────────────────
-    const resolutionSteps = (() => {
-        const raw =
-            aiTicket.resolution_steps ||
-            aiTicket.suggested_solution ||
-            aiTicket.solution_steps ||
-            duplicate.solution_steps ||
-            null;
-        if (Array.isArray(raw) && raw.length > 0) return raw;
-        if (typeof raw === 'string' && raw.trim()) {
-            return raw.split(/\n+/).map(s => s.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
-        }
-        return null; // hide section entirely if no steps
-    })();
 
     return (
         <div className="min-h-screen bg-[#f6f8f7] pb-20 pt-28 px-6">

@@ -29,5 +29,8 @@ ENV PYTHONPATH=/app
 # Expose port 7860 (Hugging Face Spaces default)
 EXPOSE 7860
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD ["python", "backend/healthcheck.py"]
+
 # Run the FastAPI server via Uvicorn
 CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "7860"]
