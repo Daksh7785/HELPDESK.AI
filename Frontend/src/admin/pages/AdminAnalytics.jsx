@@ -40,9 +40,11 @@ const AdminAnalytics = () => {
     };
 
     useEffect(() => {
-        fetchAnalytics();
+        if (profile) {
+            fetchAnalytics();
+        }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [profile]);
 
     const stats = useMemo(() => {
         if (!tickets.length) return {
@@ -156,7 +158,7 @@ const AdminAnalytics = () => {
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[400px]">
             <Loader2 className="w-10 h-10 text-indigo-600 animate-spin mb-4" />
-            <p className="text-slate-400 font-black uppercase tracking-widest italic text-center">Crunching mission data analytics...</p>
+            <p className="text-slate-400 font-black uppercase tracking-widest italic text-center">Analyzing ticket data...</p>
         </div>
     );
 

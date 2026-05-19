@@ -69,6 +69,7 @@ const aiIconMap = [
 
 const AdminDashboard = () => {
     const navigate = useNavigate();
+    const { profile } = useAuthStore();
     const [tickets, setTickets] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
 
@@ -76,7 +77,6 @@ const AdminDashboard = () => {
         setIsLoading(true);
         try {
             let query = supabase.from('tickets').select('*').order('created_at', { ascending: false });
-            const { profile } = useAuthStore.getState();
             if (profile?.role === 'admin' && profile?.company) query = query.eq('company', profile.company);
             const { data, error } = await query;
             if (error) throw error;
@@ -86,10 +86,12 @@ const AdminDashboard = () => {
     };
 
     React.useEffect(() => {
-        fetchStats();
-        const interval = setInterval(fetchStats, 30000);
-        return () => clearInterval(interval);
-    }, []);
+        if (profile) {
+            fetchStats();
+            const interval = setInterval(fetchStats, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [profile]);
 
     const metrics = useMemo(() => {
         const total = tickets.length;
