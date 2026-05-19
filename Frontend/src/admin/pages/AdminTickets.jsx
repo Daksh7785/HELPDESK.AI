@@ -24,7 +24,7 @@ import {
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
-import { formatFullTimestamp, formatTimelineDate } from "../../utils/dateUtils";
+import { formatTimelineDate } from "../../utils/dateUtils";
 
 const AdminTickets = () => {
     const navigate = useNavigate();
@@ -80,8 +80,8 @@ const AdminTickets = () => {
                 .from('tickets')
                 .select(`
                     *,
-                    creator:profiles!tickets_user_id_fkey(full_name, email),
-                    assignee:profiles!tickets_assigned_agent_id_fkey(full_name, email)
+                    creator:profiles!tickets_user_id_fkey(full_name, email, profile_picture),
+                    assignee:profiles!tickets_assigned_agent_id_fkey(full_name, email, profile_picture)
                 `);
 
             if (profile?.role === 'admin' && profile?.company) {
@@ -144,6 +144,7 @@ const AdminTickets = () => {
         return () => {
             supabase.removeChannel(channel);
         };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
 
     // Seed search from URL
@@ -211,9 +212,9 @@ const AdminTickets = () => {
             {/* 1. Header & Utility Bar */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">Incident Management</h1>
+                    <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase">Ticket Management</h1>
                     <p className="text-sm font-bold text-slate-400 mt-1 flex items-center gap-2">
-                        <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} incidents matching current filter protocol.
+                        <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} tickets matching current filters.
                     </p>
                 </div>
             </div>
@@ -314,15 +315,23 @@ const AdminTickets = () => {
                                     {/* User (Joined with Profiles) */}
                                     <td className="px-6 py-6">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 transition-all border border-transparent group-hover:border-slate-100">
-                                                <User size={14} />
-                                            </div>
+                                            {ticket.creator?.profile_picture || ticket.profiles?.profile_picture ? (
+                                                <img
+                                                    src={ticket.creator?.profile_picture || ticket.profiles?.profile_picture}
+                                                    alt={ticket.creator?.full_name || ticket.profiles?.full_name || 'User'}
+                                                    className="w-8 h-8 rounded-lg object-cover border border-slate-100 shadow-sm"
+                                                />
+                                            ) : (
+                                                <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-xs border border-emerald-100/50">
+                                                    {(ticket.creator?.full_name || ticket.profiles?.full_name || 'System').charAt(0).toUpperCase()}
+                                                </div>
+                                            )}
                                             <div className="flex flex-col">
                                                 <span className="text-xs font-black text-slate-800 tracking-tight italic uppercase truncate max-w-[120px]">
-                                                    {ticket.profiles?.full_name || 'System'}
+                                                    {ticket.creator?.full_name || ticket.profiles?.full_name || 'System'}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-slate-400 lowercase truncate max-w-[120px]">
-                                                    {ticket.profiles?.email || '—'}
+                                                    {ticket.creator?.email || ticket.profiles?.email || '—'}
                                                 </span>
                                             </div>
                                         </div>

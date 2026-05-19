@@ -22,7 +22,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
@@ -163,6 +163,11 @@ class HealthResponse(BaseModel):
     status: str
     classifier_loaded: bool
     ner_loaded: bool
+
+
+class ReadinessResponse(BaseModel):
+    status: str
+    checks: dict[str, bool]
 
 
 # ---------------------------------------------------------------------------
@@ -353,6 +358,28 @@ async def health_check():
         status="ok",
         classifier_loaded=classifier_service._loaded,
         ner_loaded=ner_service._loaded,
+    )
+
+
+@app.get("/ready", response_model=ReadinessResponse)
+async def readiness_check():
+    require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
+    checks = {
+        "api": True,
+        "classifier_loaded": classifier_service._loaded,
+        "ner_loaded": ner_service._loaded,
+        "duplicate_index_loaded": duplicate_service._loaded,
+        "rag_loaded": rag_service._loaded,
+    }
+    if require_supabase:
+        checks["supabase_configured"] = supabase is not None
+
+    if all(checks.values()):
+        return ReadinessResponse(status="ready", checks=checks)
+
+    return JSONResponse(
+        status_code=503,
+        content=jsonable_encoder(ReadinessResponse(status="not_ready", checks=checks)),
     )
 
 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
+ 
 import { motion } from "framer-motion";
 import useAuthStore from "../store/authStore";
 import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
@@ -68,7 +69,11 @@ function Login() {
       }
     } catch (err) {
       console.error("Login component error:", err);
-      setError(err.message || "Invalid credentials. Please try again.");
+      let errMsg = err.message || "Invalid credentials. Please try again.";
+      if (errMsg.toLowerCase().includes("failed to fetch")) {
+        errMsg = "Network Error: Failed to fetch. This usually happens if your browser's ad-blocker (like Brave Shields, uBlock Origin, etc.) is blocking Supabase requests. Please try disabling your ad-blocker for this site and refresh!";
+      }
+      setError(errMsg);
     }
   };
 
@@ -84,7 +89,12 @@ function Login() {
       await signInWithMagicLink(email);
       setMagicLinkSent(true);
     } catch (err) {
-      setError(err.message || "Failed to send magic link. Please check your email.");
+      console.error("Magic link error:", err);
+      let errMsg = err.message || "Failed to send magic link. Please check your email.";
+      if (errMsg.toLowerCase().includes("failed to fetch")) {
+        errMsg = "Network Error: Failed to fetch. This usually happens if your browser's ad-blocker (like Brave Shields, uBlock Origin, etc.) is blocking Supabase requests. Please try disabling your ad-blocker for this site and refresh!";
+      }
+      setError(errMsg);
     }
   };
 

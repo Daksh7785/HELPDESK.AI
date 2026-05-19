@@ -62,15 +62,28 @@ We welcome ideas that improve the AI's precision or user experience.
 
 ---
 
+## 🌟 GirlScript Summer of Code (GSSoC 2026)
+
+We are proudly participating in **GSSoC 2026**! If you are a contributor from GSSoC, please ensure you follow these steps so that your PR is scored correctly:
+1. **Target Branch Requirement (CRITICAL) 🚨**: You MUST target and submit all of your Pull Requests to the `gssoc` branch, **NOT** to the `main` branch. The `main` branch is our production-ready release branch and is strictly protected. Any Pull Request opened directly against `main` will be automatically rejected.
+2. **Approval Label**: Once your PR is reviewed and approved, we will add the `gssoc:approved` label. 
+3. **Difficulty Level**: We will assign a difficulty label (`level:beginner`, `level:intermediate`, `level:advanced`, `level:critical`).
+4. **Mentor Assignment**: We will add the `mentor:ritesh-1918` label to track review points.
+5. Make sure your PR resolves an assigned issue and is linked properly in the PR description (e.g. `Fixes #28`).
+
+---
+
 ## 💻 Pull Request Process
 
 We follow a strict "Production Ready" workflow. All PRs must meet the following criteria:
 
-1.  **Branching Strategy:**
-    *   `feature/` — New features or logic.
-    *   `fix/` — Bug fixes.
-    *   `docs/` — Documentation updates.
-    *   `refactor/` — Code cleanup without functional changes.
+1.  **Branching Strategy (CRITICAL):**
+    *   **All Pull Requests MUST target the `gssoc` branch.** Do not submit PRs directly to the `main` branch.
+    *   For your local work, branch from `gssoc` using these naming conventions:
+        *   `feature/` — New features or logic.
+        *   `fix/` — Bug fixes.
+        *   `docs/` — Documentation updates.
+        *   `refactor/` — Code cleanup without functional changes.
 2.  **Atomic Commits:** Each commit should be a small, logical unit of work with a descriptive message.
 3.  **Performance Check:** Any changes to the backend must be tested to ensure inference times remain **strictly under 500ms**.
 4.  **UI Consistency:** Frontend changes must strictly adhere to our "Chaos to Clarity" design system (Tailwind CSS + Framer Motion).

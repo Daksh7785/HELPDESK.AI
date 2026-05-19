@@ -60,7 +60,9 @@ function AdminSignup() {
         if (/[A-Z]/.test(pw)) strength += 25;
         if (/[0-9]/.test(pw)) strength += 25;
         if (/[^A-Za-z0-9]/.test(pw)) strength += 25;
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPasswordStrength(strength);
+ 
     }, [formData.password]);
 
     const handleChange = (e) => {
@@ -143,7 +145,11 @@ function AdminSignup() {
             }
         } catch (err) {
             console.error("Admin signup failed:", err);
-            setError(err.message || "Signup failed. Please try again.");
+            let errMsg = err.message || "Signup failed. Please try again.";
+            if (errMsg.toLowerCase().includes("failed to fetch")) {
+                errMsg = "Network Error: Failed to fetch. This usually happens if your browser's ad-blocker (like Brave Shields, uBlock Origin, etc.) is blocking Supabase requests. Please try disabling your ad-blocker for this site and refresh!";
+            }
+            setError(errMsg);
         }
     };
 
@@ -343,7 +349,7 @@ function AdminSignup() {
                                                 type="text"
                                                 name="fullName"
                                                 required
-                                                placeholder="John Doe"
+                                                placeholder="Alex Mercer"
                                                 value={formData.fullName}
                                                 onChange={handleChange}
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
@@ -357,7 +363,7 @@ function AdminSignup() {
                                                 type="email"
                                                 name="email"
                                                 required
-                                                placeholder="john@company.com"
+                                                placeholder="alex.mercer@acmecorp.com"
                                                 value={formData.email}
                                                 onChange={handleChange}
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
@@ -370,7 +376,7 @@ function AdminSignup() {
                                             <input
                                                 type="tel"
                                                 name="phone"
-                                                placeholder="+1 (555) 000-0000"
+                                                placeholder="+1 (415) 555-0198"
                                                 value={formData.phone}
                                                 onChange={handleChange}
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"
@@ -383,7 +389,7 @@ function AdminSignup() {
                                             <input
                                                 type="text"
                                                 name="jobTitle"
-                                                placeholder="IT Manager"
+                                                placeholder="Director of Operations"
                                                 value={formData.jobTitle}
                                                 onChange={handleChange}
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-3 text-sm focus:border-emerald-600 focus:bg-white outline-none transition-all"

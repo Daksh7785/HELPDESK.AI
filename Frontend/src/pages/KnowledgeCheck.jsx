@@ -41,15 +41,10 @@ function KnowledgeCheck() {
     if (!aiTicket) return null;
 
     /* ── Derive resolution steps from AI data ── */
-    const resolutionSteps = (() => {
-        // Try common field names the AI backend might return
-        const raw =
-            aiTicket.resolution_steps ||
-            aiTicket.suggested_solution ||
-            aiTicket.solution_steps ||
-            aiTicket.steps ||
-            null;
+    let resolutionSteps = null;
+    const rawSteps = aiTicket.resolution_steps || aiTicket.suggested_solution || aiTicket.solution_steps || aiTicket.steps || null;
 
+<<<<<<< HEAD
         if (Array.isArray(raw) && raw.length > 0) return raw;
         if (typeof raw === 'string' && raw.trim()) {
             // Split on newlines or numbered list patterns
@@ -57,6 +52,13 @@ function KnowledgeCheck() {
         }
         return null; // no steps available
     })();
+=======
+    if (Array.isArray(rawSteps) && rawSteps.length > 0) {
+        resolutionSteps = rawSteps;
+    } else if (typeof rawSteps === 'string' && rawSteps.trim()) {
+        resolutionSteps = rawSteps.split(/\n+/).map(s => s.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
+    }
+>>>>>>> upstream/main
 
     const similarityPct = aiTicket.similarity_score
         ? Math.round(aiTicket.similarity_score * 100)

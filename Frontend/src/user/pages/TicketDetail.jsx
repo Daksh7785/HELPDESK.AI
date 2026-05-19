@@ -6,8 +6,6 @@ import {
     RotateCcw, Loader2, CheckCircle2, History
 } from 'lucide-react';
 import { formatFullTimestamp } from '../../utils/dateUtils';
-import useTicketStore from "../../store/ticketStore";
-import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../../components/ui/card";
 import TicketStatusBadge from "../components/TicketStatusBadge";
@@ -19,11 +17,11 @@ import CSATModal from "../components/CSATModal";
 const TicketDetail = () => {
     const { ticket_id } = useParams();
     const navigate = useNavigate();
-    const { tickets } = useTicketStore();
     const [ticket, setTicket] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isReopening, setIsReopening] = useState(false);
     const [showCsat, setShowCsat] = useState(false);
+    const [csatHasBeenDismissed, setCsatHasBeenDismissed] = useState(false);
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -84,13 +82,15 @@ const TicketDetail = () => {
         };
     }, [ticket_id]);
 
-    // Show CSAT modal if ticket is resolved and not yet rated
+    // Show CSAT modal if ticket is resolved, not yet rated, and not dismissed in this session
     useEffect(() => {
-        if (ticket?.status?.toLowerCase()?.includes('resolv') && !ticket.csat_rating) {
+        if (ticket?.status?.toLowerCase()?.includes('resolv') && !ticket.csat_rating && !csatHasBeenDismissed) {
             const timer = setTimeout(() => setShowCsat(true), 1200);
             return () => clearTimeout(timer);
+        } else {
+            setShowCsat(false);
         }
-    }, [ticket?.status, ticket?.csat_rating]);
+    }, [ticket?.status, ticket?.csat_rating, csatHasBeenDismissed]);
 
     if (loading) {
         return (
@@ -123,13 +123,6 @@ const TicketDetail = () => {
     const isAutoResolved = ticket.auto_resolve === true;
     const confidenceScore = ticket.metadata?.confidence ?? ticket.routing_confidence ?? 0.92;
 
-    const formatDate = (dateStr) => {
-        if (!dateStr) return 'Pending...';
-        return new Date(dateStr).toLocaleString([], {
-            month: 'short', day: 'numeric', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
-    };
 
     const handleReopen = async () => {
         setIsReopening(true);
@@ -387,11 +380,15 @@ const TicketDetail = () => {
             {showCsat && (
                 <CSATModal
                     ticketId={ticket.ticket_id}
-                    onSubmit={() => {
+                    onSubmit={(rating) => {
                         setShowCsat(false);
-                        setTicket(prev => ({ ...prev, csat_rating: 1 })); // dummy, prevents re-showing
+                        setCsatHasBeenDismissed(true);
+                        setTicket(prev => ({ ...prev, csat_rating: rating }));
                     }}
-                    onDismiss={() => setShowCsat(false)}
+                    onDismiss={() => {
+                        setShowCsat(false);
+                        setCsatHasBeenDismissed(true);
+                    }}
                 />
             )}
         </main>

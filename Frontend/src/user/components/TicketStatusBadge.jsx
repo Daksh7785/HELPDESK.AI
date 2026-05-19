@@ -1,5 +1,6 @@
 import React from 'react';
 import { Badge } from "../../components/ui/badge";
+ 
 import { motion } from 'framer-motion';
 
 const TicketStatusBadge = ({ status }) => {

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Check } from 'lucide-react';
+ 
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const Select = ({ value, onChange, options, placeholder = "Select an option", className = "", buttonClassName = "", disabled = false, ...props }) => {
@@ -19,7 +20,7 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
     const selectedOption = options.find(opt => String(opt.value) === String(value)) || null;
 
     return (
-        <div ref={containerRef} className={`relative flex-1 ${className}`} {...props}>
+        <div ref={containerRef} className={`relative ${className || 'flex-1'}`} {...props}>
             <button
                 type="button"
                 onClick={() => !disabled && setIsOpen(!isOpen)}
