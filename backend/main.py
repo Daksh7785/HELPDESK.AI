@@ -127,6 +127,7 @@ class TicketResponse(BaseModel):
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
+    sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
 
 
@@ -216,6 +217,18 @@ async def lifespan(app: FastAPI):
 
     print("[Startup] Classifier V2 Shadow: Ready.")
     print("[Startup] Ready.")
+    # Strict health checks: fail loudly when core model assets are unavailable.
+    # Set ALLOW_DEGRADED_STARTUP=1 to permit degraded startup for local/dev convenience.
+    try:
+        strict_mode = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") != "1"
+    except Exception:
+        strict_mode = True
+
+    classifier_loaded_flag = getattr(classifier_service, "_loaded", False)
+    ner_loaded_flag = getattr(ner_service, "_loaded", False)
+
+    if strict_mode and not classifier_loaded_flag:
+        raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
     yield
     print("[Shutdown] Cleaning up ...")
 
@@ -900,7 +913,7 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket")
+@app.post("/ai/analyze_ticket/legacy")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 

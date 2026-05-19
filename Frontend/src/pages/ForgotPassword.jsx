@@ -31,7 +31,7 @@ function ForgotPassword() {
             });
         }, 1000);
         return () => clearInterval(timer);
-    }, [step]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [step]);
 
     const formatTime = (seconds) => {
         const mins = Math.floor(seconds / 60);
