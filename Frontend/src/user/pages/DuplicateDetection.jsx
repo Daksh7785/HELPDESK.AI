@@ -5,9 +5,7 @@ import {
     CheckCircle2, AlertTriangle, ArrowRight,
     Lightbulb, SearchX, TicketCheck, Search
 } from 'lucide-react';
-import axios from 'axios';
 import useTicketStore from "../../store/ticketStore";
-import useAuthStore from "../../store/authStore";
 import { API_CONFIG } from "../../config";
 
 // ─── Animated Step Pipeline ───────────────────────────────────────────────────
@@ -88,7 +86,7 @@ const DuplicateDetection = () => {
         if (countdown === 0 && !isDuplicate && aiTicket) {
             handleCreateTicket();
         }
-    }, [countdown, isDuplicate, aiTicket]);
+    }, [countdown, isDuplicate, aiTicket, handleCreateTicket]);
 
     if (isLoading) return <SkeletonLoader />;
     if (!aiTicket) return null;
@@ -106,7 +104,7 @@ const DuplicateDetection = () => {
             null;
         if (Array.isArray(raw) && raw.length > 0) return raw;
         if (typeof raw === 'string' && raw.trim()) {
-            return raw.split(/\n+/).map(s => s.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+            return raw.split(/\n+/).map(s => s.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
         }
         return null; // hide section entirely if no steps
     })();
