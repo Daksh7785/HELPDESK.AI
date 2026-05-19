@@ -145,7 +145,11 @@ function AdminSignup() {
             }
         } catch (err) {
             console.error("Admin signup failed:", err);
-            setError(err.message || "Signup failed. Please try again.");
+            let errMsg = err.message || "Signup failed. Please try again.";
+            if (errMsg.toLowerCase().includes("failed to fetch")) {
+                errMsg = "Network Error: Failed to fetch. This usually happens if your browser's ad-blocker (like Brave Shields, uBlock Origin, etc.) is blocking Supabase requests. Please try disabling your ad-blocker for this site and refresh!";
+            }
+            setError(errMsg);
         }
     };
 
