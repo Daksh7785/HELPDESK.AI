@@ -877,7 +877,7 @@ export default function LandingPage() {
                                 links: [
                                     { label: 'Documentation', href: '#' },
                                     { label: 'API Reference', href: '#' },
-                                    { label: 'Changelog', href: '#' },
+                                    { label: 'Changelog', href: '/changelog' },
                                     { label: 'Status Page', href: '#' },
                                 ]
                             },
