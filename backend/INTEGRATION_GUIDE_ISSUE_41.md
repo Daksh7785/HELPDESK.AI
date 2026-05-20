@@ -16,19 +16,19 @@ Two new features are being introduced:
 Execute the two new migration files in Supabase to set up the required database schema:
 
 ```bash
-# Migration 1: Create company_settings table
+# Migration 1: Create system_settings table
 supabase migration up
 
-# Verify the company_settings table was created
+# Verify the system_settings table was created
 supabase db pull
 ```
 
 **Migration files to run:**
-- `supabase/migrations/20260531_add_company_settings.sql` — Creates company_settings table with RLS policies
+- `supabase/migrations/20260531_add_company_settings.sql` — Creates system_settings table with RLS policies
 - `supabase/migrations/20260531_update_tickets_auto_close.sql` — Adds auto-close columns to tickets table
 
-**What gets created:**
-- `company_settings` table with columns: `auto_close_enabled`, `auto_close_days`, `email_notifications_enabled`, `admin_alerts_enabled`, `digest_frequency`
+- **What gets created:**
+- `system_settings` table with columns: `ai_confidence_threshold`, `duplicate_sensitivity`, `enable_auto_resolve`, `auto_close_enabled`, `auto_close_days`, `email_notifications`, `admin_alerts`, `digest_frequency`
 - `closed_at` and `auto_closed` columns on tickets table
 - Indexes on tickets(status, updated_at) and tickets(auto_closed, closed_at)
 
@@ -41,11 +41,11 @@ cd backend
 python scripts/seed_company_settings.py
 ```
 
-This script creates a default company_settings record for each company in the database with:
+This script creates a default system_settings record for each company in the database with:
 - `auto_close_enabled: true`
 - `auto_close_days: 7` (default 7-day inactivity before auto-close)
-- `email_notifications_enabled: true`
-- `admin_alerts_enabled: true`
+- `email_notifications: true`
+- `admin_alerts: true`
 - `digest_frequency: 'daily'`
 
 ## Part 2: Backend Integration
@@ -262,22 +262,22 @@ async def test_auto_close_manual():
 Before deploying to production:
 
 - [ ] All migrations have run successfully in target environment
-- [ ] `seed_company_settings.py` has been executed
+- [ ] `seed_company_settings.py` has been executed (creates `system_settings` records)
 - [ ] Environment variables are set correctly in `.env` file
 - [ ] APScheduler is installed in production requirements
 - [ ] Backend startup logs show "Auto-close cron job registered"
 - [ ] Test manual run: `service.run()` completes without errors
 - [ ] Test notification gating: Call `should_send_email_notification()` and verify it returns correct bool
-- [ ] Verify no company_settings records are missing (should equal number of companies)
+- [ ] Verify no system_settings records are missing (should equal number of companies)
 - [ ] Set up log monitoring/alerts for `[AutoCloseService]` and `[NotificationRouting]` ERROR level
 
 ## Part 6: Common Issues & Troubleshooting
 
-### Issue: "Failed to fetch company settings"
-**Cause:** company_settings table doesn't exist or RLS policies are blocking access
+### Issue: "Failed to fetch system settings"
+**Cause:** `system_settings` table doesn't exist or RLS policies are blocking access
 **Solution:**
-1. Verify migrations ran: `SELECT COUNT(*) FROM company_settings;`
-2. Check RLS policies: `SELECT * FROM pg_policies WHERE tablename = 'company_settings';`
+1. Verify migrations ran: `SELECT COUNT(*) FROM system_settings;`
+2. Check RLS policies: `SELECT * FROM pg_policies WHERE tablename = 'system_settings';`
 3. Ensure service role key has permissions
 
 ### Issue: Auto-close job doesn't run on schedule
@@ -290,7 +290,7 @@ Before deploying to production:
 ### Issue: Tickets not closing even though they're old
 **Cause:** `auto_close_enabled=false` for that company or `updated_at` is recent
 **Solution:**
-1. Check company_settings: `SELECT auto_close_enabled, auto_close_days FROM company_settings WHERE company_id = 'xyz';`
+1. Check system_settings: `SELECT auto_close_enabled, auto_close_days FROM system_settings WHERE company_id = 'xyz';`
 2. Check ticket timestamps: `SELECT id, updated_at, created_at FROM tickets WHERE status='resolved' LIMIT 1;`
 3. Run manual test: `service.run()` and check logs
 

@@ -2,9 +2,9 @@
 Notification Routing Middleware: Centralized gating logic for all notifications.
 
 Ensures that email, push, and admin alert notifications respect company-level settings:
-- email_notifications_enabled: Gate all email-based notifications (digests, alerts)
-- admin_alerts_enabled: Gate high-priority admin escalations
-- digest_frequency: Control digest email frequency (daily, weekly, disabled)
+- `email_notifications`: Gate all email-based notifications (digests, alerts)
+- `admin_alerts`: Gate high-priority admin escalations
+- `digest_frequency`: Control digest email frequency (daily, weekly, disabled)
 
 Features:
 - Company settings caching to reduce DB queries
@@ -45,6 +45,10 @@ class NotificationType(str, Enum):
 class NotificationRoutingMiddleware:
     """Middleware for routing and gating notifications based on company settings."""
 
+# NOTE: method names updated from `*_company_settings` to `*_system_settings` to match
+# the new schema. The database table and column names are `system_settings`,
+# `email_notifications`, and `admin_alerts`.
+
     def __init__(self):
         """Initialize the notification routing middleware."""
         self.supabase = create_client(
@@ -54,7 +58,7 @@ class NotificationRoutingMiddleware:
         self._settings_cache: Dict[str, Dict] = {}
         self.log_level = os.getenv("NOTIFICATION_ROUTING_LOG_LEVEL", "info").lower()
 
-    def _fetch_company_settings(self, company_id: str) -> Dict:
+    def _fetch_system_settings(self, company_id: str) -> Dict:
         """
         Fetch company settings from database.
         
@@ -62,17 +66,17 @@ class NotificationRoutingMiddleware:
             company_id: UUID of company
             
         Returns:
-            Dict with email_notifications_enabled, admin_alerts_enabled, digest_frequency
+            Dict with `email_notifications`, `admin_alerts`, `digest_frequency`
         """
         try:
-            response = self.supabase.table("company_settings").select(
-                "email_notifications_enabled, admin_alerts_enabled, digest_frequency"
+            response = self.supabase.table("system_settings").select(
+                "email_notifications, admin_alerts, digest_frequency"
             ).eq("company_id", company_id).single().execute()
 
             if response.data:
                 return {
-                    "email_notifications_enabled": response.data.get("email_notifications_enabled", True),
-                    "admin_alerts_enabled": response.data.get("admin_alerts_enabled", True),
+                    "email_notifications": response.data.get("email_notifications", True),
+                    "admin_alerts": response.data.get("admin_alerts", True),
                     "digest_frequency": response.data.get("digest_frequency", "daily")
                 }
         except Exception as e:
@@ -80,12 +84,12 @@ class NotificationRoutingMiddleware:
 
         # Fail-open: allow notifications if settings unavailable
         return {
-            "email_notifications_enabled": True,
-            "admin_alerts_enabled": True,
+            "email_notifications": True,
+            "admin_alerts": True,
             "digest_frequency": "daily"
         }
 
-    def get_company_settings(self, company_id: str) -> Dict:
+    def get_system_settings(self, company_id: str) -> Dict:
         """
         Get company settings with caching.
         
@@ -96,7 +100,7 @@ class NotificationRoutingMiddleware:
             Dict with company notification preferences
         """
         if company_id not in self._settings_cache:
-            self._settings_cache[company_id] = self._fetch_company_settings(company_id)
+            self._settings_cache[company_id] = self._fetch_system_settings(company_id)
         return self._settings_cache[company_id]
 
     def should_send_email_notification(self, company_id: str, notification_type: NotificationType) -> bool:
@@ -110,10 +114,10 @@ class NotificationRoutingMiddleware:
         Returns:
             True if notification should be sent, False otherwise
         """
-        settings = self.get_company_settings(company_id)
+        settings = self.get_system_settings(company_id)
 
         # Gate on global email notifications setting
-        if not settings["email_notifications_enabled"]:
+        if not settings["email_notifications"]:
             self.log_notification_skipped(
                 company_id, notification_type, "email_notifications_disabled"
             )
@@ -148,9 +152,9 @@ class NotificationRoutingMiddleware:
         Returns:
             True if alert should be sent, False otherwise
         """
-        settings = self.get_company_settings(company_id)
+        settings = self.get_system_settings(company_id)
 
-        if not settings["admin_alerts_enabled"]:
+        if not settings["admin_alerts"]:
             self.log_notification_skipped(
                 company_id, NotificationType.ADMIN_ALERT, "admin_alerts_disabled"
             )
@@ -169,10 +173,10 @@ class NotificationRoutingMiddleware:
         Returns:
             True if notification should be sent, False otherwise
         """
-        settings = self.get_company_settings(company_id)
+        settings = self.get_system_settings(company_id)
 
-        # Push notifications typically gated by email_notifications_enabled
-        if not settings["email_notifications_enabled"]:
+        # Push notifications typically gated by email_notifications
+        if not settings["email_notifications"]:
             self.log_notification_skipped(
                 company_id, NotificationType.PUSH_NOTIFICATION, "notifications_disabled"
             )
@@ -211,7 +215,7 @@ class NotificationRoutingMiddleware:
     def invalidate_cache(self, company_id: str) -> None:
         """
         Invalidate cached settings for a company.
-        Call this after updating company_settings in DB.
+        Call this after updating system_settings in DB.
         
         Args:
             company_id: UUID of company

@@ -1,8 +1,10 @@
 #!/usr/bin/env python
+# NOTE: Filename contains `company_settings`. The script now seeds `system_settings` records
+# (columns: `email_notifications`, `admin_alerts`, etc.). Filename was kept for backwards compatibility.
 """
-Seed Company Settings Script
+Seed System Settings Script
 
-Initializes default company_settings records for all existing companies in the database.
+Initializes default system_settings records for all existing companies in the database.
 Run this script after applying the 20260531_add_company_settings.sql migration.
 
 Usage:
@@ -11,13 +13,13 @@ Usage:
 
 This script:
 - Queries unique companies from tickets table
-- Creates default company_settings record for each
+- Creates default system_settings record for each
 - Sets default values:
-  - auto_close_enabled: true
-  - auto_close_days: 7
-  - email_notifications_enabled: true
-  - admin_alerts_enabled: true
-  - digest_frequency: 'daily'
+    - auto_close_enabled: true
+    - auto_close_days: 7
+    - email_notifications: true
+    - admin_alerts: true
+    - digest_frequency: 'daily'
 """
 
 import os
@@ -72,10 +74,10 @@ def seed_company_settings():
         unique_companies = list(companies.keys())
         logger.info(f"Found {len(unique_companies)} unique companies")
         
-        # Step 2: Get existing company_settings to avoid duplicates
-        logger.info("Fetching existing company_settings...")
+        # Step 2: Get existing system_settings to avoid duplicates
+        logger.info("Fetching existing system_settings...")
         
-        existing_response = supabase.table("company_settings").select(
+        existing_response = supabase.table("system_settings").select(
             "company_id"
         ).execute()
         
@@ -84,7 +86,7 @@ def seed_company_settings():
             for setting in existing_response.data:
                 existing_companies.add(setting.get("company_id"))
         
-        logger.info(f"Found {len(existing_companies)} existing company_settings")
+        logger.info(f"Found {len(existing_companies)} existing system_settings")
         
         # Step 3: Determine which companies need settings created
         companies_to_create = [c for c in unique_companies if c not in existing_companies]
@@ -101,15 +103,13 @@ def seed_company_settings():
         for company_id in companies_to_create:
             try:
                 # Create default settings record
-                supabase.table("company_settings").insert({
+                supabase.table("system_settings").insert({
                     "company_id": company_id,
                     "auto_close_enabled": True,
                     "auto_close_days": 7,
-                    "email_notifications_enabled": True,
-                    "admin_alerts_enabled": True,
-                    "digest_frequency": "daily",
-                    "created_at": datetime.now(timezone.utc).isoformat(),
-                    "updated_at": datetime.now(timezone.utc).isoformat()
+                    "email_notifications": True,
+                    "admin_alerts": True,
+                    "digest_frequency": "daily"
                 }).execute()
                 
                 created_count += 1
@@ -150,14 +150,14 @@ def verify_seed():
             "company_id", count="exact"
         ).execute()
         
-        settings_response = supabase.table("company_settings").select(
+        settings_response = supabase.table("system_settings").select(
             "company_id", count="exact"
         ).execute()
         
         companies_count = len(set(t["company_id"] for t in companies_response.data if t.get("company_id")))
         settings_count = len(set(s["company_id"] for s in settings_response.data if s.get("company_id")))
         
-        logger.info(f"Verification: {companies_count} unique companies, {settings_count} company_settings")
+        logger.info(f"Verification: {companies_count} unique companies, {settings_count} system_settings")
         
         if companies_count == settings_count:
             logger.info("✓ Verification passed: All companies have settings!")

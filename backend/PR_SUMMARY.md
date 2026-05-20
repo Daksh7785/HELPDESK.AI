@@ -33,15 +33,15 @@ This PR implements two critical features for the HELPDESK.AI helpdesk system:
 
 **Files created:**
 - `backend/services/auto_close_service.py` (315 lines) — Implements the auto-close logic
-- `supabase/migrations/20260531_add_company_settings.sql` — Creates company_settings table
+- `supabase/migrations/20260531_add_company_settings.sql` — Creates system_settings table
 - `supabase/migrations/20260531_update_tickets_auto_close.sql` — Adds closed_at and auto_closed columns
-- `backend/scripts/seed_company_settings.py` — Initializes company settings for all existing companies
+- `backend/scripts/seed_company_settings.py` — Initializes system settings for all existing companies
 
 ### Feature 2: Notification Routing Middleware
 
 **What it does:**
 - Provides reusable `should_send_email_notification()`, `should_send_admin_alert()`, `should_send_push_notification()` methods
-- Gates notifications based on company settings: `email_notifications_enabled`, `admin_alerts_enabled`, `digest_frequency`
+- Gates notifications based on system settings: `email_notifications`, `admin_alerts`, `digest_frequency`
 - Implements settings caching to reduce database queries
 - Logs all notification decisions (sent/skipped/error) for debugging
 - Fail-open design: allows notifications if settings unavailable (conservative approach)
@@ -78,22 +78,19 @@ instance = AutoCloseService.get_instance()
 
 ### Database Schema
 
-#### company_settings Table
+#### system_settings Table
 
 ```sql
-CREATE TABLE company_settings (
-    id uuid PRIMARY KEY,
-    company_id uuid UNIQUE NOT NULL,
-    
-    auto_close_enabled boolean DEFAULT true,
-    auto_close_days integer DEFAULT 7,
-    
-    email_notifications_enabled boolean DEFAULT true,
-    admin_alerts_enabled boolean DEFAULT true,
-    digest_frequency text DEFAULT 'daily',
-    
-    created_at timestamp,
-    updated_at timestamp
+CREATE TABLE IF NOT EXISTS system_settings (
+   company_id            UUID UNIQUE NOT NULL,
+   ai_confidence_threshold FLOAT   DEFAULT 0.80,
+   duplicate_sensitivity   FLOAT   DEFAULT 0.85,
+   enable_auto_resolve     BOOLEAN DEFAULT FALSE,
+   auto_close_enabled      BOOLEAN DEFAULT TRUE,
+   auto_close_days         INTEGER DEFAULT 7,
+   email_notifications     BOOLEAN DEFAULT TRUE,
+   admin_alerts            BOOLEAN DEFAULT TRUE,
+   digest_frequency        TEXT    DEFAULT 'daily'
 );
 ```
 
@@ -157,7 +154,7 @@ NOTIFICATION_ROUTING_LOG_LEVEL=info  # Logging level
 
 - [ ] Create test company with `auto_close_enabled=false`, verify no tickets close
 - [ ] Create test company with `auto_close_days=1`, create resolved ticket, verify closes after 1 day
-- [ ] Create test company with `email_notifications_enabled=false`, verify digest skipped
+- [ ] Create test company with `email_notifications=false`, verify digest skipped
 - [ ] Verify seed script creates settings for all existing companies
 - [ ] Verify cron job logs appear in backend logs
 - [ ] Verify cache invalidation works: update company settings, confirm new settings used
@@ -171,14 +168,14 @@ NOTIFICATION_ROUTING_LOG_LEVEL=info  # Logging level
 ## Deployment Checklist
 
 - [ ] All migrations run successfully in target environment
-- [ ] Seed script executed: `python backend/scripts/seed_company_settings.py`
+- [ ] Seed script executed: `python backend/scripts/seed_company_settings.py` (creates `system_settings` records)
 - [ ] `apscheduler>=3.10.0` added to requirements.txt and installed
 - [ ] Environment variables configured in `.env`
 - [ ] Backend startup logs show "Auto-close cron job registered"
 - [ ] Manual test confirms auto-close runs without errors
 - [ ] Manual test confirms notification routing gates correctly
 - [ ] Log monitoring set up for `[AutoCloseService]` and `[NotificationRouting]` ERROR level
-- [ ] No missing company_settings records: `SELECT COUNT(*) FROM company_settings;` should equal company count
+- [ ] No missing system_settings records: `SELECT COUNT(*) FROM system_settings;` should equal company count
 - [ ] RLS policies verified: service role has full access, authenticated users can read own company
 
 ## Rollback Plan
@@ -241,7 +238,7 @@ Please pay special attention to:
 
 1. **Migration correctness**: Verify SQL migrations run cleanly and create expected schema
 2. **APScheduler integration**: Confirm cron job registers and runs on schedule
-3. **Error handling**: Review graceful degradation when company_settings missing
+3. **Error handling**: Review graceful degradation when system_settings missing
 4. **Logging**: Verify log entries are helpful for debugging
 5. **Performance**: Confirm auto-close job completes in reasonable time
 6. **Database indexing**: Verify query plans use new indexes efficiently

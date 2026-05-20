@@ -42,7 +42,7 @@ class AutoCloseService:
         self.default_auto_close_days = int(os.getenv("AUTO_CLOSE_DAYS", "7"))
         self.cron_schedule = os.getenv("AUTO_CLOSE_CRON_SCHEDULE", "0 2 * * *")  # 2 AM UTC daily
 
-    def get_company_settings(self, company_id: str) -> Dict:
+    def get_system_settings(self, company_id: str) -> Dict:
         """
         Fetch company's auto-close settings from database.
         
@@ -51,10 +51,10 @@ class AutoCloseService:
             
         Returns:
             Dict with auto_close_days and auto_close_enabled settings.
-            Falls back to defaults if company_settings not found.
+            Falls back to defaults if system_settings not found.
         """
         try:
-            response = self.supabase.table("company_settings").select(
+            response = self.supabase.table("system_settings").select(
                 "auto_close_days, auto_close_enabled"
             ).eq("company_id", company_id).single().execute()
             
@@ -71,6 +71,8 @@ class AutoCloseService:
             "auto_close_days": self.default_auto_close_days,
             "auto_close_enabled": True
         }
+
+# NOTE: Method renamed to `get_system_settings` to match schema; underlying DB table is `system_settings`.
 
     def _close_ticket(self, ticket_id: str, company_id: str, stats: Dict) -> bool:
         """
@@ -147,7 +149,7 @@ class AutoCloseService:
             # Process each company's tickets
             for company_id, tickets in company_tickets.items():
                 try:
-                    settings = self.get_company_settings(company_id)
+                    settings = self.get_system_settings(company_id)
 
                     if not settings["auto_close_enabled"]:
                         logger.info(f"Auto-close disabled for company {company_id}, skipping {len(tickets)} tickets")

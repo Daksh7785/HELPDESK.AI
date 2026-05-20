@@ -17,7 +17,7 @@ supabase migration up
 ```
 
 This creates:
-- `company_settings` table (stores per-company auto-close and notification preferences)
+- `system_settings` table (stores per-company system configuration and notification preferences)
 - `closed_at` and `auto_closed` columns on tickets table
 - Performance indexes
 
@@ -30,8 +30,8 @@ python scripts/seed_company_settings.py
 
 Creates default settings for all existing companies:
 - Auto-close enabled, 7-day inactivity threshold
-- Email notifications enabled
-- Admin alerts enabled
+- `email_notifications` enabled
+- `admin_alerts` enabled
 
 ### 3. Install Dependencies
 
@@ -79,11 +79,11 @@ Log results: "Closed 5, Skipped 10, Errors 0"
 
 ```
 Before sending notification (digest, alert, push):
-    ↓
-Check company_settings:
-  - email_notifications_enabled? → allow/deny email/digest
-  - admin_alerts_enabled? → allow/deny admin escalation
-  - digest_frequency? → daily/weekly/disabled
+        ↓
+Check system_settings:
+    - `email_notifications`? → allow/deny email/digest
+    - `admin_alerts`? → allow/deny admin escalation
+    - `digest_frequency`? → daily/weekly/disabled
     ↓
 Log decision: sent / skipped / error
     ↓
@@ -96,9 +96,9 @@ Proceed or skip notification
 |------|---------|
 | `backend/services/auto_close_service.py` | Background job service for auto-closing tickets |
 | `backend/services/notification_routing.py` | Middleware for notification gating |
-| `supabase/migrations/20260531_add_company_settings.sql` | Database schema: company_settings table |
+| `supabase/migrations/20260531_add_company_settings.sql` | Database schema: system_settings table |
 | `supabase/migrations/20260531_update_tickets_auto_close.sql` | Database schema: auto-close columns on tickets |
-| `backend/scripts/seed_company_settings.py` | Script to initialize default company settings |
+| `backend/scripts/seed_company_settings.py` | Script to initialize default system settings |
 | `backend/INTEGRATION_GUIDE_ISSUE_41.md` | Full integration instructions |
 | `backend/ISSUE_41_README.md` | This file |
 
@@ -165,14 +165,18 @@ Backend logs will show:
 | `AUTO_CLOSE_CRON_SCHEDULE` | `0 2 * * *` | Cron schedule for job (2 AM UTC daily) |
 | `NOTIFICATION_ROUTING_LOG_LEVEL` | `info` | Logging level (debug, info, warning) |
 
-### Company Settings (Database)
+### System Settings (Database)
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
+| `company_id` | UUID | (unique) | Company identifier (unique)
+| `ai_confidence_threshold` | float | `0.80` | Threshold for AI confidence
+| `duplicate_sensitivity` | float | `0.85` | Duplicate detection sensitivity
+| `enable_auto_resolve` | bool | `false` | Allow AI auto-resolve suggestions
 | `auto_close_enabled` | bool | `true` | Enable auto-close for this company |
 | `auto_close_days` | int | `7` | Days of inactivity before closing |
-| `email_notifications_enabled` | bool | `true` | Allow email notifications |
-| `admin_alerts_enabled` | bool | `true` | Allow admin alerts |
+| `email_notifications` | bool | `true` | Allow email notifications |
+| `admin_alerts` | bool | `true` | Allow admin alerts |
 | `digest_frequency` | enum | `daily` | Email digest frequency (daily, weekly, disabled) |
 
 ## Troubleshooting
@@ -180,9 +184,9 @@ Backend logs will show:
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | Auto-close job not running | APScheduler not started or invalid cron | Check backend logs, verify cron format |
-| Tickets not closing | `auto_close_enabled=false` for company | Update company_settings table |
+| Tickets not closing | `auto_close_enabled=false` for company | Update system_settings table |
 | Notifications still sending when disabled | Cache not invalidated | Call `routing.invalidate_cache(company_id)` |
-| Missing company_settings records | Didn't run seed script | Run `python scripts/seed_company_settings.py` |
+| Missing system_settings records | Didn't run seed script | Run `python scripts/seed_company_settings.py` |
 
 ## Next Steps
 
@@ -199,4 +203,4 @@ For questions or issues:
 1. Check logs for error messages
 2. Review INTEGRATION_GUIDE_ISSUE_41.md troubleshooting section
 3. Test manually with provided examples
-4. Check database schema is correct: `SELECT * FROM company_settings LIMIT 1;`
+4. Check database schema is correct: `SELECT * FROM system_settings LIMIT 1;`
