@@ -24,7 +24,7 @@ const steps = [
 const AIProcessing = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { text, image_text, image_base64 } = location.state || {};
+    const { text, image_text, image_base64, template_id, template_used, user_modified, ai_hints, ticket_title } = location.state || {};
     const setAITicket = useTicketStore((state) => state.setAITicket);
     const { settings } = useAdminStore();
     const { user, profile } = useAuthStore();
@@ -114,7 +114,13 @@ const AIProcessing = () => {
                         "System",
                     image_url: uploadedImageUrl,
                     confidence_threshold: settings.aiConfidenceThreshold,
-                    duplicate_sensitivity: settings.duplicateSensitivity
+                    duplicate_sensitivity: settings.duplicateSensitivity,
+                    // Smart Template metadata (backend can use for improved routing)
+                    template_id: template_id || null,
+                    template_used: template_used || false,
+                    user_modified: user_modified || false,
+                    ai_hints: ai_hints || null,
+                    ticket_title: ticket_title || null,
                 };
 
                 const response = await fetch(

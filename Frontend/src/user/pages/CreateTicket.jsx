@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
     Upload,
     X,
@@ -23,9 +23,12 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../..
 import { Textarea } from "../../components/ui/textarea";
 import Tesseract from 'tesseract.js';
 import { translateText, SUPPORTED_LANGUAGES } from '../../services/translationService';
+import TemplateSelector from '../components/TemplateSelector';
+import TICKET_TEMPLATES from '../../data/ticketTemplates';
 
 const CreateTicket = () => {
     const [issue, setIssue] = useState('');
+    const [ticketTitle, setTicketTitle] = useState('');
     const [file, setFile] = useState(null);
     const [imagePreview, setImagePreview] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -35,12 +38,18 @@ const CreateTicket = () => {
     const [isListening, setIsListening] = useState(false);
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
+    const location = useLocation();
     const MAX_CHARS = 1000;
     const supportsSpeech = 'SpeechRecognition' in window || 'webkitSpeechRecognition' in window;
     const [selectedLanguage, setSelectedLanguage] = useState('en');
     const [isTranslating, setIsTranslating] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
     const langRef = useRef(null);
+
+    // Smart Template state
+    const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+    const [templateUsed, setTemplateUsed] = useState(false);
+    const [userModified, setUserModified] = useState(false);
 
     // Voice UI states
     const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -62,6 +71,18 @@ const CreateTicket = () => {
             if (audioContextRef.current) audioContextRef.current.close();
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
+    }, []);
+
+    // Pre-select template if navigated from QuickActions or Dashboard with a templateId
+    useEffect(() => {
+        const incomingTemplateId = location.state?.templateId;
+        if (incomingTemplateId) {
+            const template = TICKET_TEMPLATES.find((t) => t.id === incomingTemplateId);
+            if (template) {
+                handleSelectTemplate(template);
+            }
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     // Close language dropdown on outside click
@@ -263,6 +284,24 @@ const CreateTicket = () => {
         }
     };
 
+    // ── Smart Template handlers ──
+    const handleSelectTemplate = (template) => {
+        setSelectedTemplateId(template.id);
+        setTicketTitle(template.title);
+        setIssue(template.description_template);
+        setTemplateUsed(true);
+        setUserModified(false);
+        setError('');
+    };
+
+    const handleDismissTemplate = () => {
+        setSelectedTemplateId(null);
+        setTicketTitle('');
+        setIssue('');
+        setTemplateUsed(false);
+        setUserModified(false);
+    };
+
     const handleAnalyze = async (e) => {
         e.preventDefault();
         if (!issue.trim()) {
@@ -288,6 +327,11 @@ const CreateTicket = () => {
                 setIsTranslating(false);
             }
 
+            // If a title was provided, prepend it to the text for richer AI context
+            if (ticketTitle.trim()) {
+                textToSubmit = `${ticketTitle.trim()}\n\n${textToSubmit}`;
+            }
+
             let imageBase64 = "";
             let extractedOCRText = extractedOCR;
             if (file) {
@@ -300,6 +344,9 @@ const CreateTicket = () => {
                 });
             }
 
+            // Build template metadata for the AI pipeline
+            const selectedTpl = TICKET_TEMPLATES.find((t) => t.id === selectedTemplateId);
+
             // Navigate to AI Processing workflow where the API will be called
             navigate('/ai-processing', {
                 state: {
@@ -307,7 +354,13 @@ const CreateTicket = () => {
                     original_text: issue,
                     original_language: selectedLanguage,
                     image_base64: imageBase64,
-                    image_text: extractedOCRText
+                    image_text: extractedOCRText,
+                    // Smart Template metadata
+                    template_id: selectedTemplateId || null,
+                    template_used: templateUsed,
+                    user_modified: userModified,
+                    ai_hints: selectedTpl?.ai_hints || null,
+                    ticket_title: ticketTitle.trim() || null,
                 }
             });
 
@@ -346,6 +399,31 @@ const CreateTicket = () => {
 
                             <CardContent className="p-8 pt-2 flex-grow flex flex-col">
                                 <form onSubmit={handleAnalyze} className="space-y-6 flex-grow flex flex-col">
+
+                                    {/* ── Smart Ticket Templates ── */}
+                                    <TemplateSelector
+                                        selectedTemplateId={selectedTemplateId}
+                                        onSelectTemplate={handleSelectTemplate}
+                                        onDismissTemplate={handleDismissTemplate}
+                                    />
+
+                                    {/* Title Field */}
+                                    <div className="space-y-2">
+                                        <label className="text-sm font-bold text-gray-700">Title</label>
+                                        <input
+                                            type="text"
+                                            value={ticketTitle}
+                                            onChange={(e) => {
+                                                setTicketTitle(e.target.value);
+                                                if (templateUsed) setUserModified(true);
+                                            }}
+                                            placeholder="Brief summary of your issue"
+                                            className="w-full rounded-2xl border border-gray-100 bg-gray-50/50 focus:bg-white focus:border-emerald-300 focus:ring-2 focus:ring-emerald-100 transition-all text-base p-4 outline-none"
+                                            disabled={isLoading}
+                                            maxLength={200}
+                                        />
+                                    </div>
+
                                     {/* Description Textarea */}
                                     <div className="space-y-2 flex-grow flex flex-col relative">
                                         <div className="flex items-center justify-between">
@@ -421,7 +499,10 @@ const CreateTicket = () => {
                                         <div className="relative flex-grow flex flex-col">
                                             <Textarea
                                                 value={issue}
-                                                onChange={(e) => setIssue(e.target.value.substring(0, MAX_CHARS))}
+                                                onChange={(e) => {
+                                                    setIssue(e.target.value.substring(0, MAX_CHARS));
+                                                    if (templateUsed) setUserModified(true);
+                                                }}
                                                 placeholder="Describe your problem. Example: VPN not connecting error 789"
                                                 className="min-h-[160px] flex-grow rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white transition-all text-base p-4 resize-none"
                                                 disabled={isLoading}
