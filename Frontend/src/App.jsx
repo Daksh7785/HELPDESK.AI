@@ -205,6 +205,11 @@ function App() {
 
   useEffect(() => {
     initialize();
+    // Dark mode initialize
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
   }, [initialize]);
 
   return (
