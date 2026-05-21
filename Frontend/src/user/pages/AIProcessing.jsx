@@ -24,7 +24,7 @@ const steps = [
 const AIProcessing = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { text, image_text, image_base64, template_id, template_used, user_modified, ai_hints, ticket_title } = location.state || {};
+    const { text, image_text, image_base64, template_id, template_used, user_modified, ticket_title } = location.state || {};
     const setAITicket = useTicketStore((state) => state.setAITicket);
     const { settings } = useAdminStore();
     const { user, profile } = useAuthStore();
@@ -119,7 +119,6 @@ const AIProcessing = () => {
                     template_id: template_id || null,
                     template_used: template_used || false,
                     user_modified: user_modified || false,
-                    ai_hints: ai_hints || null,
                     ticket_title: ticket_title || null,
                 };
 

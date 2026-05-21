@@ -1,5 +1,9 @@
 /**
- * Smart Ticket Templates — predefined issue templates for common IT problems.
+ * Smart Ticket Templates v2 — Structured Dynamic Form Templates
+ *
+ * ARCHITECTURE CHANGE (v2):
+ * Templates now include a `fields` array for dynamic form rendering,
+ * replacing the old plain-text `description_template` blob approach.
  *
  * Each template contains:
  *   - id:                   unique slug identifier
@@ -8,9 +12,14 @@
  *   - category:             broad category for Quick Actions bridging
  *   - priority_hint:        soft signal for the AI pipeline
  *   - title:                auto-filled ticket title
- *   - description_template: structured markdown body with placeholders
+ *   - description_summary:  brief description shown in template preview
+ *   - fields:               structured form field definitions for dynamic rendering
  *   - tags:                 search/filter keywords
- *   - ai_hints:             metadata passed to the AI pipeline for better routing
+ *
+ * Supported field types: text, textarea, select, date, checkbox
+ *
+ * The old `description_template` is REMOVED in favor of `fields`.
+ * At submit time, fields are serialized back to formatted text for backend compatibility.
  */
 
 const TICKET_TEMPLATES = [
@@ -21,19 +30,16 @@ const TICKET_TEMPLATES = [
     category: 'Network',
     priority_hint: 'high',
     title: 'Unable to connect to company VPN',
-    description_template:
-      'Unable to establish a secure VPN connection.\n\n' +
-      '**Error Message:**\n[Paste the exact error here]\n\n' +
-      '**Device & OS:**\n[e.g., Windows 11 laptop / MacBook M2]\n\n' +
-      '**Location:**\n[Office / Home WiFi / Mobile Hotspot]\n\n' +
-      '**Internet Status:**\n[Working / Not Working]\n\n' +
-      '**Additional Context:**\n[What changed recently? e.g., after password reset, OS update]',
+    description_summary: 'Report VPN connection failures with device, location, and error details.',
+    fields: [
+      { key: 'error_message', label: 'Error Message', type: 'textarea', placeholder: 'Paste the exact error here', required: true },
+      { key: 'device_os', label: 'Device & OS', type: 'text', placeholder: 'e.g., Windows 11 laptop / MacBook M2', required: true },
+      { key: 'location', label: 'Location', type: 'select', options: ['Office', 'Home WiFi', 'Mobile Hotspot', 'Other'], required: true },
+      { key: 'internet_status', label: 'Internet Status', type: 'select', options: ['Working', 'Not Working', 'Intermittent'], required: true },
+      { key: 'vpn_client', label: 'VPN Client', type: 'text', placeholder: 'e.g., Cisco AnyConnect, GlobalProtect, OpenVPN', required: false },
+      { key: 'additional_context', label: 'Additional Context', type: 'textarea', placeholder: 'What changed recently? e.g., password reset, OS update', required: false },
+    ],
     tags: ['vpn', 'network', 'connectivity', 'remote-access'],
-    ai_hints: {
-      likely_category: 'Network & Connectivity',
-      likely_team: 'IT Infrastructure',
-      keywords: ['vpn', 'authentication failed', 'tunnel', 'cisco', 'globalprotect'],
-    },
   },
   {
     id: 'password-reset',
@@ -42,19 +48,15 @@ const TICKET_TEMPLATES = [
     category: 'Access',
     priority_hint: 'medium',
     title: 'Password reset request',
-    description_template:
-      'I need to reset my account password.\n\n' +
-      '**Account / System:**\n[e.g., Email, SSO, Active Directory, VPN]\n\n' +
-      '**Username / Email:**\n[Your account identifier]\n\n' +
-      '**Reason for Reset:**\n[Forgotten / Expired / Locked out / Compromised]\n\n' +
-      '**Last Successful Login:**\n[Approximate date]\n\n' +
-      '**Additional Context:**\n[Any error messages or relevant details]',
+    description_summary: 'Request a password reset for any company system or account.',
+    fields: [
+      { key: 'account_system', label: 'Account / System', type: 'select', options: ['Email', 'SSO', 'Active Directory', 'VPN', 'Other'], required: true },
+      { key: 'username_email', label: 'Username / Email', type: 'text', placeholder: 'Your account identifier', required: true },
+      { key: 'reset_reason', label: 'Reason for Reset', type: 'select', options: ['Forgotten', 'Expired', 'Locked out', 'Compromised', 'Other'], required: true },
+      { key: 'last_login', label: 'Last Successful Login', type: 'date', placeholder: '', required: false },
+      { key: 'additional_context', label: 'Additional Context', type: 'textarea', placeholder: 'Any error messages or relevant details', required: false },
+    ],
     tags: ['password', 'reset', 'account', 'locked', 'login'],
-    ai_hints: {
-      likely_category: 'Access & Authentication',
-      likely_team: 'Identity & Access Management',
-      keywords: ['password', 'reset', 'locked', 'expired', 'MFA', 'login'],
-    },
   },
   {
     id: 'email-access',
@@ -63,20 +65,16 @@ const TICKET_TEMPLATES = [
     category: 'Software',
     priority_hint: 'high',
     title: 'Unable to access email',
-    description_template:
-      'Experiencing issues accessing company email.\n\n' +
-      '**Email Client:**\n[Outlook Desktop / Outlook Web / Gmail / Mobile App]\n\n' +
-      '**Error Message:**\n[Paste the exact error here]\n\n' +
-      '**Device & OS:**\n[e.g., Windows 11 / macOS Sonoma / iPhone 15]\n\n' +
-      '**Issue Type:**\n[Cannot login / Emails not loading / Cannot send / Cannot receive]\n\n' +
-      '**Since When:**\n[Date & time the issue started]\n\n' +
-      '**Additional Context:**\n[Any recent changes — password reset, device change, etc.]',
+    description_summary: 'Report email connectivity, login, or delivery issues.',
+    fields: [
+      { key: 'email_client', label: 'Email Client', type: 'select', options: ['Outlook Desktop', 'Outlook Web (OWA)', 'Gmail', 'Mobile App', 'Other'], required: true },
+      { key: 'error_message', label: 'Error Message', type: 'textarea', placeholder: 'Paste the exact error here', required: false },
+      { key: 'device_os', label: 'Device & OS', type: 'text', placeholder: 'e.g., Windows 11 / macOS Sonoma / iPhone 15', required: true },
+      { key: 'issue_type', label: 'Issue Type', type: 'select', options: ['Cannot login', 'Emails not loading', 'Cannot send', 'Cannot receive', 'Slow performance'], required: true },
+      { key: 'since_when', label: 'Since When', type: 'date', placeholder: '', required: true },
+      { key: 'additional_context', label: 'Additional Context', type: 'textarea', placeholder: 'Any recent changes — password reset, device change, etc.', required: false },
+    ],
     tags: ['email', 'outlook', 'mail', 'inbox', 'access'],
-    ai_hints: {
-      likely_category: 'Email & Communication',
-      likely_team: 'Messaging & Collaboration',
-      keywords: ['email', 'outlook', 'exchange', 'mail', 'inbox', 'SMTP'],
-    },
   },
   {
     id: 'printer-issue',
@@ -85,20 +83,16 @@ const TICKET_TEMPLATES = [
     category: 'Hardware',
     priority_hint: 'low',
     title: 'Printer not working',
-    description_template:
-      'Having trouble with the office printer.\n\n' +
-      '**Printer Name / Location:**\n[e.g., 3rd Floor HP LaserJet, Room 201]\n\n' +
-      '**Issue Type:**\n[Not printing / Paper jam / Offline / Poor quality / Driver error]\n\n' +
-      '**Error Message:**\n[Any error shown on screen or printer display]\n\n' +
-      '**Connected Via:**\n[USB / WiFi / Network / Bluetooth]\n\n' +
-      '**Steps Already Tried:**\n[Restart, re-add printer, check cables, etc.]\n\n' +
-      '**Additional Context:**\n[Is this affecting multiple users?]',
+    description_summary: 'Report printer hardware, driver, or connectivity problems.',
+    fields: [
+      { key: 'printer_name', label: 'Printer Name / Location', type: 'text', placeholder: 'e.g., 3rd Floor HP LaserJet, Room 201', required: true },
+      { key: 'issue_type', label: 'Issue Type', type: 'select', options: ['Not printing', 'Paper jam', 'Offline', 'Poor quality', 'Driver error', 'Other'], required: true },
+      { key: 'error_message', label: 'Error Message', type: 'text', placeholder: 'Any error shown on screen or printer display', required: false },
+      { key: 'connection_type', label: 'Connected Via', type: 'select', options: ['USB', 'WiFi', 'Network (Ethernet)', 'Bluetooth'], required: true },
+      { key: 'steps_tried', label: 'Steps Already Tried', type: 'textarea', placeholder: 'Restart, re-add printer, check cables, etc.', required: false },
+      { key: 'affects_multiple', label: 'Affects multiple users?', type: 'checkbox', placeholder: '', required: false },
+    ],
     tags: ['printer', 'print', 'hardware', 'paper jam', 'offline'],
-    ai_hints: {
-      likely_category: 'Hardware & Peripherals',
-      likely_team: 'Desktop Support',
-      keywords: ['printer', 'print', 'paper', 'toner', 'driver', 'spooler'],
-    },
   },
   {
     id: 'wifi-network',
@@ -107,21 +101,17 @@ const TICKET_TEMPLATES = [
     category: 'Network',
     priority_hint: 'high',
     title: 'WiFi or network connectivity issue',
-    description_template:
-      'Experiencing WiFi or network connectivity problems.\n\n' +
-      '**Issue Type:**\n[No connection / Slow speed / Intermittent drops / Cannot access specific sites]\n\n' +
-      '**Network Name (SSID):**\n[e.g., CorpWiFi-5G, GuestNetwork]\n\n' +
-      '**Device & OS:**\n[e.g., Dell Laptop / Windows 11]\n\n' +
-      '**Location:**\n[Building, floor, room number]\n\n' +
-      '**Wired or Wireless:**\n[WiFi / Ethernet cable]\n\n' +
-      '**Since When:**\n[Date & time the issue started]\n\n' +
-      '**Additional Context:**\n[Are other users affected? Any recent changes?]',
+    description_summary: 'Report WiFi drops, slow speeds, or network access problems.',
+    fields: [
+      { key: 'issue_type', label: 'Issue Type', type: 'select', options: ['No connection', 'Slow speed', 'Intermittent drops', 'Cannot access specific sites'], required: true },
+      { key: 'network_name', label: 'Network Name (SSID)', type: 'text', placeholder: 'e.g., CorpWiFi-5G, GuestNetwork', required: true },
+      { key: 'device_os', label: 'Device & OS', type: 'text', placeholder: 'e.g., Dell Laptop / Windows 11', required: true },
+      { key: 'location', label: 'Location', type: 'text', placeholder: 'Building, floor, room number', required: true },
+      { key: 'connection_type', label: 'Wired or Wireless', type: 'select', options: ['WiFi', 'Ethernet cable'], required: true },
+      { key: 'since_when', label: 'Since When', type: 'date', placeholder: '', required: true },
+      { key: 'additional_context', label: 'Additional Context', type: 'textarea', placeholder: 'Are other users affected? Any recent changes?', required: false },
+    ],
     tags: ['wifi', 'network', 'internet', 'connectivity', 'slow'],
-    ai_hints: {
-      likely_category: 'Network & Connectivity',
-      likely_team: 'IT Infrastructure',
-      keywords: ['wifi', 'network', 'internet', 'ethernet', 'DNS', 'DHCP'],
-    },
   },
   {
     id: 'software-installation',
@@ -130,21 +120,58 @@ const TICKET_TEMPLATES = [
     category: 'Software',
     priority_hint: 'medium',
     title: 'Software installation request',
-    description_template:
-      'Requesting installation of software on my workstation.\n\n' +
-      '**Software Name & Version:**\n[e.g., Adobe Acrobat Pro 2024, Python 3.12]\n\n' +
-      '**Business Justification:**\n[Why is this software needed for your role?]\n\n' +
-      '**Device & OS:**\n[e.g., Windows 11 laptop, Asset Tag #12345]\n\n' +
-      '**License Available:**\n[Yes / No / Not sure]\n\n' +
-      '**Urgency:**\n[Needed by a specific date? e.g., before project deadline]\n\n' +
-      '**Additional Context:**\n[Any special configuration requirements?]',
+    description_summary: 'Request new software installation with license and justification details.',
+    fields: [
+      { key: 'software_name', label: 'Software Name & Version', type: 'text', placeholder: 'e.g., Adobe Acrobat Pro 2024, Python 3.12', required: true },
+      { key: 'justification', label: 'Business Justification', type: 'textarea', placeholder: 'Why is this software needed for your role?', required: true },
+      { key: 'device_os', label: 'Device & OS', type: 'text', placeholder: 'e.g., Windows 11 laptop, Asset Tag #12345', required: true },
+      { key: 'license_available', label: 'License Available', type: 'select', options: ['Yes', 'No', 'Not sure'], required: true },
+      { key: 'needed_by', label: 'Needed By', type: 'date', placeholder: '', required: false },
+      { key: 'additional_context', label: 'Additional Context', type: 'textarea', placeholder: 'Any special configuration requirements?', required: false },
+    ],
     tags: ['software', 'install', 'application', 'license', 'download'],
-    ai_hints: {
-      likely_category: 'Software & Applications',
-      likely_team: 'Software Deployment',
-      keywords: ['install', 'software', 'application', 'license', 'deploy'],
-    },
   },
 ];
+
+/**
+ * serializeFieldsToText — Converts structured form data back into formatted
+ * plain text for backend API compatibility.
+ *
+ * This ensures the existing `/ai/analyze_stream` and `/tickets/save` endpoints
+ * continue to work without any backend modifications.
+ *
+ * @param {Array} fields  - The template's field definitions
+ * @param {Object} values - The user-entered values keyed by field.key
+ * @returns {string}      - Formatted text description
+ */
+export function serializeFieldsToText(fields, values) {
+  const lines = [];
+  for (const field of fields) {
+    const val = values[field.key];
+    // Skip empty optional fields
+    if (!val && !field.required) continue;
+    // Handle checkbox fields
+    if (field.type === 'checkbox') {
+      lines.push(`${field.label}: ${val ? 'Yes' : 'No'}`);
+    } else if (val) {
+      lines.push(`${field.label}: ${val}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+/**
+ * getEmptyFormValues — Creates an empty values object for a template's fields.
+ *
+ * @param {Array} fields - The template's field definitions
+ * @returns {Object}     - Empty form values keyed by field.key
+ */
+export function getEmptyFormValues(fields) {
+  const values = {};
+  for (const field of fields) {
+    values[field.key] = field.type === 'checkbox' ? false : '';
+  }
+  return values;
+}
 
 export default TICKET_TEMPLATES;
