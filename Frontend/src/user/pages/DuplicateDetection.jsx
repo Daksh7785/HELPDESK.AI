@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
     FileText, Database, Zap,
     CheckCircle2, AlertTriangle, ArrowRight,
-    Lightbulb, SearchX, TicketCheck, Search, BellAlert, Link2
+    Lightbulb, SearchX, TicketCheck, Search, Bell, Link2
 } from 'lucide-react';
 import useTicketStore from "../../store/ticketStore";
 import { API_CONFIG } from "../../config";
@@ -193,7 +193,7 @@ const DuplicateDetection = () => {
                                 <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-amber-300/20 blur-3xl" />
                                 <div className="relative flex items-start gap-4">
                                     <div className="rounded-2xl bg-amber-100 p-3 shadow-sm">
-                                        <BellAlert className="h-6 w-6 text-amber-700" />
+                                        <Bell className="h-6 w-6 text-amber-700" />
                                     </div>
                                     <div className="flex-1">
                                         <p className="text-[11px] font-black uppercase tracking-[0.22em] text-amber-700">Potential Duplicate</p>
