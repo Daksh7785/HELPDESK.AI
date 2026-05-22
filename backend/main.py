@@ -721,7 +721,27 @@ async def save_ticket(request_body: TicketSaveRequest):
         final_data["is_potential_duplicate"] = duplicate_result.get("is_potential_duplicate", False)
         final_data["parent_ticket_id"] = duplicate_result.get("parent_ticket_id")
 
-        res = supabase.table("tickets").insert(final_data).execute()
+        # --- Sanitize payload to only include valid Supabase DB columns ---
+        # Extra AI telemetry fields are merged into the metadata JSONB column
+        # to avoid 400/500 errors from unknown column names in the insert call.
+        VALID_TICKET_COLUMNS = {
+            "user_id", "subject", "description", "category", "subcategory",
+            "priority", "assigned_team", "status", "auto_resolve", "is_duplicate",
+            "confidence", "image_url", "company", "company_id", "description_vector",
+            "is_potential_duplicate", "parent_ticket_id", "sla_response_due_at",
+            "sla_breach_at", "sla_status", "escalation_level", "metadata",
+        }
+        # Merge any extra telemetry fields into metadata before filtering
+        existing_metadata = final_data.get("metadata") or {}
+        for extra_key in ("entities", "solution_steps", "ocr_text", "needs_review", "routing_confidence"):
+            if extra_key in final_data and final_data[extra_key] not in (None, "", [], {}):
+                existing_metadata[extra_key] = final_data[extra_key]
+        final_data["metadata"] = existing_metadata
+
+        # Strip keys not accepted by the DB schema
+        insert_data = {k: v for k, v in final_data.items() if k in VALID_TICKET_COLUMNS}
+
+        res = supabase.table("tickets").insert(insert_data).execute()
         
         if not res.data:
             raise Exception("Failed to insert ticket into database.")
@@ -862,6 +882,46 @@ async def analyze_only(request_body: TicketRequest):
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
+
+    # --- Vague Input Guard ---
+    # If the text is extremely short or a generic term, skip AI classification and
+    # return a safe low-priority "General Inquiry" to prevent hallucinated critical categories.
+    import re as _re
+    VAGUE_KEYWORDS = {
+        "demo", "test", "hi", "hello", "check", "try", "ping", "ok", "okay",
+        "issue", "problem", "error", "bug", "help", "hey", "asdf", "xyz",
+        "foo", "bar", "nothing", "something", "stuff",
+    }
+    _stripped = text.strip().lower()
+    _word_count = len(_stripped.split())
+    _is_vague = (len(_stripped) < 15) or (_word_count == 1 and _stripped in VAGUE_KEYWORDS)
+    if _is_vague:
+        import datetime as _dt, uuid as _uuid
+        _sla_breach = calculate_sla_breach_at("Low")
+        print(f"[AI] Vague input detected: '{text}'. Returning safe General Inquiry classification.")
+        return TicketResponse(
+            ticket_id=str(_uuid.uuid4()),
+            summary=f"General inquiry: {text}",
+            category="General",
+            subcategory="General Inquiry",
+            priority="Low",
+            auto_resolve=False,
+            assigned_team="IT Support",
+            entities=[],
+            duplicate_ticket=DuplicateInfo(is_duplicate=False),
+            confidence=0.1,
+            needs_review=True,
+            reasoning="Input was too brief for accurate classification. Please provide more context.",
+            decision_factors=["Input is too short or generic for AI classification."],
+            image_description="",
+            ocr_text="",
+            highlights=[],
+            timeline={"received": _dt.datetime.utcnow().isoformat() + "Z"},
+            env_metadata={},
+            is_potential_duplicate=False,
+            parent_ticket_id=None,
+            sla_breach_at=_sla_breach.isoformat().replace("+00:00", "Z"),
+        )
     
     # --- Context & Environment ---
     import datetime
