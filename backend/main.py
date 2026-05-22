@@ -58,6 +58,13 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.sla_service import (
+    calculate_sla_breach_at,
+    calculate_sla_response_at,
+    classify_sla_status,
+    load as load_sla_service,
+    run_sla_escalation_loop,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -105,7 +112,10 @@ class TicketSaveRequest(BaseModel):
     image_url: str | None = None
     company: str | None = None
     company_id: str | None = None
+    sla_response_due_at: str | None = None
     sla_breach_at: str
+    sla_status: str | None = None
+    escalation_level: int = 0
     metadata: dict
     entities: list = []
     solution_steps: list = []
@@ -253,8 +263,30 @@ async def lifespan(app: FastAPI):
 
     if strict_mode and not classifier_loaded_flag:
         raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
-    yield
-    print("[Shutdown] Cleaning up ...")
+
+    sla_task = None
+    try:
+        if supabase and os.environ.get("SLA_ESCALATION_ENABLED", "true").lower() == "true":
+            notification_router = None
+            try:
+                from backend.services.notification_routing import load as load_notification_router
+                notification_router = load_notification_router()
+            except Exception as e:
+                print(f"[WARNING] Notification router not loaded for SLA service: {e}")
+            sla_service = load_sla_service(supabase, notification_router)
+            interval = int(os.environ.get("SLA_ESCALATION_INTERVAL_SECONDS", "300"))
+            sla_task = asyncio.create_task(run_sla_escalation_loop(sla_service, interval_seconds=interval))
+            print(f"[Startup] SLA escalation loop enabled ({interval}s interval).")
+
+        yield
+    finally:
+        if sla_task:
+            sla_task.cancel()
+            try:
+                await sla_task
+            except asyncio.CancelledError:
+                pass
+        print("[Shutdown] Cleaning up ...")
 
 
 # ---------------------------------------------------------------------------
@@ -622,6 +654,14 @@ async def save_ticket(request_body: TicketSaveRequest):
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
+        priority = final_data.get("priority")
+        if not final_data.get("sla_response_due_at"):
+            final_data["sla_response_due_at"] = calculate_sla_response_at(priority).isoformat().replace("+00:00", "Z")
+        if not final_data.get("sla_breach_at"):
+            final_data["sla_breach_at"] = calculate_sla_breach_at(priority).isoformat().replace("+00:00", "Z")
+        final_data["sla_status"] = final_data.get("sla_status") or classify_sla_status(final_data.get("sla_breach_at"))
+        final_data["escalation_level"] = int(final_data.get("escalation_level") or 0)
+
         logger.info(f"Tenant linkage: user_id={request_body.user_id}, company_id={final_data.get('company_id')}")
 
         res = supabase.table("tickets").insert(final_data).execute()
@@ -882,10 +922,8 @@ async def analyze_only(request_body: TicketRequest):
     if gemini_service and gemini_service._initialized:
         summary = gemini_service.get_summary(text)
     
-    # Convert priority to SLA breached timestamp (for preview)
-    hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-    sla_hours = hours_map.get(classification["priority"], 72)
-    sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+    # Convert priority to the SLA resolution target timestamp for preview.
+    sla_breach_dt = calculate_sla_breach_at(classification["priority"])
 
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
@@ -906,7 +944,7 @@ async def analyze_only(request_body: TicketRequest):
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
-        sla_breach_at=sla_breach_dt.isoformat() + "Z"
+        sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z")
     )
 
 @app.post("/ai/analyze_stream")
@@ -1029,9 +1067,7 @@ async def analyze_stream(request_body: TicketRequest):
         if gemini_service and gemini_service._initialized:
             summary = gemini_service.get_summary(text)
         
-        hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
-        sla_hours = hours_map.get(classification["priority"], 72)
-        sla_breach_dt = datetime.datetime.utcnow() + datetime.timedelta(hours=sla_hours)
+        sla_breach_dt = calculate_sla_breach_at(classification["priority"])
 
         ticket_response_dict = {
             "ticket_id": str(uuid.uuid4()),
@@ -1052,7 +1088,7 @@ async def analyze_stream(request_body: TicketRequest):
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+            "sla_breach_at": sla_breach_dt.isoformat().replace("+00:00", "Z")
         }
 
         # 6. Final Result
