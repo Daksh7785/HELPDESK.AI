@@ -69,11 +69,13 @@ export const api = {
 
   predictTicket: async (issueText, imageBase64 = "") => {
     try {
+      const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
       // ALWAYS call the real backend for prediction if possible
       const response = await axios.post(`${API_BASE_URL}/ai/analyze_ticket`, {
         text: issueText,
         image_base64: imageBase64,
-        image_text: ""
+        image_text: "",
+        company_id: currentUser.company_id || currentUser.companyId || null
       });
 
       const result = response.data;
@@ -95,7 +97,9 @@ export const api = {
           reasoning: result.reasoning,
           decision_factors: result.decision_factors,
           image_description: result.image_description,
-          ocr_text: result.ocr_text
+          ocr_text: result.ocr_text,
+          is_potential_duplicate: result.is_potential_duplicate || false,
+          parent_ticket_id: result.parent_ticket_id || result.duplicate_ticket?.duplicate_ticket_id || null
         }
       };
     } catch (error) {
@@ -112,7 +116,9 @@ export const api = {
           routing_confidence: 0.5,
           duplicate_probability: 0.0,
           summary: issueText.substring(0, 50) + "...",
-          entities: []
+          entities: [],
+          is_potential_duplicate: false,
+          parent_ticket_id: null
         }
       };
     }

@@ -50,6 +50,8 @@ const TicketTracking = () => {
                     status: status,
                     auto_resolve: isAutoResolved,
                     is_duplicate: aiTicket.duplicate_ticket?.is_duplicate || false,
+                    is_potential_duplicate: aiTicket.is_potential_duplicate || aiTicket.duplicate_ticket?.is_potential_duplicate || false,
+                    parent_ticket_id: aiTicket.parent_ticket_id || aiTicket.duplicate_ticket?.parent_ticket_id || aiTicket.duplicate_ticket?.duplicate_ticket_id || null,
                     confidence: aiTicket.confidence,
                     image_url: aiTicket.image_url || null,
                     company: profile?.company || null,

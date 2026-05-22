@@ -112,6 +112,7 @@ const AIProcessing = () => {
                         profile?.company ||
                         user?.user_metadata?.company ||
                         "System",
+                    company_id: profile?.company_id || null,
                     image_url: uploadedImageUrl,
                     confidence_threshold: settings.aiConfidenceThreshold,
                     duplicate_sensitivity: settings.duplicateSensitivity,

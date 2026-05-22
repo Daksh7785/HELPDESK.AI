@@ -80,12 +80,39 @@ def get_system_settings(company_id: str) -> dict:
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
+
+
+def get_duplicate_threshold(company_id: str | None, fallback: float = 0.85) -> float:
+    if not company_id:
+        return fallback
+    settings = get_system_settings(company_id)
+    try:
+        return float(settings.get("duplicate_sensitivity", fallback))
+    except (TypeError, ValueError):
+        return fallback
+
+
+def detect_semantic_duplicate(text: str, *, company_id: str | None, threshold: float) -> dict:
+    try:
+        return duplicate_service.find_semantic_duplicate(
+            text,
+            threshold=threshold,
+            company_id=company_id,
+            supabase_client=supabase,
+        )
+    except Exception as error:
+        print(f"[WARNING] Duplicate detection fallback activated: {error}")
+        duplicate_result = duplicate_service.check_duplicate(text, threshold=threshold)
+        duplicate_result["parent_ticket_id"] = duplicate_result.get("duplicate_ticket_id")
+        duplicate_result["is_potential_duplicate"] = duplicate_result.get("is_duplicate", False)
+        return duplicate_result
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
+    company_id: str | None = None
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
@@ -105,6 +132,9 @@ class TicketSaveRequest(BaseModel):
     image_url: str | None = None
     company: str | None = None
     company_id: str | None = None
+    description_vector: list[float] | None = None
+    is_potential_duplicate: bool = False
+    parent_ticket_id: str | None = None
     sla_breach_at: str
     metadata: dict
     entities: list = []
@@ -117,6 +147,8 @@ class TicketSaveRequest(BaseModel):
 class DuplicateInfo(BaseModel):
     is_duplicate: bool
     duplicate_ticket_id: str | None = None
+    parent_ticket_id: str | None = None
+    is_potential_duplicate: bool = False
     similarity: float = 0.0
 
 
@@ -138,6 +170,8 @@ class TicketResponse(BaseModel):
     entities: list[EntityInfo]
     duplicate_ticket: DuplicateInfo
     confidence: float
+    is_potential_duplicate: bool = False
+    parent_ticket_id: str | None = None
     needs_review: bool = False
     reasoning: str = ""
     decision_factors: list[str] = []
@@ -599,6 +633,29 @@ async def save_ticket(request_body: TicketSaveRequest):
 
         logger.info(f"Tenant linkage: user_id={request_body.user_id}, company_id={final_data.get('company_id')}")
 
+        duplicate_text = (request_body.description or "").strip() or (request_body.subject or "").strip()
+        duplicate_threshold = get_duplicate_threshold(final_data.get("company_id"), 0.85)
+        duplicate_result = {
+            "is_duplicate": False,
+            "duplicate_ticket_id": None,
+            "parent_ticket_id": None,
+            "is_potential_duplicate": False,
+            "similarity": 0.0,
+        }
+
+        if duplicate_text:
+            duplicate_result = detect_semantic_duplicate(
+                duplicate_text,
+                company_id=final_data.get("company_id"),
+                threshold=duplicate_threshold,
+            )
+            final_data["description_vector"] = duplicate_service.generate_embedding(duplicate_text)
+        else:
+            final_data["description_vector"] = None
+
+        final_data["is_potential_duplicate"] = duplicate_result.get("is_potential_duplicate", False)
+        final_data["parent_ticket_id"] = duplicate_result.get("parent_ticket_id")
+
         res = supabase.table("tickets").insert(final_data).execute()
         
         if not res.data:
@@ -608,9 +665,6 @@ async def save_ticket(request_body: TicketSaveRequest):
 
         duplicate_indexed = True
         duplicate_index_warning = None
-        description_text = (request_body.description or "").strip()
-        subject_text = (request_body.subject or "").strip()
-        duplicate_text = description_text or subject_text
         if duplicate_text:
             try:
                 duplicate_service.add_ticket(str(ticket_id), duplicate_text)
@@ -636,7 +690,13 @@ async def save_ticket(request_body: TicketSaveRequest):
             "message": msg
         }).execute()
         
-        response = {"status": "success", "ticket_id": ticket_id, "duplicate_indexed": duplicate_indexed}
+        response = {
+            "status": "success",
+            "ticket_id": ticket_id,
+            "duplicate_indexed": duplicate_indexed,
+            "is_potential_duplicate": final_data["is_potential_duplicate"],
+            "parent_ticket_id": final_data["parent_ticket_id"],
+        }
         if duplicate_index_warning:
             response["duplicate_index_warning"] = duplicate_index_warning
         return response
@@ -696,7 +756,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     text = request_body.text
 
-    settings = get_system_settings(request_body.company)
+    settings = get_system_settings(request_body.company_id)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -811,10 +871,21 @@ async def analyze_only(request_body: TicketRequest):
     timeline["metadata_harvested"] = get_now_ist()
 
     # --- Duplicate detection ---
+    duplicate_threshold = get_duplicate_threshold(request_body.company_id, duplicate_sensitivity)
     try:
-        dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+        dup_result = detect_semantic_duplicate(
+            text,
+            company_id=request_body.company_id,
+            threshold=duplicate_threshold,
+        )
     except Exception:
-        dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+        dup_result = {
+            "is_duplicate": False,
+            "duplicate_ticket_id": None,
+            "parent_ticket_id": None,
+            "is_potential_duplicate": False,
+            "similarity": 0.0,
+        }
 
     # --- RAG Knowledge Base Check ---
     rag_match = None
@@ -881,6 +952,8 @@ async def analyze_only(request_body: TicketRequest):
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
+        is_potential_duplicate=dup_result.get("is_potential_duplicate", False),
+        parent_ticket_id=dup_result.get("parent_ticket_id"),
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
 
@@ -901,7 +974,7 @@ async def analyze_stream(request_body: TicketRequest):
             "api_endpoint": "/ai/analyze_stream"
         }
         timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company)
+        settings = get_system_settings(request_body.company_id)
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
         enable_auto_resolve = settings["enable_auto_resolve"]
@@ -966,9 +1039,20 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+            duplicate_threshold = get_duplicate_threshold(request_body.company_id, duplicate_sensitivity)
+            dup_result = detect_semantic_duplicate(
+                text,
+                company_id=request_body.company_id,
+                threshold=duplicate_threshold,
+            )
         except Exception:
-            dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
+            dup_result = {
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "parent_ticket_id": None,
+                "is_potential_duplicate": False,
+                "similarity": 0.0,
+            }
 
         # 5. RAG / Solutions
         yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
@@ -1027,6 +1111,8 @@ async def analyze_stream(request_body: TicketRequest):
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
+            "is_potential_duplicate": dup_result.get("is_potential_duplicate", False),
+            "parent_ticket_id": dup_result.get("parent_ticket_id"),
             "sla_breach_at": sla_breach_dt.isoformat() + "Z"
         }
 
