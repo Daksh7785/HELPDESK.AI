@@ -51,7 +51,7 @@ const TicketTracking = () => {
                     is_duplicate: aiTicket.duplicate_ticket?.is_duplicate || false,
                     confidence: aiTicket.confidence,
                     image_url: aiTicket.image_url || null,
-                    company: profile?.company || "System",
+                    company: profile?.company || null,
                     company_id: profile?.company_id || null,
                     sla_breach_at: aiTicket.sla_breach_at,
                     metadata: {
