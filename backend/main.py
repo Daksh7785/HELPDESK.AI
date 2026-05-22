@@ -546,6 +546,31 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
+@app.get("/tickets/search")
+async def search_tickets(q: str | None = None, company_id: str | None = None, limit: int = 50, offset: int = 0):
+    """Search tickets using tenant-safe full-text search."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    if not q:
+        raise HTTPException(status_code=400, detail="Search query is required")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="company_id is required for tenant-safe search")
+
+    try:
+        result = supabase.rpc(
+            "search_tickets",
+            {
+                "query_text": q,
+                "company_id": company_id,
+                "limit_rows": limit,
+                "offset_rows": offset,
+            },
+        ).execute()
+        return result.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
+
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
