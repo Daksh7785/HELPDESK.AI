@@ -104,6 +104,7 @@ const DuplicateDetection = () => {
     if (isLoading) return <SkeletonLoader />;
     if (!aiTicket) return null;
 
+    
     return (
         <div className="min-h-screen bg-[#f6f8f7] pb-20 pt-28 px-6">
             <style>{`@keyframes knowledgeScan{0%{left:0%;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:100%;opacity:0}}`}</style>
