@@ -561,10 +561,10 @@ async def search_tickets(q: str | None = None, company_id: str | None = None, li
         result = supabase.rpc(
             "search_tickets",
             {
-                "query": q,
+                "query_text": q,
                 "company_id": company_id,
-                "limit": limit,
-                "offset": offset,
+                "limit_rows": limit,
+                "offset_rows": offset,
             },
         ).execute()
         return result.data or []

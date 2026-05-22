@@ -32,7 +32,7 @@ LANGUAGE sql STABLE
 AS $$
   SELECT t.*
   FROM public.tickets AS t
-  WHERE t.company_id = company_id
+  WHERE t.company_id = search_tickets.company_id
     AND (
       to_tsvector('english',
         coalesce(t.subject, '') || ' ' ||
