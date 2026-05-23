@@ -728,7 +728,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         VALID_TICKET_COLUMNS = {
             "user_id", "subject", "description", "category", "subcategory",
             "priority", "assigned_team", "status", "auto_resolve", "is_duplicate",
-            "confidence", "image_url", "company", "company_id", "description_vector",
+            "confidence", "image_url", "company", "company_id",
             "is_potential_duplicate", "parent_ticket_id", "sla_response_due_at",
             "sla_breach_at", "sla_status", "escalation_level", "metadata",
         }
