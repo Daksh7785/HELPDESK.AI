@@ -78,6 +78,7 @@ import MasterAdminDashboard from "./master-admin/pages/MasterAdminDashboard";
 import PendingAdminRequests from "./master-admin/pages/PendingAdminRequests";
 import AllCompanies from "./master-admin/pages/AllCompanies";
 import AllAdmins from "./master-admin/pages/AllAdmins";
+import Changelog from "./pages/Changelog";
 
 
 function TitleUpdater() {
@@ -205,6 +206,11 @@ function App() {
 
   useEffect(() => {
     initialize();
+    // Dark mode initialize
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
   }, [initialize]);
 
   return (
@@ -231,6 +237,9 @@ function App() {
         <Route path="/features/priority" element={<PriorityDetectionFeature />} />
         <Route path="/features/resolution" element={<SmartResolutionFeature />} />
 
+        {/* Resources Pages */}
+        <Route path="/changelog" element={<Changelog />} />
+        
         {/* Legal Pages */}
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />

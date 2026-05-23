@@ -92,7 +92,10 @@ const LoginScreen = () => {
     try {
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { shouldCreateUser: false },
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: 'helpdeskai://login',
+        },
       });
       if (error) throw error;
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -235,12 +238,6 @@ const LoginScreen = () => {
             <TouchableOpacity onPress={() => navigation.navigate('Signup')}>
               <Text style={styles.footerLink}>Create Account</Text>
             </TouchableOpacity>
-            
-            <View style={{ width: '100%', alignItems: 'center', marginTop: 24 }}>
-              <TouchableOpacity onPress={() => navigation.navigate('AdminSignup')}>
-                <Text style={styles.adminLink}>Access Admin Terminal</Text>
-              </TouchableOpacity>
-            </View>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>

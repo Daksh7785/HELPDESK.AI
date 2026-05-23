@@ -8,7 +8,7 @@ import { StatusBar } from 'expo-status-bar';
 import { supabase } from './src/lib/supabase';
 import { COLORS } from './src/styles/theme';
 import { LayoutDashboard, Ticket, User } from 'lucide-react-native';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -157,6 +157,44 @@ const AppContent = () => {
 
     return () => supabase.removeChannel(channel);
   }, [session?.user?.id]);
+
+  // Deep link listener for magic link / email verification callbacks
+  useEffect(() => {
+    const handleUrl = async ({ url }) => {
+      if (!url) return;
+      // Parse hash fragment: helpdeskai://login#access_token=...&refresh_token=...
+      const hashIndex = url.indexOf('#');
+      if (hashIndex === -1) return;
+      const hash = url.substring(hashIndex + 1);
+      const params = {};
+      hash.split('&').forEach(pair => {
+        const [key, val] = pair.split('=');
+        if (key && val) params[key] = decodeURIComponent(val);
+      });
+      if (params.access_token && params.refresh_token) {
+        try {
+          const { data, error } = await supabase.auth.setSession({
+            access_token: params.access_token,
+            refresh_token: params.refresh_token,
+          });
+          if (error) {
+            console.warn('[DeepLink] Failed to set session:', error.message);
+          } else {
+            console.log('[DeepLink] Session set successfully for:', data.user?.email);
+          }
+        } catch (e) {
+          console.warn('[DeepLink] Error parsing magic link:', e);
+        }
+      }
+    };
+
+    // Handle app already open
+    const subscription = Linking.addEventListener('url', handleUrl);
+    // Handle cold start — app launched from the link
+    Linking.getInitialURL().then(url => url && handleUrl({ url }));
+
+    return () => subscription.remove();
+  }, []);
 
   if (loading) {
     return (

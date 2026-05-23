@@ -24,7 +24,7 @@ const steps = [
 const AIProcessing = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const { text, image_text, image_base64 } = location.state || {};
+    const { text, image_text, image_base64, template_id, template_used, user_modified, ticket_title, original_text, original_language } = location.state || {};
     const setAITicket = useTicketStore((state) => state.setAITicket);
     const { settings } = useAdminStore();
     const { user, profile } = useAuthStore();
@@ -112,9 +112,15 @@ const AIProcessing = () => {
                         profile?.company ||
                         user?.user_metadata?.company ||
                         "System",
+                    company_id: profile?.company_id || null,
                     image_url: uploadedImageUrl,
                     confidence_threshold: settings.aiConfidenceThreshold,
-                    duplicate_sensitivity: settings.duplicateSensitivity
+                    duplicate_sensitivity: settings.duplicateSensitivity,
+                    // Smart Template metadata (backend can use for improved routing)
+                    template_id: template_id || null,
+                    template_used: template_used || false,
+                    user_modified: user_modified || false,
+                    ticket_title: ticket_title || null,
                 };
 
                 const response = await fetch(
@@ -270,7 +276,8 @@ const AIProcessing = () => {
                 const aiTicketObject = {
                     ...finalTicket,
                     status: 'analyzing',
-                    originalIssue: text,
+                    originalIssue: original_text || text,
+                    originalLanguage: original_language || 'en',
                     capturedFileBase64: image_base64,
                     ocrText: image_text
                 };
@@ -342,7 +349,8 @@ const AIProcessing = () => {
 
                         ocr_text: image_text || "",
                         highlights: [],
-                        originalIssue: text,
+                        originalIssue: original_text || text,
+                        originalLanguage: original_language || 'en',
                         capturedFileBase64: image_base64,
                         ocrText: image_text
                     };

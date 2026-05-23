@@ -75,6 +75,43 @@ const ProfileScreen = () => {
     }, [fetchAll])
   );
 
+  const handleAvatarPress = () => {
+    Alert.alert(
+      'Profile Photo',
+      'Choose an option to update your profile photo',
+      [
+        { text: 'Upload New Photo', onPress: uploadAvatar },
+        { 
+          text: 'Remove Photo', 
+          onPress: removeAvatar, 
+          style: 'destructive' 
+        },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const removeAvatar = async () => {
+    setUploading(true);
+    try {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ profile_picture: null })
+        .eq('id', user.id);
+
+      if (updateError) throw updateError;
+
+      setProfile({ ...profile, profile_picture: null });
+      success('Success', 'Profile picture removed!');
+      fetchAll();
+    } catch (e) {
+      console.error('Avatar Removal Error:', e);
+      notifyError('Failed to Remove', e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const uploadAvatar = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
@@ -114,12 +151,12 @@ const ProfileScreen = () => {
 
       const { error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
+        .update({ profile_picture: publicUrl })
         .eq('id', user.id);
 
       if (updateError) throw updateError;
 
-      setProfile({ ...profile, avatar_url: publicUrl });
+      setProfile({ ...profile, profile_picture: publicUrl });
       success('Success', 'Profile picture updated!');
       fetchAll(); // Refresh everything
     } catch (e) {
@@ -220,9 +257,9 @@ const ProfileScreen = () => {
 
         {/* Profile Card */}
         <View style={styles.profileCard}>
-          <TouchableOpacity style={styles.avatarContainer} onPress={uploadAvatar} disabled={uploading}>
-            {profile?.avatar_url ? (
-              <Image source={{ uri: profile.avatar_url }} style={styles.avatarImage} />
+          <TouchableOpacity style={styles.avatarContainer} onPress={handleAvatarPress} disabled={uploading}>
+            {profile?.profile_picture ? (
+              <Image source={{ uri: profile.profile_picture }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatarPlaceholder}>
                 <Text style={styles.avatarText}>{initials}</Text>
