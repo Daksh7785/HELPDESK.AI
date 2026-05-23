@@ -378,7 +378,7 @@ const AdminUsersScreen = () => {
         </View>
       ) : (
         <FlatList
-          data={getFilteredUsers()}
+          data={getFilteredUsers}
           keyExtractor={(item) => item.id}
           renderItem={renderUserItem}
           contentContainerStyle={styles.list}
