@@ -412,6 +412,10 @@ const AdminTicketDetailScreen = () => {
           renderItem={renderMessageItem}
           contentContainerStyle={styles.chatScroll}
           onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={10}
+          windowSize={10}
+          initialNumToRender={15}
           ListHeaderComponent={
             <View style={styles.ticketDetailsSection}>
               
