@@ -302,7 +302,7 @@ const AdminSettingsScreen = () => {
                   step={1}
                   suffix=""
                 />
-              </View>
+              </>
             )}
           </View>
         </View>
