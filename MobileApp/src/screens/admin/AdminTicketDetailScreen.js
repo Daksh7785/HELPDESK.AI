@@ -11,7 +11,8 @@ import { COLORS, SHADOWS } from '../../styles/theme';
 import { 
   ArrowLeft, Send, Sparkles, User, Briefcase, Clock, 
   ChevronDown, CheckCircle2, AlertTriangle, Eye, Star, 
-  Settings, Shield, ShieldAlert, Cpu, Globe, ArrowUpRight 
+  Settings, Shield, ShieldAlert, Cpu, Globe, ArrowUpRight,
+  ShieldCheck
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 

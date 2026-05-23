@@ -666,6 +666,25 @@ async def save_ticket(request_body: TicketSaveRequest):
                 profile = profile_res.data or {}
                 if not profile:
                     raise HTTPException(status_code=404, detail="User profile not found")
+                
+                # SELF-HEALING: If company_id is null in database but company name exists, resolve it!
+                if not profile.get("company_id") and profile.get("company"):
+                    try:
+                        comp_name = profile.get("company").strip()
+                        comp_res = (
+                            supabase.table("companies")
+                            .select("id")
+                            .ilike("name", comp_name)
+                            .execute()
+                        )
+                        if comp_res.data:
+                            resolved_company_id = comp_res.data[0]["id"]
+                            # Backfill the profile table in real-time
+                            supabase.table("profiles").update({"company_id": resolved_company_id}).eq("id", request_body.user_id).execute()
+                            profile["company_id"] = resolved_company_id
+                            logger.info(f"[SELF-HEALING] Backfilled company_id={resolved_company_id} for user={request_body.user_id}")
+                    except Exception as healing_err:
+                        logger.warning(f"[SELF-HEALING WARNING] Failed to backfill company_id: {healing_err}")
             except HTTPException:
                 raise
             except Exception as profile_error:
