@@ -108,14 +108,18 @@ const AdminUsersScreen = () => {
         });
 
         // 3. Try to trigger background edge email function if available (Non-blocking)
-        supabase.functions.invoke('send-user-approval-email', {
-          body: {
-            userId: userItem.id,
-            email: userItem.email,
-            name: userItem.full_name,
-            company: userItem.company
-          }
-        }).catch(() => {});
+        (async () => {
+          try {
+            await supabase.functions.invoke('send-user-approval-email', {
+              body: {
+                userId: userItem.id,
+                email: userItem.email,
+                name: userItem.full_name,
+                company: userItem.company
+              }
+            });
+          } catch (_) {}
+        })();
 
         fetchUsers();
       }

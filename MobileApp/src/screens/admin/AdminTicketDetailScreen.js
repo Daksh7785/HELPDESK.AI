@@ -187,13 +187,17 @@ const AdminTicketDetailScreen = () => {
     }, 'claim');
 
     // Insert auto system diagnostic chat log
-    supabase.from('ticket_messages').insert({
-      ticket_id: ticketId,
-      sender_id: '00000000-0000-0000-0000-000000000000',
-      sender_name: 'AI System',
-      sender_role: 'admin',
-      message: `Incident claimed by Administrator @${profile?.full_name || 'Admin'}.`
-    }).catch(() => {});
+    (async () => {
+      try {
+        await supabase.from('ticket_messages').insert({
+          ticket_id: ticketId,
+          sender_id: '00000000-0000-0000-0000-000000000000',
+          sender_name: 'AI System',
+          sender_role: 'admin',
+          message: `Incident claimed by Administrator @${profile?.full_name || 'Admin'}.`
+        });
+      } catch (_) {}
+    })();
   };
 
   const handleDivert = () => {
@@ -220,13 +224,17 @@ const AdminTicketDetailScreen = () => {
     setShowDivertModal(false);
 
     // Insert system chat log
-    supabase.from('ticket_messages').insert({
-      ticket_id: ticketId,
-      sender_id: '00000000-0000-0000-0000-000000000000',
-      sender_name: 'AI System',
-      sender_role: 'admin',
-      message: `${desc} by Administrator.`
-    }).catch(() => {});
+    (async () => {
+      try {
+        await supabase.from('ticket_messages').insert({
+          ticket_id: ticketId,
+          sender_id: '00000000-0000-0000-0000-000000000000',
+          sender_name: 'AI System',
+          sender_role: 'admin',
+          message: `${desc} by Administrator.`
+        });
+      } catch (_) {}
+    })();
   };
 
   const handleOverride = () => {
@@ -250,13 +258,17 @@ const AdminTicketDetailScreen = () => {
     if (overrideCategory !== ticket.category) changes.push(`Category corrected to ${overrideCategory}`);
     if (overridePriority !== ticket.priority) changes.push(`Priority reassessed to ${overridePriority.toUpperCase()}`);
 
-    supabase.from('ticket_messages').insert({
-      ticket_id: ticketId,
-      sender_id: '00000000-0000-0000-0000-000000000000',
-      sender_name: 'AI System',
-      sender_role: 'admin',
-      message: `Manual Override: ${changes.join(', ') || 'neural classifications overrides modified'}.`
-    }).catch(() => {});
+    (async () => {
+      try {
+        await supabase.from('ticket_messages').insert({
+          ticket_id: ticketId,
+          sender_id: '00000000-0000-0000-0000-000000000000',
+          sender_name: 'AI System',
+          sender_role: 'admin',
+          message: `Manual Override: ${changes.join(', ') || 'neural classifications overrides modified'}.`
+        });
+      } catch (_) {}
+    })();
   };
 
   const handleResolve = () => {
@@ -267,13 +279,17 @@ const AdminTicketDetailScreen = () => {
     }, 'resolve');
 
     // System log
-    supabase.from('ticket_messages').insert({
-      ticket_id: ticketId,
-      sender_id: '00000000-0000-0000-0000-000000000000',
-      sender_name: 'AI System',
-      sender_role: 'admin',
-      message: `Incident marked as RESOLVED. Lifecycle protocol finalized.`
-    }).catch(() => {});
+    (async () => {
+      try {
+        await supabase.from('ticket_messages').insert({
+          ticket_id: ticketId,
+          sender_id: '00000000-0000-0000-0000-000000000000',
+          sender_name: 'AI System',
+          sender_role: 'admin',
+          message: `Incident marked as RESOLVED. Lifecycle protocol finalized.`
+        });
+      } catch (_) {}
+    })();
   };
 
   const handleSendMessage = async () => {
@@ -401,44 +417,61 @@ const AdminTicketDetailScreen = () => {
               
               {/* Action Buttons Toolbar */}
               {!isResolved && (
-                <View style={styles.actionsBar}>
-                  {ticket?.assigned_agent_id !== currentUser?.id && (
+                <View style={styles.actionsContainer}>
+                  {/* Primary Actions Row */}
+                  <View style={styles.primaryActionsRow}>
+                    {ticket?.assigned_agent_id !== currentUser?.id ? (
+                      <>
+                        <TouchableOpacity 
+                          style={[styles.primaryActionBtn, styles.claimBtn]} 
+                          onPress={handleClaim}
+                          disabled={isUpdating !== null}
+                        >
+                          {isUpdating === 'claim' ? <ActivityIndicator size="small" color="#fff" /> : <ShieldCheck size={18} color="#fff" />}
+                          <Text style={styles.primaryActionBtnText}>CLAIM</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity 
+                          style={[styles.primaryActionBtn, styles.resolveBtn]} 
+                          onPress={handleResolve}
+                          disabled={isUpdating !== null}
+                        >
+                          {isUpdating === 'resolve' ? <ActivityIndicator size="small" color="#fff" /> : <CheckCircle2 size={18} color="#fff" />}
+                          <Text style={styles.primaryActionBtnText}>RESOLVE</Text>
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <TouchableOpacity 
+                        style={[styles.primaryActionBtn, styles.resolveBtn, { flex: 1 }]} 
+                        onPress={handleResolve}
+                        disabled={isUpdating !== null}
+                      >
+                        {isUpdating === 'resolve' ? <ActivityIndicator size="small" color="#fff" /> : <CheckCircle2 size={18} color="#fff" />}
+                        <Text style={styles.primaryActionBtnText}>RESOLVE TICKET</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {/* Secondary Triage Actions Row */}
+                  <View style={styles.secondaryActionsRow}>
                     <TouchableOpacity 
-                      style={[styles.toolbarBtn, styles.claimBtn]} 
-                      onPress={handleClaim}
+                      style={[styles.secondaryActionBtn, styles.divertBtn]} 
+                      onPress={() => setShowDivertModal(true)}
                       disabled={isUpdating !== null}
                     >
-                      {isUpdating === 'claim' ? <ActivityIndicator size="small" color="#fff" /> : <ShieldCheck size={16} color="#fff" />}
-                      <Text style={styles.toolbarBtnText}>CLAIM</Text>
+                      <ArrowUpRight size={16} color={COLORS.text} />
+                      <Text style={styles.secondaryActionBtnText}>DIVERT ROUTE</Text>
                     </TouchableOpacity>
-                  )}
-                  
-                  <TouchableOpacity 
-                    style={[styles.toolbarBtn, styles.divertBtn]} 
-                    onPress={() => setShowDivertModal(true)}
-                    disabled={isUpdating !== null}
-                  >
-                    <ArrowUpRight size={16} color={COLORS.text} />
-                    <Text style={[styles.toolbarBtnText, { color: COLORS.text }]}>DIVERT</Text>
-                  </TouchableOpacity>
 
-                  <TouchableOpacity 
-                    style={[styles.toolbarBtn, styles.overrideBtn]} 
-                    onPress={() => setShowOverrideModal(true)}
-                    disabled={isUpdating !== null}
-                  >
-                    <Settings size={16} color={COLORS.text} />
-                    <Text style={[styles.toolbarBtnText, { color: COLORS.text }]}>OVERRIDE</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity 
-                    style={[styles.toolbarBtn, styles.resolveBtn]} 
-                    onPress={handleResolve}
-                    disabled={isUpdating !== null}
-                  >
-                    {isUpdating === 'resolve' ? <ActivityIndicator size="small" color="#fff" /> : <CheckCircle2 size={16} color="#fff" />}
-                    <Text style={styles.toolbarBtnText}>RESOLVE</Text>
-                  </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={[styles.secondaryActionBtn, styles.overrideBtn]} 
+                      onPress={() => setShowOverrideModal(true)}
+                      disabled={isUpdating !== null}
+                    >
+                      <Settings size={16} color={COLORS.text} />
+                      <Text style={styles.secondaryActionBtnText}>OVERRIDE AI</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
@@ -743,14 +776,49 @@ const styles = StyleSheet.create({
   
   loadingWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: COLORS.background },
   
-  // Toolbar
-  actionsBar: { flexDirection: 'row', paddingHorizontal: 20, paddingTop: 16, gap: 8 },
-  toolbarBtn: { flex: 1, height: 42, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, ...SHADOWS.soft },
+  // Toolbar Overhaul for Premium layout without squishing or overlapping
+  actionsContainer: {
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    gap: 10,
+    marginBottom: 4,
+  },
+  primaryActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  secondaryActionsRow: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  primaryActionBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    ...SHADOWS.soft,
+  },
+  secondaryActionBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    ...SHADOWS.soft,
+  },
   claimBtn: { backgroundColor: '#3b82f6' },
+  resolveBtn: { backgroundColor: COLORS.primary },
   divertBtn: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.08)' },
   overrideBtn: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.08)' },
-  resolveBtn: { backgroundColor: COLORS.primary },
-  toolbarBtnText: { fontSize: 10.5, fontWeight: '800', color: '#fff' },
+  primaryActionBtnText: { fontSize: 12, fontWeight: '900', color: '#fff', letterSpacing: 0.5 },
+  secondaryActionBtnText: { fontSize: 11, fontWeight: '800', color: COLORS.text, letterSpacing: 0.3 },
 
   resolvedBanner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, marginHorizontal: 20, marginTop: 16, paddingVertical: 12, backgroundColor: '#dcfce7', borderWidth: 1.5, borderColor: '#bbf7d0', borderRadius: 16 },
   resolvedBannerText: { fontSize: 11, fontWeight: '800', color: '#15803d', letterSpacing: 0.5 },
