@@ -12,7 +12,7 @@ import {
   ArrowLeft, Send, Sparkles, User, Briefcase, Clock, 
   ChevronDown, CheckCircle2, AlertTriangle, Eye, Star, 
   Settings, Shield, ShieldAlert, Cpu, Globe, ArrowUpRight,
-  ShieldCheck
+  ShieldCheck, X
 } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
