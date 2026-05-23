@@ -133,20 +133,39 @@ const AppContent = () => {
         setSession(session);
 
         if (session?.user) {
-          const { data } = await supabase
+          const { data, error } = await supabase
             .from('profiles')
             .select('status, role')
             .eq('id', session.user.id)
             .single();
-          setUserStatus(data?.status || 'active');
-          setUserRole(data?.role || 'user');
+          
+          if (error) {
+            console.log('[AuthInit] Profile fetch error, validating session:', error.message);
+            // Verify if session is still validly active (GetUser forces refresh if expired)
+            const { data: userData, error: userError } = await supabase.auth.getUser();
+            if (userError) {
+              console.log('[AuthInit] Token validation failed. Clearing session.');
+              setSession(null);
+            } else {
+              // Valid token but profiles table is temporarily offline; default to user
+              setUserStatus('active');
+              setUserRole('user');
+            }
+          } else {
+            setUserStatus(data?.status || 'active');
+            setUserRole(data?.role || 'user');
+          }
         }
-
-        const onboardingDone = await AsyncStorage.getItem('@onboarding_complete');
-        setShowOnboarding(onboardingDone === null);
       } catch (e) {
-        console.log('Init error', e);
+        console.log('[AuthInit] Crash caught during initialization:', e);
       } finally {
+        // Guarantee showOnboarding is resolved to a boolean to prevent React Navigation stack layout mismatch
+        try {
+          const onboardingDone = await AsyncStorage.getItem('@onboarding_complete');
+          setShowOnboarding(onboardingDone === null);
+        } catch (err) {
+          setShowOnboarding(false);
+        }
         setLoading(false);
       }
     };
@@ -156,14 +175,27 @@ const AppContent = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
-        // Fetch profile status and role for routing
-        const { data } = await supabase
-          .from('profiles')
-          .select('status, role')
-          .eq('id', session.user.id)
-          .single();
-        setUserStatus(data?.status || 'active');
-        setUserRole(data?.role || 'user');
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('status, role')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (error) {
+            console.log('[AuthChange] Profile query failed:', error.message);
+            // Default to safe values to avoid blank screens
+            setUserStatus('active');
+            setUserRole('user');
+          } else {
+            setUserStatus(data?.status || 'active');
+            setUserRole(data?.role || 'user');
+          }
+        } catch (err) {
+          console.warn('[AuthChange] Uncaught exception inside handler:', err);
+          setUserStatus('active');
+          setUserRole('user');
+        }
       } else {
         setUserStatus(null);
         setUserRole('user');
