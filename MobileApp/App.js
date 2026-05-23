@@ -1,5 +1,4 @@
 import 'react-native-gesture-handler';
-import LogRocket from '@logrocket/react-native';
 import React, { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -128,21 +127,12 @@ const AppContent = () => {
   const [userRole, setUserRole] = useState('user'); // 'user', 'admin', 'master_admin'
 
   useEffect(() => {
-    // Initialize LogRocket
-    LogRocket.init('ky7sla/helpdeskai');
-
     const initialize = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
 
         if (session?.user) {
-          // Identify user in LogRocket
-          LogRocket.identify(session.user.id, {
-            email: session.user.email,
-            name: session.user.user_metadata?.full_name || 'User',
-          });
-
           const { data } = await supabase
             .from('profiles')
             .select('status, role')
@@ -166,12 +156,6 @@ const AppContent = () => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session?.user) {
-        // Identify user in LogRocket on auth change
-        LogRocket.identify(session.user.id, {
-          email: session.user.email,
-          name: session.user.user_metadata?.full_name || 'User',
-        });
-
         // Fetch profile status and role for routing
         const { data } = await supabase
           .from('profiles')
