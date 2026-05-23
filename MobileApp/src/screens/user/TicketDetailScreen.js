@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   StyleSheet, View, Text, TextInput, TouchableOpacity,
   FlatList, KeyboardAvoidingView, Platform, ActivityIndicator,
-  StatusBar, Alert, Modal, Image, ScrollView
+  StatusBar, Alert, Modal, Image, ScrollView, Animated
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
@@ -10,9 +10,9 @@ import { COLORS, SHADOWS } from '../../styles/theme';
 import { 
   ArrowLeft, Send, User, Bot, Mic, Phone, Video, 
   Info, Smile, Paperclip, X, CheckCheck, Shield, Sparkles, 
-  Globe, Hash, Calendar, Star 
+  Globe, Hash, Calendar, Star, Play, Pause, Check, Volume2, MicOff, CameraOff
 } from 'lucide-react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 
 const SUGGESTIONS = {
@@ -34,43 +34,105 @@ const TicketDetailScreen = ({ route }) => {
   const [ticket, setTicket] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
 
-  // Premium UI Interactive States
-  const [reactions, setReactions] = useState({}); // { [messageId]: '❤️' }
-  const [selectedMessageId, setSelectedMessageId] = useState(null); // Active message reacting to
-  const [showInfoModal, setShowInfoModal] = useState(false); // Info sheet
+  // Simulated call state
+  const [activeCall, setActiveCall] = useState(null); // 'Audio' | 'Video' | null
+  const [callDuration, setCallDuration] = useState(0);
+  const [callStatus, setCallStatus] = useState('Ringing...'); // 'Ringing...' | 'Connected'
+  const callTimerRef = useRef(null);
 
+  // Voice recording simulation state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordDuration, setRecordDuration] = useState(0);
+  const recordTimerRef = useRef(null);
+
+  // Dialog and emoji reactions state
+  const [showInfoModal, setShowInfoModal] = useState(false);
+  const [reactions, setReactions] = useState({});
+  const [selectedMessageId, setSelectedMessageId] = useState(null);
+
+  // Call options state
+  const [isMuted, setIsMuted] = useState(false);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
+  const [isCameraOff, setIsCameraOff] = useState(false);
+
+  // Voice playback simulation state
+  const [playingVoiceId, setPlayingVoiceId] = useState(null);
+  const [voiceProgress, setVoiceProgress] = useState({});
+  const voicePlayTimerRef = useRef(null);
+
+  // Pulse animation for recording dot
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  // Recording pulse animation loop
   useEffect(() => {
-    const initialize = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
-      await fetchTicketDetails();
-      await fetchMessages();
-    };
+    if (isRecording) {
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, {
+            toValue: 0.3,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isRecording]);
 
-    initialize();
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
 
-    // Set up real-time subscription for messages
-    const channel = supabase
-      .channel(`ticket_messages_user:${ticketId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'ticket_messages',
-        filter: `ticket_id=eq.${ticketId}`
-      }, (payload) => {
-        setMessages(prev => {
-          if (prev.some(m => m.id === payload.new.id)) return prev;
-          return [...prev, payload.new];
-        });
-        setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 150);
-      })
-      .subscribe();
+      const initialize = async () => {
+        try {
+          if (isMounted) setLoading(true);
+          const { data: { user } } = await supabase.auth.getUser();
+          if (isMounted) setCurrentUser(user);
+          
+          await Promise.all([
+            fetchTicketDetails(),
+            fetchMessages()
+          ]);
+        } catch (err) {
+          console.error("Initialization error:", err);
+        } finally {
+          if (isMounted) setLoading(false);
+        }
+      };
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [ticketId]);
+      initialize();
 
+      // Set up real-time subscription for messages
+      const channel = supabase
+        .channel(`ticket_messages_user:${ticketId}`)
+        .on('postgres_changes', {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'ticket_messages',
+          filter: `ticket_id=eq.${ticketId}`
+        }, (payload) => {
+          setMessages(prev => {
+            if (prev.some(m => m.id === payload.new.id)) return prev;
+            return [...prev, payload.new];
+          });
+          setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 150);
+        })
+        .subscribe();
+
+      return () => {
+        isMounted = false;
+        supabase.removeChannel(channel);
+        if (callTimerRef.current) clearInterval(callTimerRef.current);
+        if (recordTimerRef.current) clearInterval(recordTimerRef.current);
+        if (voicePlayTimerRef.current) clearInterval(voicePlayTimerRef.current);
+      };
+    }, [ticketId])
+  );
   const fetchTicketDetails = async () => {
     const { data, error } = await supabase
       .from('tickets')
@@ -156,13 +218,112 @@ const TicketDetailScreen = ({ route }) => {
     );
   };
 
+  // Dynamic active grey-to-blue checkmark ticks color resolver
+  const getTickColor = (msg) => {
+    if (!msg.created_at) return "#9ca3af"; // local / unsaved
+    
+    // A message gets blue ticks if:
+    // 1. There is an admin or AI reply sent AFTER this message.
+    const hasAdminReply = messages.some(
+      m => m.created_at && 
+           new Date(m.created_at) > new Date(msg.created_at) && 
+           (m.sender_role === 'admin' || m.sender_role === 'ai')
+    );
+    
+    // 2. The ticket is marked as resolved or closed.
+    const isCompleted = ticket?.status === 'resolved' || ticket?.status === 'closed';
+    
+    if (hasAdminReply || isCompleted) {
+      return "#38bdf8"; // WhatsApp Blue tick!
+    }
+    return "#8e8e93"; // WhatsApp Grey double-ticks!
+  };
+
+  const playVoiceNote = (msgId, durationStr) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (playingVoiceId === msgId) {
+      setPlayingVoiceId(null);
+      if (voicePlayTimerRef.current) clearInterval(voicePlayTimerRef.current);
+      return;
+    }
+
+    if (voicePlayTimerRef.current) clearInterval(voicePlayTimerRef.current);
+    setPlayingVoiceId(msgId);
+
+    const parts = durationStr.split(':');
+    const totalSecs = parseInt(parts[0] || '0') * 60 + parseInt(parts[1] || '0');
+    let currentSecs = voiceProgress[msgId] ? (voiceProgress[msgId] / 100) * totalSecs : 0;
+
+    voicePlayTimerRef.current = setInterval(() => {
+      currentSecs += 0.25;
+      const percentage = Math.min((currentSecs / totalSecs) * 100, 100);
+      
+      setVoiceProgress(prev => ({
+        ...prev,
+        [msgId]: percentage
+      }));
+
+      if (percentage >= 100) {
+        setPlayingVoiceId(null);
+        clearInterval(voicePlayTimerRef.current);
+        setVoiceProgress(prev => ({
+          ...prev,
+          [msgId]: 0
+        }));
+      }
+    }, 250);
+  };
+
   const handleCallPress = (type) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Alert.alert(
-      `${type} stream`,
-      `Initializing secure ${type.toLowerCase()} stream connection to assignees...`,
-      [{ text: "End Stream", style: "destructive" }]
-    );
+    setActiveCall(type);
+    setCallStatus('Ringing...');
+    setCallDuration(0);
+    setIsMuted(false);
+    setIsCameraOff(false);
+    setIsSpeakerOn(true);
+
+    // Simulate connection after 2 seconds
+    setTimeout(() => {
+      setCallStatus('Connected');
+      callTimerRef.current = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+    }, 2000);
+  };
+
+  const endCall = () => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    setActiveCall(null);
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+    }
+  };
+
+  const startRecording = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setIsRecording(true);
+    setRecordDuration(0);
+    recordTimerRef.current = setInterval(() => {
+      setRecordDuration(prev => prev + 1);
+    }, 1000);
+  };
+
+  const stopRecording = (shouldSave = true) => {
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    setIsRecording(false);
+    if (recordTimerRef.current) {
+      clearInterval(recordTimerRef.current);
+    }
+    if (shouldSave && recordDuration > 0) {
+      sendMessage(`🎤 Voice message (${formatDuration(recordDuration)})`);
+    }
+  };
+
+  const formatDuration = (sec) => {
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
   };
 
   const handleReactionPress = (msgId, emoji) => {
@@ -250,16 +411,80 @@ const TicketDetailScreen = ({ route }) => {
             </View>
           )}
 
-          <Text style={[styles.messageText, isUser && styles.userMessageText]}>
-            {item.message}
-          </Text>
+          {(() => {
+            const isVoiceNote = item.message && item.message.startsWith('🎤 Voice message');
+            let voiceDuration = "0:00";
+            if (isVoiceNote) {
+              const match = item.message.match(/\((.*?)\)/);
+              if (match) voiceDuration = match[1];
+            }
+            if (isVoiceNote) {
+              return (
+                <View style={styles.voiceNoteContainer}>
+                  <TouchableOpacity
+                    onPress={() => playVoiceNote(item.id, voiceDuration)}
+                    style={styles.voicePlayBtn}
+                  >
+                    {playingVoiceId === item.id ? (
+                      <Pause size={16} color={isUser ? '#075e54' : COLORS.primary} fill={isUser ? '#075e54' : COLORS.primary} />
+                    ) : (
+                      <Play size={16} color={isUser ? '#075e54' : COLORS.primary} fill={isUser ? '#075e54' : COLORS.primary} />
+                    )}
+                  </TouchableOpacity>
+                  
+                  <View style={styles.voiceWaveContainer}>
+                    <View style={styles.voiceWaveform}>
+                      {[8, 14, 18, 10, 6, 12, 20, 14, 10, 16, 22, 12, 8, 14, 18, 10, 6, 12, 16, 8].map((barHeight, idx) => {
+                        const barProgress = (idx / 20) * 100;
+                        const isPlayed = (voiceProgress[item.id] || 0) >= barProgress;
+                        return (
+                          <View
+                            key={idx}
+                            style={[
+                              styles.voiceWaveBar,
+                              { 
+                                height: barHeight, 
+                                backgroundColor: isPlayed 
+                                  ? (isUser ? '#075e54' : COLORS.primary) 
+                                  : (isUser ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.1)') 
+                              }
+                            ]}
+                          />
+                        );
+                      })}
+                    </View>
+                    <View style={styles.voiceProgressTextRow}>
+                      <Text style={styles.voiceDurationText}>
+                        {playingVoiceId === item.id 
+                          ? formatDuration(Math.round(((voiceProgress[item.id] || 0) / 100) * (parseInt(voiceDuration.split(':')[0] || '0') * 60 + parseInt(voiceDuration.split(':')[1] || '0'))))
+                          : voiceDuration
+                        }
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              );
+            }
+            return (
+              <Text style={[styles.messageText, isUser && styles.userMessageText]}>
+                {item.message}
+              </Text>
+            );
+          })()}
 
           <View style={styles.bubbleFooter}>
             <Text style={[styles.messageTime, isUser && styles.userTimeText]}>
-              {new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {item.created_at 
+                ? new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              }
             </Text>
             {isUser && (
-              <CheckCheck size={14} color="#38bdf8" style={{ marginLeft: 4 }} /> // Double Ticks in WhatsApp style
+              item.created_at ? (
+                <CheckCheck size={14} color={getTickColor(item)} style={{ marginLeft: 4 }} />
+              ) : (
+                <Check size={14} color="#9ca3af" style={{ marginLeft: 4 }} />
+              )
             )}
           </View>
 
@@ -355,9 +580,9 @@ const TicketDetailScreen = ({ route }) => {
         <View style={styles.gridOverlay} />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 80}
         >
           {loading ? (
             <View style={styles.loadingContainer}>
@@ -403,42 +628,57 @@ const TicketDetailScreen = ({ route }) => {
 
           {/* Input container footer */}
           <View style={styles.inputContainer}>
-            <View style={styles.inputCard}>
-              <TouchableOpacity style={styles.inputIconBtn}>
-                <Smile size={22} color={COLORS.textMuted} />
-              </TouchableOpacity>
-              
-              <TextInput
-                style={styles.input}
-                placeholder="Type your reply..."
-                placeholderTextColor="rgba(0,0,0,0.3)"
-                value={newMessage}
-                onChangeText={setNewMessage}
-                multiline
-              />
+            {isRecording ? (
+              <View style={styles.recordingCard}>
+                <Animated.View style={[styles.pulseRecDot, { opacity: pulseAnim }]} />
+                <Text style={styles.recordingTimerText}>Recording {formatDuration(recordDuration)}</Text>
+                <TouchableOpacity onPress={() => stopRecording(false)} style={styles.cancelRecBtn}>
+                  <Text style={styles.cancelRecText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => stopRecording(true)} style={styles.sendRecBtn}>
+                  <Send size={18} color={COLORS.primary} />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View style={styles.inputCard}>
+                <TouchableOpacity style={styles.inputIconBtn}>
+                  <Smile size={22} color={COLORS.textMuted} />
+                </TouchableOpacity>
+                
+                <TextInput
+                  style={styles.input}
+                  placeholder="Type your reply..."
+                  placeholderTextColor="rgba(0,0,0,0.3)"
+                  value={newMessage}
+                  onChangeText={setNewMessage}
+                  multiline
+                />
 
-              <TouchableOpacity style={styles.inputIconBtn}>
-                <Paperclip size={20} color={COLORS.textMuted} />
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity style={styles.inputIconBtn}>
+                  <Paperclip size={20} color={COLORS.textMuted} />
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Dynamic Action Button WhatsApp feel */}
-            {isUserTyping ? (
-              <TouchableOpacity 
-                style={styles.actionBtn} 
-                onPress={() => sendMessage()}
-                activeOpacity={0.8}
-              >
-                <Send size={20} color="#fff" />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity 
-                style={[styles.actionBtn, { backgroundColor: COLORS.primary }]} 
-                onPress={handleMicPress}
-                activeOpacity={0.8}
-              >
-                <Mic size={20} color="#fff" />
-              </TouchableOpacity>
+            {!isRecording && (
+              isUserTyping ? (
+                <TouchableOpacity 
+                  style={styles.actionBtn} 
+                  onPress={() => sendMessage()}
+                  activeOpacity={0.8}
+                >
+                  <Send size={20} color="#fff" />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity 
+                  style={[styles.actionBtn, { backgroundColor: COLORS.primary }]} 
+                  onPress={startRecording}
+                  activeOpacity={0.8}
+                >
+                  <Mic size={20} color="#fff" />
+                </TouchableOpacity>
+              )
             )}
           </View>
         </KeyboardAvoidingView>
@@ -535,7 +775,7 @@ const TicketDetailScreen = ({ route }) => {
                 </View>
                 <View style={[styles.telemetryRow, { borderBottomWidth: 0, paddingBottom: 0 }]}>
                   <Text style={styles.telemetryLabel}>RAG Match Score</Text>
-                  <Text style={[styles.telemetryValue, { color: '#8b5cf6', fontWeight: '950' }]}>
+                  <Text style={[styles.telemetryValue, { color: '#8b5cf6', fontWeight: '955' }]}>
                     {((ticket?.confidence || 0.85) * 100).toFixed(0)}% Accuracy
                   </Text>
                 </View>
@@ -563,6 +803,68 @@ const TicketDetailScreen = ({ route }) => {
               </View>
 
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Premium WhatsApp simulated calling overlay */}
+      <Modal
+        visible={!!activeCall}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={endCall}
+      >
+        <View style={styles.callScreenContainer}>
+          <StatusBar barStyle="light-content" />
+          <View style={styles.callScreenHeader}>
+            <Shield size={16} color="rgba(255,255,255,0.4)" />
+            <Text style={styles.secureCallText}>SECURE END-TO-END ENCRYPTED</Text>
+          </View>
+
+          <View style={styles.callScreenInfo}>
+            <View style={styles.callAvatarWrap}>
+              <Text style={styles.callAvatarText}>{assigneeName[0].toUpperCase()}</Text>
+            </View>
+            <Text style={styles.callContactName}>{assigneeName}</Text>
+            <Text style={styles.callStatusLabel}>
+              {callStatus === 'Connected' ? formatDuration(callDuration) : callStatus}
+            </Text>
+          </View>
+
+          {/* Video mock view */}
+          {activeCall === 'Video' && (
+            <View style={styles.videoMockContainer}>
+              <View style={styles.selfVideoMock} />
+            </View>
+          )}
+
+          <View style={styles.callScreenControls}>
+            <TouchableOpacity 
+              style={[styles.callControlBtn, isMuted && styles.activeControlBtn]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setIsMuted(!isMuted);
+              }}
+            >
+              {isMuted ? <MicOff size={24} color={COLORS.primary} /> : <Mic size={24} color="#ffffff" />}
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.callControlBtn, { backgroundColor: '#ef4444' }]} 
+              onPress={endCall}
+            >
+              <Phone size={24} color="#ffffff" style={{ transform: [{ rotate: '135deg' }] }} />
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={[styles.callControlBtn, isSpeakerOn && styles.activeControlBtn]}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                setIsSpeakerOn(!isSpeakerOn);
+              }}
+            >
+              <Volume2 size={24} color={isSpeakerOn ? COLORS.primary : "#ffffff"} />
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -796,7 +1098,106 @@ const styles = StyleSheet.create({
   aiTelemetryTitle: { fontSize: 12, fontWeight: '900', color: '#8b5cf6', textTransform: 'uppercase', letterSpacing: 0.5 },
   telemetryRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: 'rgba(139,92,246,0.1)' },
   telemetryLabel: { fontSize: 12, fontWeight: '600', color: COLORS.textLight },
-  telemetryValue: { fontSize: 12, fontWeight: '800', color: COLORS.text }
+  telemetryValue: { fontSize: 12, fontWeight: '800', color: COLORS.text },
+
+  // Simulated calling style sheet
+  callScreenContainer: { flex: 1, backgroundColor: '#07121e', justifyContent: 'space-between', paddingVertical: 40, paddingHorizontal: 20 },
+  callScreenHeader: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 6, opacity: 0.8 },
+  secureCallText: { fontSize: 10, fontWeight: '800', color: 'rgba(255,255,255,0.5)', letterSpacing: 1 },
+  callScreenInfo: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14, marginTop: 40 },
+  callAvatarWrap: { width: 120, height: 120, borderRadius: 60, backgroundColor: COLORS.primary, justifyContent: 'center', alignItems: 'center', elevation: 8, ...SHADOWS.medium },
+  callAvatarText: { fontSize: 48, fontWeight: '900', color: '#ffffff' },
+  callContactName: { fontSize: 24, fontWeight: '950', color: '#ffffff', textAlign: 'center' },
+  callStatusLabel: { fontSize: 14, fontWeight: '700', color: 'rgba(255,255,255,0.6)', letterSpacing: 0.5 },
+  videoMockContainer: { width: '100%', height: 260, borderRadius: 24, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.03)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.06)', marginVertical: 20, justifyContent: 'center', alignItems: 'center' },
+  selfVideoMock: { width: 90, height: 130, borderRadius: 16, backgroundColor: '#1c2d42', position: 'absolute', bottom: 16, right: 16, borderStyle: 'solid', borderWidth: 2, borderColor: 'rgba(255,255,255,0.1)' },
+  callScreenControls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 28, marginBottom: 20 },
+  callControlBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.08)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.05)' },
+
+  // Pulse voice recording styles
+  recordingCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 25,
+    paddingHorizontal: 16,
+    height: 48,
+    gap: 12,
+    ...SHADOWS.soft
+  },
+  pulseRecDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#ef4444'
+  },
+  recordingTimerText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#ef4444'
+  },
+  cancelRecBtn: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
+    backgroundColor: '#f3f4f6'
+  },
+  cancelRecText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: COLORS.textMuted
+  },
+  sendRecBtn: {
+    padding: 8
+  },
+
+  // Custom interactive caller styling
+  activeControlBtn: {
+    backgroundColor: '#ffffff',
+    borderColor: '#ffffff'
+  },
+
+  // Voice Note message rendering styles
+  voiceNoteContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    width: 220,
+    paddingVertical: 4
+  },
+  voicePlayBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.06)',
+    justifyContent: 'center',
+    alignItems: 'center'
+  },
+  voiceWaveContainer: {
+    flex: 1,
+    gap: 4
+  },
+  voiceWaveform: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    height: 24
+  },
+  voiceWaveBar: {
+    width: 3,
+    borderRadius: 1.5
+  },
+  voiceProgressTextRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between'
+  },
+  voiceDurationText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: COLORS.textMuted
+  }
 });
 
 export default TicketDetailScreen;
