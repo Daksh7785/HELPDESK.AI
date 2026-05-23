@@ -7,7 +7,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { StatusBar } from 'expo-status-bar';
 import { supabase } from './src/lib/supabase';
 import { COLORS } from './src/styles/theme';
-import { LayoutDashboard, Ticket, User } from 'lucide-react-native';
+import { LayoutDashboard, Ticket, User, Settings, ShieldAlert, Users } from 'lucide-react-native';
 import { View, ActivityIndicator, Linking } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,6 +33,13 @@ import TicketTrackingScreen from './src/screens/user/TicketTrackingScreen';
 import AIProcessingScreen from './src/screens/user/AIProcessingScreen';
 import NotificationsScreen from './src/screens/user/NotificationsScreen';
 import KnowledgeBaseScreen from './src/screens/user/KnowledgeBaseScreen';
+
+// Admin Screens
+import AdminDashboardScreen from './src/screens/admin/AdminDashboardScreen';
+import AdminTicketsScreen from './src/screens/admin/AdminTicketsScreen';
+import AdminTicketDetailScreen from './src/screens/admin/AdminTicketDetailScreen';
+import AdminUsersScreen from './src/screens/admin/AdminUsersScreen';
+import AdminSettingsScreen from './src/screens/admin/AdminSettingsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -72,6 +79,45 @@ const TabNavigator = () => {
   );
 };
 
+const AdminTabNavigator = () => {
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = 60 + insets.bottom;
+
+  return (
+    <Tab.Navigator
+      screenOptions={({ route }) => ({
+        tabBarIcon: ({ color, size }) => {
+          if (route.name === 'AdminDashboard') return <LayoutDashboard size={size} color={color} />;
+          if (route.name === 'Tickets') return <Ticket size={size} color={color} />;
+          if (route.name === 'Users') return <Users size={size} color={color} />;
+          if (route.name === 'Settings') return <Settings size={size} color={color} />;
+          if (route.name === 'Profile') return <User size={size} color={color} />;
+        },
+        tabBarActiveTintColor: COLORS.primary,
+        tabBarInactiveTintColor: COLORS.textMuted,
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '700' },
+        tabBarStyle: {
+          height: tabBarHeight,
+          paddingBottom: insets.bottom + 8,
+          paddingTop: 10,
+          backgroundColor: '#ffffff',
+          borderTopWidth: 1,
+          borderTopColor: '#f0f0f0',
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerShown: false,
+      })}
+    >
+      <Tab.Screen name="AdminDashboard" component={AdminDashboardScreen} options={{ title: 'Dashboard' }} />
+      <Tab.Screen name="Tickets" component={AdminTicketsScreen} />
+      <Tab.Screen name="Users" component={AdminUsersScreen} />
+      <Tab.Screen name="Settings" component={AdminSettingsScreen} />
+      <Tab.Screen name="Profile" component={ProfileScreen} />
+    </Tab.Navigator>
+  );
+};
+
 // Inner app that has access to SafeAreaProvider context
 const AppContent = () => {
   const insets = useSafeAreaInsets();
@@ -79,6 +125,7 @@ const AppContent = () => {
   const [loading, setLoading] = useState(true);
   const [showOnboarding, setShowOnboarding] = useState(null);
   const [userStatus, setUserStatus] = useState(null); // 'active', 'pending_approval', 'rejected'
+  const [userRole, setUserRole] = useState('user'); // 'user', 'admin', 'master_admin'
 
   useEffect(() => {
     // Initialize LogRocket
@@ -98,10 +145,11 @@ const AppContent = () => {
 
           const { data } = await supabase
             .from('profiles')
-            .select('status')
+            .select('status, role')
             .eq('id', session.user.id)
             .single();
           setUserStatus(data?.status || 'active');
+          setUserRole(data?.role || 'user');
         }
 
         const onboardingDone = await AsyncStorage.getItem('@onboarding_complete');
@@ -124,15 +172,17 @@ const AppContent = () => {
           name: session.user.user_metadata?.full_name || 'User',
         });
 
-        // Fetch profile status for routing
+        // Fetch profile status and role for routing
         const { data } = await supabase
           .from('profiles')
-          .select('status')
+          .select('status, role')
           .eq('id', session.user.id)
           .single();
         setUserStatus(data?.status || 'active');
+        setUserRole(data?.role || 'user');
       } else {
         setUserStatus(null);
+        setUserRole('user');
       }
     });
 
@@ -152,6 +202,7 @@ const AppContent = () => {
         filter: `id=eq.${session.user.id}`,
       }, (payload) => {
         setUserStatus(payload.new.status);
+        setUserRole(payload.new.role || 'user');
       })
       .subscribe();
 
@@ -208,6 +259,7 @@ const AppContent = () => {
   const isActive = userStatus === 'active';
   const isPending = userStatus === 'pending_approval';
   const isRejected = userStatus === 'rejected';
+  const isAdmin = userRole === 'admin' || userRole === 'master_admin';
 
   return (
     <NotificationProvider topInset={insets.top}>
@@ -229,13 +281,20 @@ const AppContent = () => {
           ) : (
             // ─── Active user ───
             <>
-               <Stack.Screen name="MainTabs" component={TabNavigator} />
+               {isAdmin ? (
+                 <Stack.Screen name="MainTabs" component={AdminTabNavigator} />
+               ) : (
+                 <Stack.Screen name="MainTabs" component={TabNavigator} />
+               )}
               <Stack.Screen name="CreateTicket" component={CreateTicketScreen} options={{ animation: 'slide_from_bottom' }} />
               <Stack.Screen name="AIProcessing" component={AIProcessingScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TicketTracking" component={TicketTrackingScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="TicketDetail" component={TicketDetailScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="KnowledgeBase" component={KnowledgeBaseScreen} options={{ animation: 'slide_from_right' }} />
+              
+              {/* Admin specific screens */}
+              <Stack.Screen name="AdminTicketDetail" component={AdminTicketDetailScreen} options={{ animation: 'slide_from_right' }} />
             </>
           )}
         </Stack.Navigator>
