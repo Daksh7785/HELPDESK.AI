@@ -723,18 +723,20 @@ async def save_ticket(request_body: TicketSaveRequest):
         final_data["parent_ticket_id"] = duplicate_result.get("parent_ticket_id")
 
         # --- Sanitize payload to only include valid Supabase DB columns ---
-        # Extra AI telemetry fields are merged into the metadata JSONB column
+        # Extra AI telemetry and non-existent schema fields are merged into the metadata JSONB column
         # to avoid 400/500 errors from unknown column names in the insert call.
         VALID_TICKET_COLUMNS = {
             "user_id", "subject", "description", "category", "subcategory",
             "priority", "assigned_team", "status", "auto_resolve", "is_duplicate",
-            "confidence", "image_url", "company", "company_id",
-            "is_potential_duplicate", "parent_ticket_id", "sla_response_due_at",
-            "sla_breach_at", "sla_status", "escalation_level", "metadata",
+            "confidence", "image_url", "company", "company_id", "sla_breach_at", "metadata",
         }
-        # Merge any extra telemetry fields into metadata before filtering
+        # Merge any extra telemetry and SLA/duplicate fields into metadata before filtering
         existing_metadata = final_data.get("metadata") or {}
-        for extra_key in ("entities", "solution_steps", "ocr_text", "needs_review", "routing_confidence"):
+        extra_keys = (
+            "entities", "solution_steps", "ocr_text", "needs_review", "routing_confidence",
+            "is_potential_duplicate", "parent_ticket_id", "sla_response_due_at", "sla_status", "escalation_level"
+        )
+        for extra_key in extra_keys:
             if extra_key in final_data and final_data[extra_key] not in (None, "", [], {}):
                 existing_metadata[extra_key] = final_data[extra_key]
         final_data["metadata"] = existing_metadata
