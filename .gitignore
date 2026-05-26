@@ -4,7 +4,10 @@ __pycache__/
 *$py.class
 venv/
 env/
-.env
+# Ignore all env files anywhere in the repo
+**/.env
+**/.env.*
+
 
 # Models (Keep them if they are small, but here they are large. 
 # We should probably only keep the ones we actually use if possible, 
@@ -34,3 +37,10 @@ docs/logs/
 scratch/
 .npm-cache/
 
+# GSSoC Score Tracking and Temporary Scripts
+scratch/
+.npm-cache/
+*.tmp
+../MOBILE_SETUP_TEMP.md
+../CI_YML_TEMP.yml
+../ENV_EXAMPLE_TEMP.example
