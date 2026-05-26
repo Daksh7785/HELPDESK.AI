@@ -81,7 +81,12 @@ class ClassifierService:
                 "Please ensure model files are present."
             )
 
-        if os.path.getsize(safetensors_path) < 1024:
+        with open(safetensors_path, "rb") as f:
+            header = f.read(512)
+        if (
+            b"version https://git-lfs.github.com/spec" in header
+            or b"oid sha256:" in header
+        ):
             raise FileNotFoundError(
                 f"Classifier model at {abs_dir} is a Git LFS placeholder, not the actual model. "
                 "Please pull the LFS assets."
