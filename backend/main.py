@@ -35,6 +35,14 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
+# Apply database encryption for PII fields
+try:
+    from backend.auth.crypto import apply_db_encryption_patch
+    apply_db_encryption_patch()
+except Exception as e:
+    print(f"[WARNING] Database encryption patch initialization failed: {e}")
+
+
 # Initialize Supabase Client (Service Role for backend bypass)
 try:
     from supabase import create_client, Client
@@ -265,11 +273,11 @@ async def lifespan(app: FastAPI):
     print("[Startup] Loading AI models ...")
     try:
         classifier_service.load()
-    except FileNotFoundError as e:
+    except Exception as e:
         print(f"[WARNING] Classifier not loaded: {e}")
     try:
         ner_service.load()
-    except FileNotFoundError as e:
+    except Exception as e:
         print(f"[WARNING] NER not loaded: {e}")
     try:
         duplicate_service.load()
