@@ -3,6 +3,7 @@
 This document provides a comprehensive breakdown of all 30+ pages and interaction states across the Helpdesk.ai ecosystem.
 
 ## 🏢 Layer 1: Public & Authentication
+
 | Page | Description | Key Features |
 | :--- | :--- | :--- |
 | **Landing Page** | The public storefront. | Premium "Chaos to Clarity" journey, Pricing tiers, FAQ, Video Demo. |
@@ -12,6 +13,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Knowledge Check** | Pre-support interactive guide. | Self-service assessment before ticket submission. |
 
 ## 👤 Layer 2: Standard User Portal
+
 | Page | Description | Key Features |
 | :--- | :--- | :--- |
 | **User Lobby** | Central entry point for employees. | Quick-start actions, high-level ticket status. |
@@ -24,6 +26,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **User Profile** | Identity management. | Personal details, company affiliation. |
 
 ## 🏢 Layer 3: Company Admin Portal
+
 | Page | Description | Key Features |
 | :--- | :--- | :--- |
 | **Admin Lobby** | Central IT management hub. | Quick metrics (Pending, Resolved, Critical). |
@@ -34,6 +37,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Admin Profile** | Managerial settings. | Administrative credentials and settings. |
 
 ## 👑 Layer 4: Master Admin Portal
+
 | Page | Description | Key Features |
 | :--- | :--- | :--- |
 | **Master Login** | God-mode entry point. | Restricted access for platform owners. |

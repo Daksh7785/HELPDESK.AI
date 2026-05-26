@@ -17,6 +17,7 @@ supabase migration up
 ```
 
 This creates:
+
 - `system_settings` table (stores per-company system configuration and notification preferences)
 - `closed_at` and `auto_closed` columns on tickets table
 - Performance indexes
@@ -29,6 +30,7 @@ python scripts/seed_company_settings.py
 ```
 
 Creates default settings for all existing companies:
+
 - Auto-close enabled, 7-day inactivity threshold
 - `email_notifications` enabled
 - `admin_alerts` enabled
@@ -54,6 +56,7 @@ NOTIFICATION_ROUTING_LOG_LEVEL=info
 ### 5. Restart Backend
 
 Backend will automatically:
+
 - Load auto-close service
 - Register cron job on startup
 - Initialize notification routing middleware
@@ -169,10 +172,10 @@ Backend logs will show:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `company_id` | UUID | (unique) | Company identifier (unique)
-| `ai_confidence_threshold` | float | `0.80` | Threshold for AI confidence
-| `duplicate_sensitivity` | float | `0.85` | Duplicate detection sensitivity
-| `enable_auto_resolve` | bool | `false` | Allow AI auto-resolve suggestions
+| `company_id` | UUID | (unique) | Company identifier (unique) |
+| `ai_confidence_threshold` | float | `0.80` | Threshold for AI confidence |
+| `duplicate_sensitivity` | float | `0.85` | Duplicate detection sensitivity |
+| `enable_auto_resolve` | bool | `false` | Allow AI auto-resolve suggestions |
 | `auto_close_enabled` | bool | `true` | Enable auto-close for this company |
 | `auto_close_days` | int | `7` | Days of inactivity before closing |
 | `email_notifications` | bool | `true` | Allow email notifications |
@@ -200,6 +203,7 @@ Backend logs will show:
 ## Support
 
 For questions or issues:
+
 1. Check logs for error messages
 2. Review INTEGRATION_GUIDE_ISSUE_41.md troubleshooting section
 3. Test manually with provided examples

@@ -37,7 +37,9 @@
 <br><br>
 
 > [!IMPORTANT]
+>
 > ### Transparent Scalability
+>
 > We didn't just build a smart backend; we paired it with a sleek UI that uses rich emeralds and deep indigos to ease eye strain. Designed for enterprise orchestration.
 
 <p align="center">
@@ -47,5 +49,5 @@
 <br>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/BUILT_FOR_PRODUCTION-111827?style=flat-square&logo=github&logoColor=white">
+  <img src="https://img.shields.io/badge/BUILT_FOR_PRODUCTION-111827?style=flat-square&logo=github&logoColor=white" alt="Built for Production">
 </p>

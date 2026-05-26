@@ -48,6 +48,7 @@ console.log(data); // Gemini API response
 ```
 
 ## Security model
+
 - Keys stored in Supabase Vault (AES-256 encrypted at rest)
 - Edge Function only accessible with a valid anon key (rate-limited by Supabase)
 - Frontend .env only needs VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY

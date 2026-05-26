@@ -92,8 +92,10 @@ We are extremely proud to be part of the **GirlScript Summer of Code (GSSoC) 202
 
 ---
 
-> [!NOTE] 
+> [!NOTE]
+>
 > ### Eliminating the Manual Triage Bottleneck
+>
 > Helpdesk.ai uses deep-learning neural networks and 4-layer enterprise architecture to categorize, prioritize, and resolve IT issues in milliseconds.
 
 <br/>
@@ -112,12 +114,12 @@ We are extremely proud to be part of the **GirlScript Summer of Code (GSSoC) 202
 
 > [!IMPORTANT]
 > <h2 id="why-helpdeskai">🎯 Why Helpdesk.AI?</h2>
-> 
+>
 > Helpdesk.AI is more than just a ticketing tool; it is a **Neural Service Orchestrator** designed for modern enterprises. It provides massive ROI by:
-> 
-> 1.  **Eliminating the Triage Bottleneck**: By using context-aware AI (DistilBERT), it categorizes 100% of tickets in milliseconds, bypassing the L1 support line entirely.
-> 2.  **Proactive Resolution**: Integrated LLMs (GitHub Models/Gemini) analyze issues during creation to suggest "Instant Fixes," severely reducing actual ticket volume.
-> 3.  **Tiered Multi-Tenancy**: Built for true SaaS isolation, it securely isolates completely separate companies within a single Supabase database.
+>
+> 1. **Eliminating the Triage Bottleneck**: By using context-aware AI (DistilBERT), it categorizes 100% of tickets in milliseconds, bypassing the L1 support line entirely.
+> 2. **Proactive Resolution**: Integrated LLMs (GitHub Models/Gemini) analyze issues during creation to suggest "Instant Fixes," severely reducing actual ticket volume.
+> 3. **Tiered Multi-Tenancy**: Built for true SaaS isolation, it securely isolates completely separate companies within a single Supabase database.
 
 ---
 
@@ -183,6 +185,7 @@ Under the hood, Helpdesk.ai leverages a custom suite of high speed models.
 <h2 id="deploy">🚀 Deployment & Operations</h2>
 
 Create a `.env` file in the `/Frontend` directory:
+
 ```bash
 VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
 VITE_SUPABASE_ANON_KEY=your_key
@@ -191,6 +194,7 @@ VITE_BACKEND_URL=http://localhost:8000
 ```
 
 ### Local Installation
+
 ```bash
 git clone https://github.com/ritesh-1918/HELPDESK.AI.git
 cd HELPDESK.AI/Frontend
@@ -224,5 +228,5 @@ Helpdesk.ai is now available as a native Android application. It features a comp
 ---
 
 <div align="center">
-Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team. 
+Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team.
 </div>
