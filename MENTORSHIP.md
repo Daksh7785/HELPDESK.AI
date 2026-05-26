@@ -7,6 +7,7 @@ Welcome to the **HELPDESK.AI Neural Service Orchestrator** GSSoC 2026 Mentoring 
 ## 🌟 Mentorship Philosophy: Customer-First & S-Tier Standards
 
 Our project relies on a "Customer-First" approach:
+
 1. **Immediate Engagement**: Reply to every issue and PR within 12–24 hours.
 2. **Chronological Assignment**: Assign issues to the very first contributor who comments with a clear plan. Encourage others to follow along or tackle parallel open bounties.
 3. **Warm, Constructive Tone**: Address contributors by their GitHub handle, praise their work, and offer guidance to elevate their code quality.
@@ -19,6 +20,7 @@ Our project relies on a "Customer-First" approach:
 When reviewing Pull Requests, carefully audit the implementation against our tech stack (Vite, React, Tailwind, FastAPI, Python, Supabase). Award labels strategically to maximize GSSoC points for both the **Contributor** and the **Mentor**.
 
 ### 1. Contributor Points Formula
+
 $$\text{PR Score} = 50 + (\text{Difficulty Pts} \times \text{Quality Multiplier}) + \text{Type Bonus}$$
 
 | Difficulty Label | Points | Quality Multiplier | Value | Type Bonus Label | Points |
@@ -32,6 +34,7 @@ $$\text{PR Score} = 50 + (\text{Difficulty Pts} \times \text{Quality Multiplier}
 > **Maximize Contributor Scores**: If a contributor does outstanding work (clean architecture, thorough testing, or bundle optimization), reward them with `quality:exceptional` and `level:critical` / `level:advanced` labels. This helps them climb the contributor charts and keeps them active on our repo!
 
 ### 2. Mentor Points Grid (Points credited to the reviewing Mentor)
+
 Mentors earn points for every contributor PR merged under their direct guidance.
 
 | Difficulty Classification | Mentor Base Points | Quality Bonus | Total Points |
@@ -61,7 +64,9 @@ graph TD
 ```
 
 ### Mandatory Labeling Standard
+
 When merging a PR, ensure exactly **one** label from each group is applied:
+
 1. **Approval Label**: `gssoc`, `gssoc:approved`
 2. **Difficulty Label**: `level:beginner`, `level:intermediate`, `level:advanced`, or `level:critical` (Prefer S-Tier for exceptional work)
 3. **Quality Label**: `quality:clean` or `quality:exceptional`
@@ -70,6 +75,7 @@ When merging a PR, ensure exactly **one** label from each group is applied:
 ---
 
 ## 📢 Standardized Engagement Banner
+
 Every comment posted by a Mentor on an issue or PR **MUST** append this markdown banner:
 
 ```markdown
