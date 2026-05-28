@@ -37,6 +37,7 @@ const AdminTickets = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null); // ID of ticket being updated
+    const [newlyBreachedTicketIds, setNewlyBreachedTicketIds] = useState([]);
 
     // Filter States
     const [searchQuery, setSearchQuery] = useState('');
@@ -146,6 +147,52 @@ const AdminTickets = () => {
         };
      
     }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
+
+    useEffect(() => {
+        const channelSla = supabase
+            .channel('sla-alerts')
+            .on(
+                'broadcast',
+                { event: 'breach' },
+                (payload) => {
+                    const { ticketId, subject, originalTeam, escalatedTeam, companyId } = payload.payload;
+                    console.log("Realtime SLA breach event:", payload);
+                    
+                    const { profile } = useAuthStore.getState();
+                    if (profile?.company_id && companyId && profile.company_id !== companyId) {
+                        return;
+                    }
+
+                    // Show custom toast
+                    const formattedId = String(ticketId).slice(0, 8).toUpperCase();
+                    showToast(`⚠️ SLA BREACH: Ticket #${formattedId} ("${subject}") escalated from '${originalTeam}' to '${escalatedTeam}'!`, "error");
+
+                    // Highlight the row
+                    setNewlyBreachedTicketIds(prev => [...prev, ticketId]);
+                    setTimeout(() => {
+                        setNewlyBreachedTicketIds(prev => prev.filter(id => id !== ticketId));
+                    }, 12000);
+
+                    // Update ticket in state
+                    setTickets(prev => prev.map(t => 
+                        t.id === ticketId 
+                            ? { 
+                                ...t, 
+                                sla_status: 'BREACHED', 
+                                assigned_team: escalatedTeam, 
+                                escalation_level: (t.escalation_level || 0) + 1,
+                                updated_at: new Date().toISOString()
+                              }
+                            : t
+                    ));
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channelSla);
+        };
+    }, []);
 
     // Seed search from URL
     useEffect(() => {
@@ -306,7 +353,7 @@ const AdminTickets = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {filteredTickets.map((ticket) => (
-                                <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''} ${newlyBreachedTicketIds.includes(ticket.id) ? 'animate-sla-breach-highlight' : ''}`}>
                                     {/* Ticket ID */}
                                     <td className="px-6 py-6">
                                         <span className="font-mono text-xs font-black text-emerald-600">#{formatTicketId(ticket.id)}</span>
