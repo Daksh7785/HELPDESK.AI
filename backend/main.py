@@ -85,18 +85,41 @@ def get_system_settings(company_id: str) -> dict:
     defaults = {
         "ai_confidence_threshold": 0.80,
         "duplicate_sensitivity": 0.85,
-        "enable_auto_resolve": False
+        "enable_auto_resolve": False,
+        "auto_close_enabled": True,
+        "auto_close_days": 7,
+        "email_notifications": True,
+        "admin_alerts": True
     }
     if not supabase or not company_id:
         return defaults
+    
+    # Try to see if company_id is a valid UUID
+    resolved_id = None
+    try:
+        uuid.UUID(company_id)
+        resolved_id = company_id
+    except ValueError:
+        # Not a valid UUID, treat it as a company name and resolve it!
+        try:
+            comp_res = supabase.table("companies").select("id").ilike("name", company_id.strip()).execute()
+            if comp_res.data:
+                resolved_id = comp_res.data[0]["id"]
+                print(f"[INFO] Resolved company name '{company_id}' to UUID '{resolved_id}'")
+        except Exception as err:
+            print(f"[WARNING] Failed to resolve company name '{company_id}' to ID: {err}")
+            
+    if not resolved_id:
+        return defaults
+
     try:
         res = supabase.table("system_settings").select(
-            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
-        ).eq("company_id", company_id).single().execute()
+            "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve, auto_close_enabled, auto_close_days, email_notifications, admin_alerts"
+        ).eq("company_id", resolved_id).single().execute()
         if res.data:
             return {**defaults, **res.data}
     except Exception as e:
-        print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
+        print(f"[WARNING] Could not fetch system_settings for resolved company_id={resolved_id}: {e}")
     return defaults
 
 
@@ -134,6 +157,15 @@ class TicketRequest(BaseModel):
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
+
+class SystemSettingsUpdate(BaseModel):
+    ai_confidence_threshold: float | None = None
+    duplicate_sensitivity: float | None = None
+    enable_auto_resolve: bool | None = None
+    auto_close_enabled: bool | None = None
+    auto_close_days: int | None = None
+    email_notifications: bool | None = None
+    admin_alerts: bool | None = None
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -852,6 +884,48 @@ async def get_ticket_by_id(ticket_id: str):
     return res.data
 
 
+@app.get("/settings/{company_id}")
+async def get_settings_endpoint(company_id: str):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        uuid.UUID(company_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid company_id format")
+
+    try:
+        settings = get_system_settings(company_id)
+        return settings
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.patch("/settings/{company_id}")
+async def update_settings(company_id: str, updates: SystemSettingsUpdate):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    
+    try:
+        uuid.UUID(company_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid company_id format")
+
+    try:
+        update_data = {k: v for k, v in updates.dict(exclude_unset=True).items() if v is not None}
+        update_data["company_id"] = company_id
+        
+        res = supabase.table("system_settings").upsert(update_data).execute()
+        
+        if not res.data:
+            raise Exception("Upsert returned no data")
+            
+        return res.data[0]
+    except Exception as e:
+        print(f"[ERROR] Failed to upsert system settings for company_id={company_id}: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
 @app.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
     """Save a new ticket into the system."""
@@ -891,7 +965,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     text = request_body.text
 
-    settings = get_system_settings(request_body.company_id)
+    settings = get_system_settings(request_body.company_id or request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -928,7 +1002,7 @@ async def analyze_only(request_body: TicketRequest):
     """
     text = request_body.text
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(request_body.company)
+    settings = get_system_settings(request_body.company_id or request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -1169,7 +1243,7 @@ async def analyze_stream(request_body: TicketRequest):
             "api_endpoint": "/ai/analyze_stream"
         }
         timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company_id)
+        settings = get_system_settings(request_body.company_id or request_body.company)
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
         enable_auto_resolve = settings["enable_auto_resolve"]

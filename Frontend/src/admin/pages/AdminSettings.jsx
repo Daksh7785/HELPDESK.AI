@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Settings,
     Cpu,
@@ -8,8 +8,30 @@ import {
     ShieldCheck
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
+import useAuthStore from '../../store/authStore';
+import useToastStore from '../../store/toastStore';
 import { Card, CardContent } from "../../components/ui/card";
 import { Select } from "../../components/ui/select";
+import { API_CONFIG } from '../../config';
+
+// Key mappings to bridge frontend camelCase and backend database snake_case
+const mapToSnakeCase = (settings) => ({
+    ai_confidence_threshold: settings.aiConfidenceThreshold,
+    duplicate_sensitivity: settings.duplicateSensitivity,
+    enable_auto_resolve: settings.enableAutoResolve,
+    auto_close_days: settings.autoCloseDays,
+    email_notifications: settings.emailNotifications,
+    admin_alerts: settings.adminAlerts,
+});
+
+const mapToCamelCase = (settings) => ({
+    aiConfidenceThreshold: settings.ai_confidence_threshold ?? 0.80,
+    duplicateSensitivity: settings.duplicate_sensitivity ?? 0.85,
+    enableAutoResolve: settings.enable_auto_resolve ?? false,
+    autoCloseDays: settings.auto_close_days ?? 7,
+    emailNotifications: settings.email_notifications ?? true,
+    adminAlerts: settings.admin_alerts ?? true,
+});
 
 /**
  * AdminSettings Page
@@ -17,16 +39,83 @@ import { Select } from "../../components/ui/select";
  */
 const AdminSettings = () => {
     const { settings, updateSettings } = useAdminStore();
+    const { profile } = useAuthStore();
+    const { showToast } = useToastStore();
+    const [saving, setSaving] = useState(false);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchSettings = async () => {
+            if (!profile?.company_id) {
+                setLoading(false);
+                return;
+            }
+            try {
+                const response = await fetch(`${API_CONFIG.BACKEND_URL}/settings/${profile.company_id}`);
+                if (response.ok) {
+                    const data = await response.json();
+                    updateSettings(mapToCamelCase(data));
+                } else {
+                    console.warn("Failed to fetch settings from backend, status:", response.status);
+                }
+            } catch (error) {
+                console.error("Failed to load settings:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchSettings();
+    }, [profile?.company_id, updateSettings]);
 
     // Handlers
     const handleChange = (key, value) => {
         updateSettings({ [key]: value });
     };
 
+    const handleSave = async () => {
+        if (!profile?.company_id) {
+            showToast("No company associated with this account.", "error");
+            return;
+        }
+        setSaving(true);
+        try {
+            const payload = mapToSnakeCase(settings);
+            const response = await fetch(`${API_CONFIG.BACKEND_URL}/settings/${profile.company_id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (response.ok) {
+                const updated = await response.json();
+                updateSettings(mapToCamelCase(updated));
+                showToast("System settings successfully synced to cloud database.", "success");
+            } else {
+                const errData = await response.json().catch(() => ({}));
+                showToast(errData.detail || "Failed to save settings to database.", "error");
+            }
+        } catch (error) {
+            console.error("Failed to save settings:", error);
+            showToast("Network error. Failed to save settings.", "error");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[50vh]">
+                <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+        );
+    }
+
     return (
         <div className="max-w-4xl mx-auto py-6 space-y-10 pb-20 animate-in fade-in duration-700">
             {/* 1. Header Area */}
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase flex items-center gap-3">
                         <Settings size={28} className="text-indigo-600" /> Settings
@@ -35,6 +124,13 @@ const AdminSettings = () => {
                         <ShieldCheck size={14} className="text-emerald-500" /> Administrator Account
                     </p>
                 </div>
+                <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest px-6 py-3 rounded-xl transition-all shadow-lg hover:shadow-indigo-600/20 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                >
+                    <Save size={16} /> {saving ? "Saving..." : "Save Settings"}
+                </button>
             </div>
 
             <div className="space-y-8">
