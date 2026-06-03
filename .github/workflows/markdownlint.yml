@@ -9,12 +9,3 @@ jobs:
         with:
           globs: '**/*.md'
           config: .markdownlint-cli2.jsonc
-          ignores: |
-            .tmp-ci-venv/**/*.md
-            node_modules/**/*.md
-            venv/**/*.md
-            .venv/**/*.md
-            dist/**/*.md
-            build/**/*.md
-            scratch/**/*.md
-            Summary/**/*.md
