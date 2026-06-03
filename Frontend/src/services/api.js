@@ -2,7 +2,7 @@ import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
 
-const USE_MOCK = true;
+const USE_MOCK = false;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -99,22 +99,9 @@ export const api = {
         }
       };
     } catch (error) {
-      console.error("AI Backend Error, falling back to mock:", error);
-      // Fallback to mock logic if backend fails
-      await delay(1000);
-      return {
-        data: {
-          ticket_id: "TCKT-MOCK-" + Math.floor(Math.random() * 10000),
-          category: "Hardware",
-          priority: "Medium",
-          assigned_team: "Hardware Support",
-          auto_resolve: false,
-          routing_confidence: 0.5,
-          duplicate_probability: 0.0,
-          summary: issueText.substring(0, 50) + "...",
-          entities: []
-        }
-      };
+      console.error("AI Backend Error:", error);
+      // Bubble up the error so calling components can handle failure state
+      throw error;
     }
   },
 
