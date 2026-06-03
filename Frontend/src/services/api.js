@@ -7,10 +7,13 @@ const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// In-memory cache replaces localStorage to prevent data leakage (XSS Mitigation)
+const inMemoryCache = new Map();
+
 // Safe helper to get data from storage or default
 const getStorage = (key, defaultData) => {
   try {
-    const stored = localStorage.getItem(key);
+    const stored = inMemoryCache.get(key);
     if (!stored) {
       setStorage(key, defaultData);
       return defaultData;
@@ -22,13 +25,12 @@ const getStorage = (key, defaultData) => {
   }
 };
 
-// Safe helper to set data and handle QuotaExceeded
+// Safe helper to set data
 const setStorage = (key, data) => {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    inMemoryCache.set(key, JSON.stringify(data));
   } catch (error) {
-    console.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
-    // If quota exceeded, we could trim the data, but for now we fail gracefully.
+    console.warn(`[Storage Error] Failed to write '${key}':`, error);
   }
 };
 

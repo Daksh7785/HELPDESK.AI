@@ -112,6 +112,27 @@ if (!hasValidConfig) {
 	)
 }
 
+// Custom In-Memory Storage to prevent JWT tokens from touching localStorage (XSS Mitigation)
+const inMemoryStorage = {
+	items: new Map(),
+	getItem(key) {
+		return this.items.get(key) || null;
+	},
+	setItem(key, value) {
+		this.items.set(key, value);
+	},
+	removeItem(key) {
+		this.items.delete(key);
+	}
+};
+
 export const supabase = hasValidConfig
-	? createClient(supabaseUrl, supabaseKey)
+	? createClient(supabaseUrl, supabaseKey, {
+			auth: {
+				storage: inMemoryStorage,
+				persistSession: true, // Will persist to our secure in-memory Map instead of localStorage
+				autoRefreshToken: true,
+				detectSessionInUrl: true
+			}
+	  })
 	: createDisabledSupabaseClient()

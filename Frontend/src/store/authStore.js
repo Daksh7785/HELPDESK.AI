@@ -1,10 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
 import useTicketStore from './ticketStore';
 
 const useAuthStore = create(
-    persist(
         (set, get) => ({
             // --- AUTH STATE ---
             user: null,
@@ -288,16 +286,7 @@ const useAuthStore = create(
                     set({ loading: false });
                 });
             }
-        }),
-        {
-            name: 'auth-storage',
-            partialize: (state) => ({
-                // We keep profile persisted for quick UI transitions, 
-                // but session is handled by Supabase cookie/localStorage
-                profile: state.profile
-            }),
-        }
-    )
+        })
 );
 
 export default useAuthStore;
