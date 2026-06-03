@@ -161,7 +161,7 @@ function AutoResolve() {
                                 Still Not Working
                             </button>
                             <button
-                                onClick={() => window.location.reload()}
+                                onClick={() => navigate(0)}
                                 className="w-full sm:w-auto px-4 py-4 text-gray-400 hover:text-emerald-600 transition-colors"
                             >
                                 <RefreshCcw size={20} />
