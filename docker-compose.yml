@@ -1,9 +1,13 @@
 version: "3.9"
 
-# Local development stack for HELPDESK.AI
+# Full-stack deployment stack for HELPDESK.AI
 # Usage: docker compose up --build
+#
+# Multi-stage builds used for both backend (Python) and frontend (Vite + nginx)
+# to ensure minimal production images with only runtime dependencies.
 
 services:
+  # ── Backend: FastAPI (Python) ──────────────────────────────────────────────
   backend:
     build:
       context: ./backend
@@ -41,6 +45,23 @@ services:
     networks:
       - helpdesk_net
 
+  # ── Frontend: Vite + nginx (multi-stage build) ─────────────────────────────
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    image: helpdesk-ai-frontend:local
+    container_name: helpdesk_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - helpdesk_net
+
+  # ── Redis Cache ────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: helpdesk_redis
