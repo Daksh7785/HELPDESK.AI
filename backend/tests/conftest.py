@@ -443,13 +443,13 @@ def _install_optional_ml_stubs():
         elif module_name == "encryption":
             try:
                 crypto_missing = importlib.util.find_spec("Crypto") is None
-            except ModuleNotFoundError:
+            except (ModuleNotFoundError, ValueError):
                 crypto_missing = True
             should_stub = module_name not in sys.modules and crypto_missing
         else:
             try:
                 spec_missing = importlib.util.find_spec(module_name) is None
-            except ModuleNotFoundError:
+            except (ModuleNotFoundError, ValueError):
                 spec_missing = True
             should_stub = module_name not in sys.modules and spec_missing
 
