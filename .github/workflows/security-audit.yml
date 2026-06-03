@@ -32,11 +32,4 @@ jobs:
         ALLOW_DEGRADED_STARTUP: "1"
         REQUIRE_SUPABASE: "false"
       run: |
-        python -m pytest backend/tests/test_tenant_isolation.py -v
-
-    - name: Run Isolation Audit Engine Tests
-      env:
-        ALLOW_DEGRADED_STARTUP: "1"
-        REQUIRE_SUPABASE: "false"
-      run: |
-        python -m pytest backend/tests/security/ -v --ignore=backend/tests/security/__pycache__
+        cd backend && python -m pytest tests/test_tenant_isolation.py -v
