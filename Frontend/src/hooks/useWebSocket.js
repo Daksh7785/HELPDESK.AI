@@ -85,20 +85,6 @@ export default function useWebSocket(companyId, accessToken) {
     }
   }, [clearTimers]);
 
-  // ---- Start heartbeat timers (called after connect) --------------------
-
-  const startHeartbeat = useCallback(() => {
-    // Clear any existing timers first to prevent duplicates on reconnect
-    clearTimers();
-
-    // Periodic pings
-    pingTimerRef.current = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "ping" }));
-      }
-    }, PING_INTERVAL_MS);
-  }, [clearTimers]);
-
   // ---- WebSocket lifecycle & Reconnection ---------------------------------
 
   const connectRef = useRef(null);
@@ -133,6 +119,8 @@ export default function useWebSocket(companyId, accessToken) {
    *  4. If the deadline fires, the connection is dead — force a reconnect.
    */
   const startHeartbeat = useCallback((socket) => {
+    clearTimers();
+
     pingTimerRef.current = setInterval(() => {
       if (!socket || socket.readyState !== WebSocket.OPEN) return;
 
@@ -160,8 +148,6 @@ export default function useWebSocket(companyId, accessToken) {
   }, [clearTimers, scheduleReconnect]);
 
   // ---- WebSocket lifecycle -----------------------------------------------
-
-  const connectRef = useRef(null);
 
   const connect = useCallback(() => {
     cleanup();
