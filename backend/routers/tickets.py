@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException
 from backend.dependencies import supabase, duplicate_service
 from backend.models import TicketSaveRequest, TicketRecord, TICKETS_DB
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 @router.get("")
 async def get_tickets(company_id: str | None = None):
@@ -120,7 +122,8 @@ async def save_ticket(request_body: TicketSaveRequest):
 
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("Failed to create ticket", exc_info=e)
+        raise HTTPException(status_code=500, detail="Failed to create ticket. Please try again later.")
 
 @router.get("/{ticket_id}")
 async def get_ticket_by_id(ticket_id: str):

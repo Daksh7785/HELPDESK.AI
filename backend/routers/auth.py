@@ -1,8 +1,11 @@
 
+import logging
 import os
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from backend.dependencies import supabase
 from backend.models import LoginBody, SignupBody
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 ACCESS_COOKIE = "access_token"
@@ -83,7 +86,8 @@ async def auth_login(body: LoginBody, response: Response):
             {"email": body.email, "password": body.password}
         )
     except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+        logger.error("Login attempt failed", exc_info=exc)
+        raise HTTPException(status_code=401, detail="Invalid email or password") from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
@@ -115,7 +119,8 @@ async def auth_signup(body: SignupBody, response: Response):
             }
         )
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.error("Signup attempt failed", exc_info=exc)
+        raise HTTPException(status_code=400, detail="Signup failed. Please try again.") from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
