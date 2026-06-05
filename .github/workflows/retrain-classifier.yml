@@ -1,0 +1,119 @@
+name: "[AI] Bi-Weekly Classifier Retraining — Issue #1931"
+
+on:
+  # Bi-weekly: every other Sunday at 02:00 UTC
+  schedule:
+    - cron: "0 2 */14 * 0"
+
+  # Manual trigger with optional dry-run flag
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (skip actual training)"
+        required: false
+        default: "false"
+        type: boolean
+
+permissions:
+  contents: write   # needed to commit updated registry / dataset back to repo
+
+jobs:
+  retrain:
+    name: "Active Learning — Retrain & Validate"
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. Checkout
+      # ------------------------------------------------------------------ #
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # full history for accurate versioning
+
+      # ------------------------------------------------------------------ #
+      # 2. Python environment
+      # ------------------------------------------------------------------ #
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+
+      # ------------------------------------------------------------------ #
+      # 3. Prepare active-learning dataset
+      # ------------------------------------------------------------------ #
+      - name: Prepare Training Dataset
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          python -c "
+          import sys, os
+          sys.path.insert(0, os.getcwd())
+          from backend.services.active_learning_service import active_learning_service
+          summary = active_learning_service.prepare_training_dataset()
+          print('Dataset summary:', summary)
+          if summary.get('total_samples', 0) < 10:
+              print('::warning::Insufficient training samples. Retraining skipped.')
+              sys.exit(0)
+          "
+
+      # ------------------------------------------------------------------ #
+      # 4. Run retraining pipeline
+      # ------------------------------------------------------------------ #
+      - name: Run Retraining Pipeline
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
+          ARGS=""
+          if [ "$DRY_RUN" = "true" ]; then
+            ARGS="--dry-run"
+            echo "Running in DRY RUN mode"
+          fi
+          python -m backend.training.retraining_pipeline $ARGS
+
+      # ------------------------------------------------------------------ #
+      # 5. Commit updated artefacts (registry, dataset, candidate meta)
+      # ------------------------------------------------------------------ #
+      - name: Commit Retraining Artefacts
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add backend/data/model_registry.json \
+                  backend/data/active_learning_dataset.json \
+                  backend/models/classifier-candidate/al_meta.json || true
+          git diff --cached --quiet || git commit -m \
+            "chore(ml): update model registry and AL dataset [skip ci]"
+          git push || true
+
+      # ------------------------------------------------------------------ #
+      # 6. Annotate job summary
+      # ------------------------------------------------------------------ #
+      - name: Write Job Summary
+        if: always()
+        run: |
+          python -c "
+          import json, sys, os
+          sys.path.insert(0, os.getcwd())
+          try:
+              from backend.services.active_learning_service import active_learning_service
+              reg = active_learning_service.get_registry()
+              current = active_learning_service.get_current_version()
+              print('## Active Learning Retraining Summary')
+              print(f'**Current model:** {reg.get(\"current_version\", \"none\")}')
+              if current:
+                  print(f'**Accuracy:** {current.get(\"accuracy\", 0):.4f}')
+                  print(f'**Training samples:** {current.get(\"training_samples\", 0)}')
+              print(f'**Total registered versions:** {len(reg.get(\"versions\", []))}')
+          except Exception as e:
+              print(f'Could not generate summary: {e}')
+          " >> \$GITHUB_STEP_SUMMARY

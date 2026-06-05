@@ -43,5 +43,15 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Pending Requests** | Onboarding queue. | Approve/Reject new company registrations. |
 | **Master Bug Reports** | Platform diagnostics. | System-wide error tracking and resolution. |
 
+## 🤖 Layer 5: AI/ML Operations (Active Learning Pipeline — Issue #1931)
+| Component | Description | Key Features |
+| :--- | :--- | :--- |
+| **Active Learning Service** | `backend/services/active_learning_service.py` | Telemetry-enriched correction logging, hard-negative mining, dataset balancing, model registry, rollback |
+| **Retraining Pipeline** | `backend/training/retraining_pipeline.py` | DistilBERT fine-tuning, weighted hard-negative loss, validation gate (≥2% gain), automatic backup & promotion |
+| **Active Learning Router** | `backend/routes/active_learning.py` | 11 REST endpoints: retrain, status, registry, rollback, promote, annotation pool, drift stats |
+| **Bi-Weekly GitHub Action** | `.github/workflows/retrain-classifier.yml` | Scheduled retraining every other Sunday, dry-run support, artefact commit |
+| **Low-Confidence Pool** | `GET /active-learning/pool` | Human-in-the-loop annotation queue sorted by ascending confidence |
+| **Model Registry** | `backend/data/model_registry.json` | Full version history with accuracy, training samples, promotion status |
+
 ---
 *Documented with millisecond precision for Helpdesk.ai Platform.*
