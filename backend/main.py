@@ -1474,6 +1474,303 @@ async def auth_signup(body: SignupBody, response: Response):
     user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
     return {"user": user_payload, "message": "Signup complete"}
 
+# ---------------------------------------------------------------------------
+# Admin Analytics endpoints
+# ---------------------------------------------------------------------------
+
+# SLA resolution hour targets per priority level (matches sla_service.py)
+SLA_RESOLUTION_HOURS: dict[str, int] = {
+    "critical": 4,
+    "high": 12,
+    "medium": 24,
+    "low": 72,
+}
+
+
+def _analytics_query(company_id: str | None, period_days: int | None = None):
+    """Build a base tickets query scoped to company and optional date window."""
+    q = supabase.table("tickets").select(
+        "id, created_at, status, priority, category, assigned_team, "
+        "sla_breach_at, sla_status, escalation_level, closed_at, company_id"
+    )
+    if company_id:
+        q = q.eq("company_id", company_id)
+    if period_days:
+        import datetime as _dt
+        cutoff = (_dt.datetime.utcnow() - _dt.timedelta(days=period_days)).isoformat() + "Z"
+        q = q.gte("created_at", cutoff)
+    return q
+
+
+@app.get("/admin/analytics/overview")
+async def analytics_overview(company_id: str | None = None):
+    """
+    Aggregated KPI counts: total, open, resolved, SLA breach rate, avg resolution time.
+    Used by the Overview Cards section of the analytics dashboard.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        res = _analytics_query(company_id).execute()
+        tickets = res.data or []
+
+        total = len(tickets)
+        resolved_statuses = {"resolved", "closed", "auto-resolved", "auto resolved"}
+        open_tickets = [t for t in tickets if (t.get("status") or "").lower() not in resolved_statuses]
+        resolved_tickets = [t for t in tickets if (t.get("status") or "").lower() in resolved_statuses]
+
+        # SLA breach rate
+        breached = [t for t in tickets if (t.get("sla_status") or "").upper() == "BREACHED"]
+        sla_breach_rate = round((len(breached) / total * 100), 1) if total else 0.0
+
+        # Average resolution time in hours (uses closed_at - created_at)
+        import datetime as _dt
+        resolution_times_hours: list[float] = []
+        for t in resolved_tickets:
+            ca = t.get("closed_at") or t.get("created_at")
+            cr = t.get("created_at")
+            if ca and cr:
+                try:
+                    end = _dt.datetime.fromisoformat(str(ca).replace("Z", "+00:00"))
+                    start = _dt.datetime.fromisoformat(str(cr).replace("Z", "+00:00"))
+                    hours = (end - start).total_seconds() / 3600
+                    if 0 < hours < 8760:  # ignore outliers > 1 year
+                        resolution_times_hours.append(round(hours, 2))
+                except (ValueError, TypeError):
+                    pass
+        avg_resolution_hours = (
+            round(sum(resolution_times_hours) / len(resolution_times_hours), 1)
+            if resolution_times_hours
+            else None
+        )
+
+        # Tickets per assigned_team (agent workload proxy)
+        team_counts: dict[str, int] = {}
+        for t in open_tickets:
+            team = t.get("assigned_team") or "Unassigned"
+            team_counts[team] = team_counts.get(team, 0) + 1
+        busiest_team = max(team_counts, key=lambda k: team_counts[k]) if team_counts else None
+
+        return {
+            "total": total,
+            "open": len(open_tickets),
+            "resolved": len(resolved_tickets),
+            "sla_breach_rate": sla_breach_rate,
+            "avg_resolution_hours": avg_resolution_hours,
+            "busiest_team": busiest_team,
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/admin/analytics/volume")
+async def analytics_volume(company_id: str | None = None, period: str = "30d"):
+    """
+    Daily ticket creation + resolution counts for the given period.
+    period values: '7d', '30d', '90d'
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        period_days = {"7d": 7, "30d": 30, "90d": 90}.get(period, 30)
+        res = _analytics_query(company_id, period_days).execute()
+        tickets = res.data or []
+
+        import datetime as _dt
+        resolved_statuses = {"resolved", "closed", "auto-resolved", "auto resolved"}
+        created_map: dict[str, int] = {}
+        resolved_map: dict[str, int] = {}
+
+        for t in tickets:
+            ca = t.get("created_at")
+            if ca:
+                try:
+                    day = _dt.datetime.fromisoformat(str(ca).replace("Z", "+00:00")).strftime("%Y-%m-%d")
+                    created_map[day] = created_map.get(day, 0) + 1
+                except (ValueError, TypeError):
+                    pass
+            if (t.get("status") or "").lower() in resolved_statuses:
+                close_ts = t.get("closed_at") or ca
+                if close_ts:
+                    try:
+                        day = _dt.datetime.fromisoformat(str(close_ts).replace("Z", "+00:00")).strftime("%Y-%m-%d")
+                        resolved_map[day] = resolved_map.get(day, 0) + 1
+                    except (ValueError, TypeError):
+                        pass
+
+        all_days = sorted(set(list(created_map.keys()) + list(resolved_map.keys())))
+        series = [
+            {"date": d, "created": created_map.get(d, 0), "resolved": resolved_map.get(d, 0)}
+            for d in all_days
+        ]
+        return {"period": period, "series": series}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/admin/analytics/sla")
+async def analytics_sla(company_id: str | None = None):
+    """
+    SLA compliance percentage by priority level.
+    Returns [{ priority, within_sla, breached, compliance_rate }]
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        res = _analytics_query(company_id).execute()
+        tickets = res.data or []
+
+        from collections import defaultdict
+        priority_totals: dict[str, int] = defaultdict(int)
+        priority_breached: dict[str, int] = defaultdict(int)
+
+        for t in tickets:
+            pri = (t.get("priority") or "low").lower()
+            priority_totals[pri] += 1
+            if (t.get("sla_status") or "").upper() == "BREACHED" or t.get("escalation_level", 0) > 0:
+                priority_breached[pri] += 1
+
+        result = []
+        for pri in ["critical", "high", "medium", "low"]:
+            total = priority_totals.get(pri, 0)
+            breached = priority_breached.get(pri, 0)
+            within = total - breached
+            compliance = round((within / total * 100), 1) if total else 100.0
+            result.append({
+                "priority": pri.capitalize(),
+                "total": total,
+                "within_sla": within,
+                "breached": breached,
+                "compliance_rate": compliance,
+                "sla_target_hours": SLA_RESOLUTION_HOURS.get(pri, 72),
+            })
+        return {"sla_by_priority": result}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/admin/analytics/categories")
+async def analytics_categories(company_id: str | None = None):
+    """
+    Ticket count per category and subcategory for donut/bar charts.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        res = _analytics_query(company_id).execute()
+        tickets = res.data or []
+
+        from collections import Counter
+        cat_counts: Counter = Counter()
+        for t in tickets:
+            cat = t.get("category") or "Uncategorized"
+            cat_counts[cat] += 1
+
+        categories = [
+            {"name": cat, "count": cnt}
+            for cat, cnt in sorted(cat_counts.items(), key=lambda x: -x[1])
+        ]
+        return {"total": len(tickets), "categories": categories}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/admin/analytics/agents")
+async def analytics_agents(company_id: str | None = None):
+    """
+    Open ticket count per assigned team (agent workload distribution).
+    Returns horizontal bar chart data sorted by workload descending.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        res = _analytics_query(company_id).execute()
+        tickets = res.data or []
+
+        resolved_statuses = {"resolved", "closed", "auto-resolved", "auto resolved"}
+        from collections import defaultdict
+        team_open: dict[str, int] = defaultdict(int)
+        team_total: dict[str, int] = defaultdict(int)
+
+        for t in tickets:
+            team = t.get("assigned_team") or "Unassigned"
+            team_total[team] += 1
+            if (t.get("status") or "").lower() not in resolved_statuses:
+                team_open[team] += 1
+
+        teams = sorted(
+            [
+                {"team": team, "open_tickets": team_open.get(team, 0), "total_tickets": team_total[team]}
+                for team in team_total
+            ],
+            key=lambda x: -x["open_tickets"],
+        )
+        return {"teams": teams}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
+@app.get("/admin/analytics/resolution-time")
+async def analytics_resolution_time(company_id: str | None = None):
+    """
+    Distribution of resolution times (in hours) for a histogram.
+    Buckets: 0-4h, 4-12h, 12-24h, 24-48h, 48-72h, 72h+
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        res = _analytics_query(company_id).execute()
+        tickets = res.data or []
+
+        import datetime as _dt
+        resolved_statuses = {"resolved", "closed", "auto-resolved", "auto resolved"}
+        buckets = [
+            {"label": "0–4h", "min": 0, "max": 4, "count": 0},
+            {"label": "4–12h", "min": 4, "max": 12, "count": 0},
+            {"label": "12–24h", "min": 12, "max": 24, "count": 0},
+            {"label": "24–48h", "min": 24, "max": 48, "count": 0},
+            {"label": "48–72h", "min": 48, "max": 72, "count": 0},
+            {"label": "72h+", "min": 72, "max": float("inf"), "count": 0},
+        ]
+
+        hours_list: list[float] = []
+        for t in tickets:
+            if (t.get("status") or "").lower() not in resolved_statuses:
+                continue
+            close_ts = t.get("closed_at") or None
+            create_ts = t.get("created_at")
+            if not close_ts or not create_ts:
+                continue
+            try:
+                end = _dt.datetime.fromisoformat(str(close_ts).replace("Z", "+00:00"))
+                start = _dt.datetime.fromisoformat(str(create_ts).replace("Z", "+00:00"))
+                hours = (end - start).total_seconds() / 3600
+                if 0 < hours < 8760:
+                    hours_list.append(hours)
+                    for bucket in buckets:
+                        if bucket["min"] <= hours < bucket["max"]:
+                            bucket["count"] += 1
+                            break
+            except (ValueError, TypeError):
+                pass
+
+        avg = round(sum(hours_list) / len(hours_list), 1) if hours_list else None
+        median = None
+        if hours_list:
+            sorted_h = sorted(hours_list)
+            n = len(sorted_h)
+            median = round(sorted_h[n // 2] if n % 2 else (sorted_h[n // 2 - 1] + sorted_h[n // 2]) / 2, 1)
+
+        return {
+            "buckets": [{"label": b["label"], "count": b["count"]} for b in buckets],
+            "avg_hours": avg,
+            "median_hours": median,
+            "sample_size": len(hours_list),
+        }
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+
+
 @app.post("/auth/logout")
 async def auth_logout(response: Response):
     _clear_session_cookies(response)
