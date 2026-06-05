@@ -1,8 +1,11 @@
 
 import os
-import psycopg2
 import pytest
 
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
 
 @pytest.fixture(scope="module")
 def db_connection():
@@ -10,6 +13,8 @@ def db_connection():
     PostgreSQL database connection fixture.
     Skips DB-dependent tests if database is unavailable.
     """
+    if psycopg2 is None:
+        pytest.skip("psycopg2 is not installed")
 
     try:
         connection = psycopg2.connect(
