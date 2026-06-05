@@ -18,9 +18,15 @@ def _truthy(value: str | None) -> bool:
     return (value or "").strip().lower() in {"1", "true", "yes", "on"}
 
 
-def _text_key(prefix: str, text: str) -> str | None:
+def _text_key(prefix: str, text: str) -> str:
+    """
+    Computes an MD5 hash of the given text for use as a cache key.
+    
+    Raises:
+        ValueError: If the input text is empty or only whitespace.
+    """
     if not text or not text.strip():
-        return None
+        raise ValueError("Text cannot be empty or whitespace.")
     digest = hashlib.md5(text.strip().lower().encode("utf-8")).hexdigest()
     return f"{prefix}{digest}"
 
@@ -60,11 +66,19 @@ class RedisInferenceCache:
                 raise RuntimeError(message) from error
 
     def get_classification(self, text: str) -> dict | None:
+        """
+        Retrieve a cached classification result for the given text.
+        Handles empty text gracefully by returning None.
+        """
         if not self.available:
             return None
-        cache_key = _text_key(CLASSIFICATION_PREFIX, text)
-        if not cache_key:
+            
+        try:
+            cache_key = _text_key(CLASSIFICATION_PREFIX, text)
+        except ValueError as err:
+            logger.warning("[RedisCache] %s", err)
             return None
+            
         try:
             raw = self._client.get(cache_key)
             return json.loads(raw) if raw else None
@@ -73,11 +87,19 @@ class RedisInferenceCache:
             return None
 
     def set_classification(self, text: str, payload: dict) -> None:
+        """
+        Cache a classification result for the given text.
+        Handles empty text gracefully by returning early.
+        """
         if not self.available:
             return
-        cache_key = _text_key(CLASSIFICATION_PREFIX, text)
-        if not cache_key:
+            
+        try:
+            cache_key = _text_key(CLASSIFICATION_PREFIX, text)
+        except ValueError as err:
+            logger.warning("[RedisCache] %s", err)
             return
+            
         try:
             self._client.setex(
                 cache_key,
@@ -88,11 +110,19 @@ class RedisInferenceCache:
             logger.warning("[RedisCache] classification set failed: %s", error)
 
     def get_embedding(self, text: str) -> list[float] | None:
+        """
+        Retrieve a cached embedding for the given text.
+        Handles empty text gracefully by returning None.
+        """
         if not self.available:
             return None
-        cache_key = _text_key(EMBEDDING_PREFIX, text)
-        if not cache_key:
+            
+        try:
+            cache_key = _text_key(EMBEDDING_PREFIX, text)
+        except ValueError as err:
+            logger.warning("[RedisCache] %s", err)
             return None
+            
         try:
             raw = self._client.get(cache_key)
             if not raw:
@@ -104,11 +134,19 @@ class RedisInferenceCache:
             return None
 
     def set_embedding(self, text: str, embedding: list[float]) -> None:
+        """
+        Cache an embedding for the given text.
+        Handles empty text gracefully by returning early.
+        """
         if not self.available:
             return
-        cache_key = _text_key(EMBEDDING_PREFIX, text)
-        if not cache_key:
+            
+        try:
+            cache_key = _text_key(EMBEDDING_PREFIX, text)
+        except ValueError as err:
+            logger.warning("[RedisCache] %s", err)
             return
+            
         try:
             self._client.setex(
                 cache_key,
