@@ -204,6 +204,25 @@ function TicketDetailView() {
                                 </CardContent>
                             </Card>
                         )}
+                        {isResolved && (
+    <Card className="p-0 overflow-hidden border-none shadow-xl shadow-gray-200/50">
+        <CardHeader className="bg-emerald-50 px-8 py-5 border-b border-emerald-100">
+            <CardTitle className="font-bold text-emerald-800 flex items-center gap-2">
+                <BrainCircuit size={18} />
+                AI Resolution Summary
+            </CardTitle>
+        </CardHeader>
+
+        <CardContent className="p-8">
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
+                <p className="text-gray-700 leading-relaxed">
+                    {ticket.resolution_summary ||
+                        "This issue has been successfully resolved by the support team. All reported concerns were reviewed and appropriate actions were taken to address the problem."}
+                </p>
+            </div>
+        </CardContent>
+    </Card>
+)}
 
                         {/* Conversation Card */}
                         <Card className="p-0 overflow-hidden border-none shadow-xl shadow-gray-200/50">
