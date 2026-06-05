@@ -222,3 +222,81 @@ class GeminiService:
         except Exception as e:
             print(f"[GeminiService] Bug Analysis Error: {e}")
             return f"Diagnostic analysis failed: {str(e)}"
+
+    def ask_ai(self, prompt: str, ticket_context: dict, history: list, image_base64: str = None) -> str:
+        """
+        Generic raw AI chat for troubleshooting. Replaces the frontend askAI direct call.
+        """
+        if not self._initialized:
+            return "AI Chat unavailable (API key missing or disconnected)."
+
+        try:
+            # Build context string from ticket_context
+            summary = ticket_context.get("summary", "N/A") if ticket_context else "N/A"
+            category = ticket_context.get("category", "N/A") if ticket_context else "N/A"
+            subcategory = ticket_context.get("subcategory", "N/A") if ticket_context else "N/A"
+            entities = ticket_context.get("entities", []) if ticket_context else []
+            ocr_text = ticket_context.get("ocr_text", "None") if ticket_context else "None"
+            
+            system_prompt = (
+                "You are an expert enterprise IT troubleshooting assistant.\n"
+                "Your goal is to guide the user to a resolution with extreme clarity and professionalism.\n\n"
+                "STRICT FORMATTING RULES:\n"
+                "1. Use **markdown** for all responses.\n"
+                "2. Use **bold headers** for main steps.\n"
+                "3. Use - bulleted lists for options or details within a step.\n"
+                "4. Use `code blocks` or `inline code` for all terminal commands, paths, or specific UI elements.\n"
+                "5. Keep the tone helpful, concise, and structured. Avoid long blocks of text.\n"
+                "6. If you need to ask multiple questions, use a bulleted list.\n\n"
+                f"Context:\n"
+                f"- Summary: {summary}\n"
+                f"- Category: {category}\n"
+                f"- Subcategory: {subcategory}\n"
+                f"- Entities: {entities}\n"
+                f"- OCR Text: {ocr_text}"
+            )
+
+            contents = []
+            
+            # Since the new python SDK does not have a "startChat" equivalent that easily takes system prompts
+            # without specific role mapping we'll construct the history manually.
+            if not history:
+                effective_prompt = f"{system_prompt}\n\nUSER REQUEST: {prompt}"
+                contents.append(effective_prompt)
+            else:
+                # Add history
+                # We will prepend system prompt to the first user message
+                for i, msg in enumerate(history):
+                    role = "user" if msg.get("role") == "user" else "model"
+                    msg_text = msg.get("text", "")
+                    if i == 0 and role == "user":
+                        msg_text = f"{system_prompt}\n\n{msg_text}"
+                    
+                    contents.append(genai.types.Content(role=role, parts=[genai.types.Part.from_text(text=msg_text)]))
+                
+                # Add current prompt
+                current_prompt = f"{prompt}\n\n(Reminder: Follow all system formatting and context rules)"
+                contents.append(genai.types.Content(role="user", parts=[genai.types.Part.from_text(text=current_prompt)]))
+
+            # Add image to the last part if provided
+            if image_base64:
+                image_bytes = base64.b64decode(image_base64.split("base64,")[-1] if "base64," in image_base64 else image_base64)
+                img = Image.open(io.BytesIO(image_bytes))
+                
+                # Note: For contents parameter, if it's a list of `Content` objects, we need to append the image to the last user message.
+                if isinstance(contents[-1], genai.types.Content):
+                    contents[-1].parts.append(img)
+                else:
+                    contents.append(img)
+
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=contents
+            )
+            return response.text.strip()
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            print(f"[GeminiService] Chat Error: {e}")
+            return f"I encountered an error processing your request: {str(e)}"
+

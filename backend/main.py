@@ -443,6 +443,30 @@ async def troubleshoot(request: TroubleshootRequest):
     return TroubleshootResponse(**result)
 
 
+class AIChatRequest(BaseModel):
+    prompt: str
+    ticketContext: dict | None = None
+    history: list[dict] = []
+    image: str | None = None
+
+class AIChatResponse(BaseModel):
+    response: str
+
+@app.post("/ai/chat", response_model=AIChatResponse)
+async def ai_chat(request: AIChatRequest):
+    """Raw AI chat for troubleshooting directly replacing the frontend."""
+    if not gemini_service or not gemini_service._initialized:
+        return AIChatResponse(response="AI Chat is currently unavailable.")
+    
+    result = gemini_service.ask_ai(
+        request.prompt,
+        request.ticketContext or {},
+        request.history,
+        request.image
+    )
+    return AIChatResponse(response=result)
+
+
 class BugReportAnalysisRequest(BaseModel):
     bug_title: str
     description: str
