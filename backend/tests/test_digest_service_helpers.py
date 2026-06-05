@@ -16,6 +16,7 @@ import unittest
 from backend.services.digest_service import (
     _build_team_performance_html,
     _build_category_list_html,
+    _build_digest_email_subject,
 )
 
 
@@ -71,6 +72,25 @@ class TestBuildTeamPerformanceHtml(unittest.TestCase):
         ]
         result = _build_team_performance_html(teams)
         self.assertIn("#059669", result)
+
+
+class TestBuildDigestEmailSubject(unittest.TestCase):
+    """Tests for digest email subject formatting."""
+
+    def test_preserves_special_characters(self):
+        result = _build_digest_email_subject({"company_name": "Soporte Nino & Cafe \"VIP\" 🚀"})
+
+        self.assertEqual(result, 'Weekly Helpdesk Operations Digest - Soporte Nino & Cafe "VIP" 🚀')
+
+    def test_strips_control_characters(self):
+        result = _build_digest_email_subject({"company_name": "ACME\r\n\tOps\x00Team"})
+
+        self.assertEqual(result, "Weekly Helpdesk Operations Digest - ACME Ops Team")
+
+    def test_falls_back_when_company_name_is_blank(self):
+        result = _build_digest_email_subject({"company_name": "\n\t"})
+
+        self.assertEqual(result, "Weekly Helpdesk Operations Digest - Your Company")
 
     def test_medium_resolution_rate_uses_amber(self):
         """Resolution rate 50-79 should use amber (#d97706)."""
