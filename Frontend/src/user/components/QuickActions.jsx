@@ -8,7 +8,6 @@ const actions = [
         title: "Network Issues",
         description: "Connectivity problems, VPN access, and slow internet.",
         category: "Network",
-        templateId: "vpn-connectivity",
         icon: Network,
         color: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
         hoverColor: "group-hover:border-emerald-500/40",
@@ -17,7 +16,6 @@ const actions = [
         title: "Software Problems",
         description: "Application crashes, license issues, and installations.",
         category: "Software",
-        templateId: "software-installation",
         icon: Laptop,
         color: "text-blue-400 bg-blue-500/10 border-blue-500/20",
         hoverColor: "group-hover:border-blue-500/40",
@@ -26,7 +24,6 @@ const actions = [
         title: "Access Requests",
         description: "Permission changes, new account setup, and MFA.",
         category: "Access",
-        templateId: "password-reset",
         icon: ShieldCheck,
         color: "text-purple-400 bg-purple-500/10 border-purple-500/20",
         hoverColor: "group-hover:border-purple-500/40",
@@ -34,11 +31,10 @@ const actions = [
 ];
 
 const QuickActions = () => {
-  const navigate = useNavigate();
-  const [hoveredIdx, setHoveredIdx] = useState(null);
+    const navigate = useNavigate();
 
-    const handleActionClick = (action) => {
-        navigate("/create-ticket", { state: { templateId: action.templateId, prefilledCategory: action.category } });
+    const handleActionClick = (category) => {
+        navigate("/create-ticket", { state: { prefilledCategory: category } });
     };
 
     return (
@@ -59,29 +55,25 @@ const QuickActions = () => {
                                 <action.icon size={20} />
                             </div>
 
-          <h3 style={{ fontSize: '17px', fontWeight: 600, color: '#111827', marginBottom: '8px' }}>
-            {action.title}
-          </h3>
-          <p style={{ fontSize: '14px', color: '#6b7280', lineHeight: 1.6, marginBottom: '20px' }}>
-            {action.description}
-          </p>
+                            {/* Content Block */}
+                            <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2 tracking-tight font-syne uppercase">
+                                {action.title}
+                            </h3>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 font-medium leading-relaxed m-0">
+                                {action.description}
+                            </p>
+                        </div>
 
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              color: '#16a34a',
-              fontWeight: 600,
-              fontSize: '13px',
-            }}
-          >
-            Start Request →
-          </div>
+                        {/* Interactive Footer Navigation Trigger */}
+                        <div className="flex items-center gap-1.5 text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-6 pt-4 border-t border-slate-100 dark:border-white/5 w-full">
+                            <span>Start Request</span>
+                            <ArrowRight size={14} className="transition-transform group-hover:translate-x-1" />
+                        </div>
+                    </div>
+                </motion.div>
+            ))}
         </div>
-      ))}
-    </div>
-  );
+    );
 };
 
 export default QuickActions;

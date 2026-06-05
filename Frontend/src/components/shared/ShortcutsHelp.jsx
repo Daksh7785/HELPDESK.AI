@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { formatShortcut, getShortcutDescription } from '../hooks/useKeyboardShortcuts';
+import { formatShortcut, getShortcutDescription } from '../../hooks/useKeyboardShortcuts';
 
 const ShortcutsHelp = ({ isOpen, onClose, shortcuts = {} }) => {
     const [selectedCategory, setSelectedCategory] = useState('navigation');

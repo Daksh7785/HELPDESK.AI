@@ -1,8 +1,9 @@
 import { create } from 'zustand';
-import { safePersist } from '../../store/middleware/safePersist';
+import { createPersistedStore } from '../../store/persistenceMiddleware';
 
 const useAdminStore = create(
-    safePersist(
+    createPersistedStore(
+        'admin-settings',
         (set) => ({
             users: [], // System users for management
             settings: {
@@ -38,10 +39,7 @@ const useAdminStore = create(
         set((state) => ({
           users: state.users.filter((u) => u.id !== userId),
         })),
-    }),
-    {
-      name: 'admin-storage-settings',
-    }
+    })
   )
 );
 

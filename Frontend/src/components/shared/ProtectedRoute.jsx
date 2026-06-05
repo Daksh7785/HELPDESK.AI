@@ -26,23 +26,33 @@ const ProtectedRoute = () => {
             </div>
         );
     }
-    if (
-      profile.role === 'admin' &&
-      profile.status === 'active' &&
-      !currentPath.startsWith('/admin')
-    ) {
-      return <Navigate to='/admin/dashboard' replace />;
+    if (!user) {
+        return <Navigate to="/login" replace />;
     }
-    if (
-      profile.role === 'user' &&
-      profile.status !== 'active' &&
-      !currentPath.startsWith('/user-lobby')
-    ) {
-      return <Navigate to='/user-lobby' replace />;
-    }
-  }
 
-  return <Outlet />;
+    const currentPath = window.location.pathname;
+
+    if (profile) {
+        if (profile.role === 'master_admin' && !currentPath.startsWith('/master-admin')) {
+            return <Navigate to="/master-admin/dashboard" replace />;
+        }
+        if (
+            profile.role === 'admin' &&
+            profile.status === 'active' &&
+            !currentPath.startsWith('/admin')
+        ) {
+            return <Navigate to="/admin/dashboard" replace />;
+        }
+        if (
+            profile.role === 'user' &&
+            profile.status !== 'active' &&
+            !currentPath.startsWith('/user-lobby')
+        ) {
+            return <Navigate to="/user-lobby" replace />;
+        }
+    }
+
+    return <Outlet />;
 };
 
 export default ProtectedRoute;

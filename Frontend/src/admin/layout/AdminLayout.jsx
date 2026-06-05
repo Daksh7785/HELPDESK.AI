@@ -58,18 +58,6 @@ const AdminLayout = () => {
             {/* Keyboard Shortcuts Help Modal */}
             <ShortcutsHelpModal isOpen={showHelp} onClose={() => setShowHelp(false)} isAdmin={true} />
 
-            {/* Keyboard Shortcuts Help Modal */}
-            <KeyboardShortcutsModal
-                isOpen={isShortcutsModalOpen}
-                onClose={() => setShortcutsModalOpen(false)}
-            />
-
-            {/* Keyboard Shortcuts Legend Modal */}
-            <KeyboardLegend isOpen={showLegend} onClose={closeLegend} />
-
-            {/* Keyboard Shortcuts Help Overlay */}
-            <KeyboardShortcutsHelp open={showShortcutsHelp} onClose={() => setShowShortcutsHelp(false)} />
-
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
                 <div
@@ -85,8 +73,6 @@ const AdminLayout = () => {
                 </div>
             )}
         </div>
-      )}
-    </div>
   );
 };
 

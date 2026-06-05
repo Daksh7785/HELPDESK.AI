@@ -67,31 +67,7 @@ const Dashboard = () => {
       }
     };
     fetchTickets();
-<<<<<<< HEAD
-=======
 
->>>>>>> upstream/gssoc
-  }, []);
-
-  useEffect(() => {
-    const prevIds = new Set(prevTicketsRef.current.map((t) => t.ticket_id));
-
-    tickets.forEach((t) => {
-      if (!prevIds.has(t.ticket_id)) {
-        markUpdated(t.ticket_id);
-      } else {
-        const prev = prevTicketsRef.current.find((p) => p.ticket_id === t.ticket_id);
-        if (prev && JSON.stringify(prev) !== JSON.stringify(t)) {
-          markUpdated(t.ticket_id);
-        }
-      }
-    });
-
-    prevTicketsRef.current = tickets;
-<<<<<<< HEAD
-=======
-
->>>>>>> upstream/gssoc
   }, [tickets]);
 
   const totalTickets = tickets.length;
