@@ -90,6 +90,8 @@ class AutoCloseService:
                 return settings
 
         except Exception as e:
+            import logging
+            logging.exception(e)
             logger.warning(f"Could not fetch settings for company {company_id}: {str(e)}. Using defaults.")
         
         # Fall back to safe default: disabled.
@@ -157,6 +159,8 @@ class AutoCloseService:
             logger.info(f"Closed ticket {ticket_id} for company {company_id}")
             return True
         except Exception as e:
+            import logging
+            logging.exception(e)
             stats["error_count"] += 1
             logger.error(f"Failed to close ticket {ticket_id}: {str(e)}")
             return False
@@ -166,7 +170,7 @@ class AutoCloseService:
         Execute the auto-close job.
 
         Process:
-        1. Fetch all resolved tickets
+        1. Fetch all resolved tickets (paginated to avoid memory exhaustion)
         2. Group by company_id
         3. For each company, check auto-close settings from DATABASE
         4. Close tickets older than auto_close_days
@@ -187,14 +191,30 @@ class AutoCloseService:
         try:
             logger.info("Starting auto-close job...")
 
-            # Fetch all resolved tickets
-            response = self.supabase.table("tickets").select(
-                "id, company_id, status, updated_at"
-            ).eq("status", "resolved").execute()
+            # Fetch resolved tickets in pages to avoid memory exhaustion at scale
+            PAGE_SIZE = 1000
+            resolved_tickets: List[Dict] = []
+            offset = 0
 
-            resolved_tickets = response.data if response.data else []
+            while True:
+                response = self.supabase.table("tickets").select(
+                    "id, company_id, status, updated_at"
+                ).eq("status", "resolved").range(offset, offset + PAGE_SIZE - 1).execute()
+
+                page = response.data if response.data else []
+                resolved_tickets.extend(page)
+                logger.info(f"Fetched page of {len(page)} resolved tickets (offset={offset})")
+
+                if len(page) < PAGE_SIZE:
+                    break
+                offset += PAGE_SIZE
+
             stats["processed_count"] = len(resolved_tickets)
-            logger.info(f"Found {len(resolved_tickets)} resolved tickets")
+            logger.info(f"Found {len(resolved_tickets)} resolved tickets total")
+
+            if not resolved_tickets:
+                logger.info("No resolved tickets to process")
+                return stats
 
             if not resolved_tickets:
                 logger.info("No resolved tickets to process")
@@ -252,6 +272,8 @@ class AutoCloseService:
             return stats
 
         except Exception as e:
+            import logging
+            logging.exception(e)
             logger.error(f"Fatal error in auto-close job: {str(e)}")
             stats["error_count"] += 1
             return stats
@@ -280,6 +302,8 @@ class AutoCloseService:
             return tickets
 
         except Exception as e:
+            import logging
+            logging.exception(e)
             logger.error(f"Error in test_query: {str(e)}")
             return []
 

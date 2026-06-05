@@ -114,6 +114,8 @@ except Exception as e:
 
 
 # Ensure project root is on path for imports
+import sys
+import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "https://helpdeskaiv1.vercel.app").rstrip("/")
@@ -504,6 +506,8 @@ def get_system_settings(company_id: str) -> dict:
                 pass
             return settings
     except Exception as e:
+        import logging
+        logging.exception(e)
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
 
@@ -990,11 +994,11 @@ async def lifespan(app: FastAPI):
         print(f"[WARNING] NER not loaded: {e}")
     try:
         duplicate_service.load()
-    except Exception as e:
+    except (ValueError, IOError) as e:
         print(f"[WARNING] Duplicate service not loaded: {e}")
     try:
         rag_service.load()
-    except Exception as e:
+    except RuntimeError as e:
         print(f"[WARNING] RAG service not loaded: {e}")
     try:
         onnx_classifier.load()
@@ -1197,7 +1201,7 @@ async def _custom_rate_limit_handler(request: Request, exc: RateLimitExceeded) -
 
 
 # ── Security Headers Middleware (Helmet.js equivalent) ────────────────────────
-from security_middleware import SecurityHeadersMiddleware, get_allowed_origins
+from backend.security_middleware import SecurityHeadersMiddleware, get_allowed_origins
 app.add_middleware(SecurityHeadersMiddleware)
 
 # ── CORS — strictly from ALLOWED_ORIGINS env var, never wildcard ──────────────
@@ -1282,11 +1286,11 @@ from backend.routes.estimator import router as estimator_router
 app.include_router(estimator_router)
 
 # Tagging router (Issue #404)
-from tag_router import router as tag_router
+from backend.tag_router import router as tag_router
 app.include_router(tag_router)
 
 # Sentiment router (Issue #775)
-from sentiment_router import router as sentiment_router
+from backend.sentiment_router import router as sentiment_router
 app.include_router(sentiment_router)
 
 
@@ -1612,6 +1616,7 @@ class BugReportAnalysisRequest(BaseModel):
 class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 @limiter.limit("10/minute")
 async def analyze_bug(request: Request, request_body: BugReportAnalysisRequest):
@@ -1834,6 +1839,7 @@ def _atomic_write_json(path: Path, data) -> None:
     os.replace(tmp_path, path)
 
 
+@limiter.limit("10/minute")
 @app.post("/ai/log_correction")
 @limiter.limit("30/minute")
 async def log_correction(request: Request, user: dict = Depends(get_current_user)):

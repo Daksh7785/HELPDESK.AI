@@ -202,6 +202,7 @@ class DuplicateService:
                         data = json.load(f)
                     if not isinstance(data, list):
                         data = []
+                    data = data[-MAX_CACHE_ENTRIES:]
                     for item in data:
                         text = item["text"]
                         embedding = self._encode(text)
@@ -245,6 +246,7 @@ class DuplicateService:
                         data = []
 
             data.append({"ticket_id": ticket_id, "text": text})
+            data = data[-MAX_CACHE_ENTRIES:]
             with open(self.storage_file, "w") as f:
                 json.dump(data, f, indent=2)
             print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
@@ -317,13 +319,22 @@ class DuplicateService:
             threshold: Optional override for the similarity threshold.
 
         Returns:
-            {
-                "is_duplicate": bool,
-                "duplicate_ticket_id": str | None,
-                "similarity": float
-            }
+            dict with duplicate_ticket_id, similarity_score, original_text
+            or None if no duplicate found / service unavailable.
         """
+        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
+        if not 0.0 <= active_threshold <= 1.0:
+            raise ValueError("Duplicate similarity threshold must be between 0.0 and 1.0")
+
         self.load()
+
+        # Validate the threshold up front so a bad override is reported
+        # even when the model is unavailable (degraded mode).
+        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
+        if active_threshold is not None and not (0.0 <= active_threshold <= 1.0):
+            raise ValueError(
+                f"threshold must be between 0.0 and 1.0, got {active_threshold!r}"
+            )
 
         # If model is not available, return no duplicate found
         if not self.is_available():
@@ -331,13 +342,11 @@ class DuplicateService:
                 "[DuplicateService] DEGRADED: Duplicate check skipped (model not available)"
             )
             return {
-                "is_duplicate": False,
-                "duplicate_ticket_id": None,
-                "similarity": 0.0,
+                "duplicate_ticket_id": ticket_id,
+                "similarity_score": round(best_score, 4),
+                "original_text": original_text,
             }
 
-        # Use provided threshold or default to global constant
-        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
         use_default_threshold = threshold is None
 
         # Try the result cache only when using the default threshold so we

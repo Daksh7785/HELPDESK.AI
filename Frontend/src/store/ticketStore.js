@@ -1,5 +1,10 @@
 import { create } from 'zustand';
 import { createPersistedStore } from './persistenceMiddleware';
+import {
+    removeTicketFromQueue,
+    updateTicketInQueue,
+    upsertTicketInQueue,
+} from './ticketStoreUtils';
 
 const useTicketStore = create(
     createPersistedStore(
@@ -23,8 +28,54 @@ const useTicketStore = create(
 
             clearNotifications: () => set({ notifications: [] }),
 
+            addTicket: (ticket) => set((state) => ({
+                tickets: upsertTicketInQueue(state.tickets, ticket)
+            })),
+
+            upsertTicket: (ticket) => set((state) => ({
+                tickets: upsertTicketInQueue(state.tickets, ticket)
+            })),
+
+            updateTicket: (ticketId, updates) => set((state) => ({
+                tickets: updateTicketInQueue(state.tickets, ticketId, updates)
+            })),
+
+            removeTicket: (ticketId) => set((state) => ({
+                tickets: removeTicketFromQueue(state.tickets, ticketId)
+            })),
+
             updateTicketLocally: (ticketId, updates) => set((state) => ({
+                tickets: updateTicketInQueue(state.tickets, ticketId, updates)
+            })),
+
+            appendMessage: (ticketId, message) => set((state) => ({
+                tickets: updateTicketInQueue(
+                    state.tickets,
+                    ticketId,
+                    {
+                        messages: [
+                            ...(
+                                state.tickets.find((ticket) => (
+                                    ticket.id === ticketId || ticket.ticket_id === ticketId
+                                ))?.messages || []
+                            ),
+                            message,
+                        ],
+                    },
+                )
+            })),
+
+            addTicket: (ticket) => set((state) => {
+                if (state.tickets.some(t => t.id === ticket.id)) return state;
+                return { tickets: [...state.tickets, ticket] };
+            }),
+
+            updateTicket: (ticketId, updates) => set((state) => ({
                 tickets: state.tickets.map(t => t.id === ticketId ? { ...t, ...updates } : t)
+            })),
+
+            removeTicket: (ticketId) => set((state) => ({
+                tickets: state.tickets.filter(t => t.id !== ticketId)
             })),
 
             reset: () => set({
