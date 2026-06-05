@@ -1,453 +1,349 @@
 """
-Locust Load Testing Suite for HELPDESK.AI Critical API Endpoints.
-
-Simulates concurrent users performing realistic workflows:
-  - Authentication (login with token reuse)
-  - Ticket browsing (paginated lists with filters)
-  - Ticket creation (submitting support tickets)
-  - AI ticket analysis (DistilBERT classifier)
-  - OCR processing (image upload + analysis)
-
-Usage:
-    locust --host=https://staging.example.com --users=50 --spawn-rate=5 --run-time=10m
-    locust --headless --host=https://staging.example.com --users=100 --spawn-rate=10 --run-time=5m --html=report.html
+Locust Load Testing Suite for HELPDESK.AI
+Tests critical API endpoints: /auth, /tickets, /ai/analyze_ticket, /tickets/save
 """
 
 import json
-import os
-import random
+import logging
 import time
-from urllib.parse import urlencode
+import random
+from locust import HttpUser, task, between, SequentialTaskSet
+from sla_config import SLAConfig, ReportCollector
 
-from locust import HttpUser, task, between, events
-from locust.exception import StopUser
-
-from .locust_config import DEFAULT_BUDGET, PERFORMANCE_BUDGET_ENV_VAR, parse_budget_env
-
-# ─── Test Data ─────────────────────────────────────────────
-
-SAMPLE_TICKET_TITLES = [
-    "Cannot connect to VPN after latest update",
-    "Email client crashes when opening attachments",
-    "Printer not responding on network",
-    "Login page returns 500 error intermittently",
-    "Database connection timeout during peak hours",
-    "UI freezes when loading large ticket lists",
-    "File upload fails for PDFs over 10MB",
-    "Search results not showing recently created tickets",
-    "Mobile app push notifications not delivered",
-    "Two-factor authentication SMS delay",
-]
-
-SAMPLE_TICKET_DESCRIPTIONS = [
-    "After updating to version 3.2.1, the VPN client fails to establish a connection. "
-    "I've tried reinstalling and restarting, but the issue persists. The error log shows "
-    "a TLS handshake failure.",
-    "The email client (version 5.0) crashes consistently when trying to open emails with "
-    "attachments larger than 5MB. CPU usage spikes to 100% before the crash.",
-    "Network printer HP LaserJet M404dn is not responding from any workstation. Printer "
-    "dashboard shows 'Ready' status. Network ping to printer IP succeeds.",
-    "Login endpoint returns HTTP 500 for approximately 1 in 50 requests during business "
-    "hours. The issue correlates with high database connection pool usage.",
-    "Primary database connection pool maxes out at 100 connections during peak usage "
-    "(10:00-12:00 UTC). Query response time degrades from 50ms to 2000ms.",
-]
-
-SAMPLE_USER_AGENTS = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
-]
-
-# ─── SLA Configuration ─────────────────────────────────────
-
-# Read performance budget from environment variable
-PERFORMANCE_BUDGET = parse_budget_env(
-    os.environ.get(PERFORMANCE_BUDGET_ENV_VAR)
-)
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
-# ─── Test User ─────────────────────────────────────────────
+class AuthBehaviour(SequentialTaskSet):
+    """Simulates a user who first logs in, then performs actions."""
 
-class HelpDeskUser(HttpUser):
-    """
-    Simulates a helpdesk agent performing common daily workflows.
-    Each user gets a unique session with token-based authentication.
-    """
-
-    wait_time = between(1, 5)  # Think time between tasks (seconds)
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.auth_token = None
-        self.auth_headers = {}
-        self.created_ticket_ids = []
-        self.session_start = time.time()
+    token = None
+    user_id = None
 
     def on_start(self):
-        """Called when a simulated user starts — performs login."""
+        """Login at the start of the session."""
         self.login()
 
     def login(self):
-        """
-        Simulate user login via /auth/login.
-        Reuses session cookies/tokens for subsequent requests.
-        """
-        email = f"loadtest.user{random.randint(1, 10000):04d}@example.com"
-        password = "LoadTestPass123!"
-
-        payload = {"email": email, "password": password}
-
+        """POST /auth/login and extract token."""
+        creds = {
+            "email": f"loadtest_{random.randint(1, 999999)}@example.com",
+            "password": "TestPass123!"
+        }
         with self.client.post(
             "/auth/login",
-            json=payload,
-            headers={"Content-Type": "application/json"},
-            name="/auth/login",
-            catch_response=True,
+            json=creds,
+            name="POST /auth/login",
+            catch_response=True
         ) as resp:
             if resp.status_code == 200:
-                resp.success()
-                # Extract session token from cookies or response body
-                cookies = resp.cookies
-                if cookies:
-                    self.auth_token = cookies.get("session", "")
-                # Try JSON body for token
-                try:
-                    body = resp.json()
-                    if isinstance(body, dict) and "token" in body:
-                        self.auth_token = body["token"]
-                except (json.JSONDecodeError, ValueError):
-                    pass
-
-                # Build authorization headers
-                if self.auth_token:
-                    self.auth_headers = {
-                        "Authorization": f"Bearer {self.auth_token}",
-                        "Content-Type": "application/json",
-                        "User-Agent": random.choice(SAMPLE_USER_AGENTS),
-                    }
+                data = resp.json()
+                self.token = data.get("token", data.get("access_token"))
+                self.user_id = data.get("user_id") or data.get("id")
+                if self.token:
+                    resp.success()
+                    logger.info("Auth login OK")
                 else:
-                    # Fall back to no auth for open endpoints
-                    self.auth_headers = {
-                        "Content-Type": "application/json",
-                        "User-Agent": random.choice(SAMPLE_USER_AGENTS),
-                    }
+                    resp.failure("No token in login response")
+            elif resp.status_code in (400, 401, 409):
+                # Already exists or invalid — try signup
+                self.signup(creds)
             else:
-                resp.failure(f"Login failed: HTTP {resp.status_code}")
-                # Don't stop the user — some endpoints may be unauthenticated
+                resp.failure(f"Auth login failed: {resp.status_code}")
 
-    # ── Task 1: Health Check (lightweight) ────────────────
-
-    @task(2)
-    def health_check(self):
-        """Check API health endpoint — lightweight liveness probe."""
-        with self.client.get(
-            "/health",
-            name="/health",
-            catch_response=True,
+    def signup(self, creds):
+        """POST /auth/signup as fallback."""
+        with self.client.post(
+            "/auth/signup",
+            json=creds,
+            name="POST /auth/signup",
+            catch_response=True
         ) as resp:
-            if resp.status_code == 200:
-                resp.success()
+            if resp.status_code == 200 or resp.status_code == 201:
+                data = resp.json()
+                self.token = data.get("token", data.get("access_token"))
+                self.user_id = data.get("user_id") or data.get("id")
+                if self.token:
+                    resp.success()
+                else:
+                    resp.failure("No token after signup")
             else:
-                resp.failure(f"Health check failed: HTTP {resp.status_code}")
+                resp.failure(f"Signup failed: {resp.status_code}")
 
-    # ── Task 2: Readiness Check ──────────────────────────
+    def get_headers(self):
+        return {"Authorization": f"Bearer {self.token}"} if self.token else {}
 
-    @task(1)
-    def readiness_check(self):
-        """Check API readiness — full service dependency check."""
-        with self.client.get(
-            "/ready",
-            name="/ready",
-            catch_response=True,
-        ) as resp:
-            if resp.status_code == 200:
-                resp.success()
-            else:
-                resp.failure(f"Readiness check failed: HTTP {resp.status_code}")
-
-    # ── Task 3: Browse Tickets ──────────────────────────
-
-    @task(5)
-    def browse_tickets(self):
-        """GET /tickets — browse paginated ticket list with various filters."""
-        params = {
-            "page": random.randint(1, 5),
-            "per_page": random.choice([10, 20, 50]),
-        }
-        # Occasionally add filters
+    @task
+    def list_tickets(self):
+        """GET /tickets with optional filters."""
+        params = {}
+        if random.random() < 0.5:
+            params["page"] = random.randint(1, 5)
+            params["page_size"] = random.choice([10, 20, 50])
         if random.random() < 0.3:
             params["status"] = random.choice(["open", "in_progress", "resolved"])
-        if random.random() < 0.2:
-            params["priority"] = random.choice(["high", "medium", "low"])
-
-        url = f"/tickets?{urlencode(params)}"
         with self.client.get(
-            url,
-            headers=self.auth_headers,
-            name="/tickets",
-            catch_response=True,
+            "/tickets",
+            params=params,
+            headers=self.get_headers(),
+            name="GET /tickets",
+            catch_response=True
         ) as resp:
             if resp.status_code == 200:
                 resp.success()
+            elif resp.status_code in (401, 403):
+                self.login()
+                resp.failure("Unauthorized")
             else:
-                resp.failure(f"Browse tickets failed: HTTP {resp.status_code}")
+                resp.failure(f"List tickets: {resp.status_code}")
 
-    # ── Task 4: Get Single Ticket ────────────────────────
-
-    @task(3)
-    def get_ticket_detail(self):
-        """GET /tickets/{id} — view a single ticket's details."""
-        # Use a realistic ticket ID pattern
-        ticket_id = f"TKT-{random.randint(1000, 9999)}"
-        with self.client.get(
-            f"/tickets/{ticket_id}",
-            headers=self.auth_headers,
-            name="/tickets/{id}",
-            catch_response=True,
-        ) as resp:
-            if resp.status_code in (200, 404):
-                # 404 is acceptable if the ticket doesn't exist in staging
-                resp.success()
-            else:
-                resp.failure(f"Get ticket failed: HTTP {resp.status_code}")
-
-    # ── Task 5: Create Ticket ───────────────────────────
-
-    @task(3)
+    @task
     def create_ticket(self):
-        """POST /tickets — submit a new support ticket."""
-        title = random.choice(SAMPLE_TICKET_TITLES)
-        description = random.choice(SAMPLE_TICKET_DESCRIPTIONS)
-
-        payload = {
-            "title": title,
-            "description": description,
-            "priority": random.choice(["low", "medium", "high", "critical"]),
-            "category": random.choice(["network", "software", "hardware", "access"]),
-            "contact_email": f"user{random.randint(100, 999)}@company.com",
+        """POST /tickets to create a new ticket."""
+        ticket = {
+            "ticket_id": f"LT-{random.randint(10000, 99999)}",
+            "owner_id": self.user_id or "loadtest_user",
+            "summary": random.choice([
+                "VPN connection failing to authenticate",
+                "Email server not sending notifications",
+                "Database query timeout on dashboard",
+                "SSL certificate expired for subdomain",
+                "File upload failing with large attachments",
+                "API rate limit exceeded on third-party integration",
+            ]),
+            "category": random.choice(["Access", "Network", "Security", "Software"]),
+            "subcategory": random.choice(["VPN", "Email", "Database", "Certificate"]),
+            "priority": random.choice(["Low", "Medium", "High", "Critical"]),
+            "status": "open",
+            "assigned_team": random.choice(["IT Support", "Network Team", "Security", "DevOps"]),
+            "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+            "metadata": {"source": "loadtest", "severity": random.randint(1, 5)}
         }
-
         with self.client.post(
             "/tickets",
-            json=payload,
-            headers=self.auth_headers,
-            name="/tickets POST",
-            catch_response=True,
+            json=ticket,
+            headers=self.get_headers(),
+            name="POST /tickets",
+            catch_response=True
         ) as resp:
-            if resp.status_code in (200, 201):
+            if resp.status_code == 200:
                 resp.success()
-                try:
-                    body = resp.json()
-                    if isinstance(body, dict) and "id" in body:
-                        self.created_ticket_ids.append(body["id"])
-                except (json.JSONDecodeError, ValueError):
-                    pass
-            elif resp.status_code == 422:
-                # Validation error — acceptable if payload doesn't match schema
-                resp.success()
+            elif resp.status_code in (401, 403):
+                self.login()
+                resp.failure("Unauthorized")
             else:
-                resp.failure(f"Create ticket failed: HTTP {resp.status_code}")
+                resp.failure(f"Create ticket: {resp.status_code}")
 
-    # ── Task 6: Save Ticket ─────────────────────────────
 
-    @task(2)
-    def save_ticket(self):
-        """POST /tickets/save — save ticket from draft/form."""
-        payload = {
-            "title": random.choice(SAMPLE_TICKET_TITLES),
-            "description": random.choice(SAMPLE_TICKET_DESCRIPTIONS),
-            "status": "draft",
-            "urgency": random.choice(["low", "medium", "high"]),
+class TicketAnalystUser(HttpUser):
+    """
+    Simulates a support agent analyzing tickets through AI.
+    Tests: /ai/analyze_ticket, /ai/analyze, /health
+    """
+    wait_time = between(1, 3)
+
+    def on_start(self):
+        self.token = None
+        self.login()
+
+    def login(self):
+        creds = {
+            "email": f"analyst_{random.randint(1, 999999)}@example.com",
+            "password": "AnalystPass456!"
         }
-
         with self.client.post(
-            "/tickets/save",
-            json=payload,
-            headers=self.auth_headers,
-            name="/tickets/save",
-            catch_response=True,
+            "/auth/login", json=creds,
+            name="POST /auth/login (analyst)",
+            catch_response=True
         ) as resp:
-            if resp.status_code in (200, 201):
+            if resp.status_code == 200:
+                data = resp.json()
+                self.token = data.get("token", data.get("access_token"))
                 resp.success()
             else:
-                resp.failure(f"Save ticket failed: HTTP {resp.status_code}")
+                # Try signup
+                with self.client.post(
+                    "/auth/signup", json=creds,
+                    name="POST /auth/signup (analyst)",
+                    catch_response=True
+                ) as r2:
+                    if r2.status_code in (200, 201):
+                        data = r2.json()
+                        self.token = data.get("token", data.get("access_token"))
+                        r2.success()
 
-    # ── Task 7: AI Ticket Analysis ──────────────────────
+    def _headers(self):
+        return {"Authorization": f"Bearer {self.token}"} if self.token else {}
 
-    @task(4)
+    @task(3)
+    def health_check(self):
+        with self.client.get("/health", name="GET /health", catch_response=True) as resp:
+            if resp.status_code == 200:
+                resp.success()
+            else:
+                resp.failure(f"Health: {resp.status_code}")
+
+    @task(5)
     def analyze_ticket(self):
-        """POST /ai/analyze_ticket — full AI triage pipeline (DistilBERT)."""
+        """POST /ai/analyze_ticket — the critical AI endpoint."""
+        ticket_texts = [
+            "I cannot connect to the VPN from my home office. It keeps timing out.",
+            "Our email server stopped sending notifications after the last update.",
+            "The database keeps returning timeout errors during peak hours.",
+            "A security certificate has expired and users are seeing warnings.",
+            "File attachments over 25MB are failing to upload to the portal.",
+            "The authentication service is returning 503 errors intermittently.",
+        ]
         payload = {
-            "ticket_text": f"{random.choice(SAMPLE_TICKET_TITLES)}. "
-                           f"{random.choice(SAMPLE_TICKET_DESCRIPTIONS)}",
-            "ticket_id": f"TKT-{random.randint(1000, 9999)}",
+            "text": random.choice(ticket_texts),
+            "user_id": self.token or "loadtest",
+            "company": "LoadTestCorp",
+            "confidence_threshold": 0.20,
         }
-
         with self.client.post(
             "/ai/analyze_ticket",
             json=payload,
-            headers=self.auth_headers,
-            name="/ai/analyze_ticket",
-            catch_response=True,
+            headers=self._headers(),
+            name="POST /ai/analyze_ticket",
+            catch_response=True
         ) as resp:
             if resp.status_code == 200:
                 resp.success()
-                # Verify response has expected structure
-                try:
-                    body = resp.json()
-                    if not isinstance(body, dict):
-                        resp.failure("Response is not a JSON object")
-                except (json.JSONDecodeError, ValueError):
-                    resp.failure("Response is not valid JSON")
-            elif resp.status_code == 503:
-                # Model not loaded — acceptable on staging without GPU
-                resp.success()
+            elif resp.status_code in (401, 403):
+                self.login()
+                resp.failure("Unauthorized")
             else:
-                resp.failure(f"AI analysis failed: HTTP {resp.status_code}")
-
-    # ── Task 8: AI Lightweight Analysis ─────────────────
+                resp.failure(f"Analyze ticket: {resp.status_code}")
 
     @task(2)
     def analyze_only(self):
-        """POST /ai/analyze — lightweight analysis (no ticket save)."""
+        """POST /ai/analyze — lightweight analysis endpoint."""
         payload = {
-            "ticket_text": random.choice(SAMPLE_TICKET_DESCRIPTIONS),
+            "text": "User reports slow network performance after recent patch deployment.",
         }
-
         with self.client.post(
             "/ai/analyze",
             json=payload,
-            headers=self.auth_headers,
-            name="/ai/analyze",
-            catch_response=True,
+            headers=self._headers(),
+            name="POST /ai/analyze",
+            catch_response=True
         ) as resp:
             if resp.status_code == 200:
                 resp.success()
-            elif resp.status_code == 503:
-                resp.success()  # Model loading acceptable
+            elif resp.status_code in (401, 403):
+                resp.failure("Auth required")
             else:
-                resp.failure(f"Analyze only failed: HTTP {resp.status_code}")
+                resp.failure(f"Analyze: {resp.status_code}")
 
-    # ── Task 9: AI Troubleshooting ──────────────────────
 
-    @task(1)
-    def troubleshoot(self):
-        """POST /ai/troubleshoot — get step-by-step troubleshooting."""
-        payload = {
-            "query": random.choice(SAMPLE_TICKET_TITLES),
-            "history": [],
-        }
+class MixedWorkloadUser(HttpUser):
+    """
+    Simulates a realistic mixed workload: auth, tickets, and AI analysis.
+    """
+    wait_time = between(2, 5)
+    host = "http://localhost:8000"
 
+    def on_start(self):
+        self.token = None
+        self.user_id = None
+        self._login()
+
+    def _login(self):
+        """Login and save token."""
+        email = f"mixed_{random.randint(1, 999999)}@loadtest.com"
         with self.client.post(
-            "/ai/troubleshoot",
-            json=payload,
-            headers=self.auth_headers,
-            name="/ai/troubleshoot",
-            catch_response=True,
+            "/auth/signup",
+            json={"email": email, "password": "MixedPass789!"},
+            name="POST /auth/signup (mixed)",
+            catch_response=True
         ) as resp:
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                self.token = data.get("token", data.get("access_token"))
+                self.user_id = data.get("user_id", data.get("id"))
+                resp.success()
+            elif resp.status_code == 409:
+                # Already exists, try login
+                with self.client.post(
+                    "/auth/login",
+                    json={"email": email, "password": "MixedPass789!"},
+                    name="POST /auth/login (mixed)",
+                    catch_response=True
+                ) as r2:
+                    if r2.status_code == 200:
+                        data = r2.json()
+                        self.token = data.get("token", data.get("access_token"))
+                        r2.success()
+
+    def _headers(self):
+        return {"Authorization": f"Bearer {self.token}"} if self.token else {}
+
+    @task
+    def readiness(self):
+        with self.client.get("/ready", name="GET /ready", catch_response=True) as resp:
             if resp.status_code == 200:
                 resp.success()
             else:
-                resp.failure(f"Troubleshoot failed: HTTP {resp.status_code}")
+                resp.failure(f"Readiness: {resp.status_code}")
 
-    # ── Task 10: Patch Ticket ───────────────────────────
-
-    @task(1)
-    def update_ticket(self):
-        """PATCH /tickets/{id} — update ticket status/priority."""
-        ticket_id = f"TKT-{random.randint(1000, 9999)}"
+    @task(3)
+    def save_ticket(self):
+        """POST /tickets/save — save analyzed ticket to database."""
         payload = {
-            "status": random.choice(["in_progress", "resolved"]),
-            "priority": random.choice(["low", "medium", "high"]),
+            "user_id": self.user_id or "mixed_user",
+            "subject": random.choice([
+                "VPN timeout issue", "Email notification failure",
+                "SSL certificate renewal", "Database performance degradation"
+            ]),
+            "description": random.choice([
+                "User unable to establish VPN connection after password reset.",
+                "Email notifications delayed by over 30 minutes.",
+                "SSL certificate for api.internal.example.com expired yesterday.",
+                "Queries timing out on the analytics dashboard during business hours."
+            ]),
+            "category": random.choice(["Access", "Network", "Security"]),
+            "subcategory": random.choice(["VPN", "Email", "Certificate", "Database"]),
+            "priority": random.choice(["High", "Medium"]),
+            "assigned_team": random.choice(["IT Support", "Network Team"]),
+            "status": "open",
+            "auto_resolve": False,
+            "is_duplicate": False,
+            "confidence": round(random.uniform(0.75, 0.99), 2),
+            "sla_breach_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time() + 7200)),
+            "metadata": {"source": "loadtest", "region": "us-east"},
+            "entities": [],
+            "solution_steps": [],
+            "routing_confidence": round(random.uniform(0.7, 0.95), 2),
         }
-
-        with self.client.patch(
-            f"/tickets/{ticket_id}",
+        with self.client.post(
+            "/tickets/save",
             json=payload,
-            headers=self.auth_headers,
-            name="/tickets/{id} PATCH",
-            catch_response=True,
+            headers=self._headers(),
+            name="POST /tickets/save",
+            catch_response=True
+        ) as resp:
+            if resp.status_code in (200, 201):
+                resp.success()
+            else:
+                resp.failure(f"Save ticket: {resp.status_code}")
+
+    @task
+    def get_ticket_by_id(self):
+        """GET /tickets/{ticket_id} — retrieve specific ticket."""
+        tid = f"LT-{random.randint(10000, 99999)}"
+        with self.client.get(
+            f"/tickets/{tid}",
+            headers=self._headers(),
+            name="GET /tickets/[id]",
+            catch_response=True
         ) as resp:
             if resp.status_code in (200, 404):
                 resp.success()
             else:
-                resp.failure(f"Update ticket failed: HTTP {resp.status_code}")
+                resp.failure(f"Get ticket: {resp.status_code}")
 
 
-# ── Event Handlers ──────────────────────────────────────────
-
-@events.test_start.add_listener
-def on_test_start(environment, **kwargs):
-    """Called when the load test starts."""
-    print(f"[LOAD TEST] Starting performance test against {environment.host}")
-    print(f"[LOAD TEST] Performance budget: "
-          f"CRUD p50<{PERFORMANCE_BUDGET.crud.p50_ms}ms, "
-          f"p95<{PERFORMANCE_BUDGET.crud.p95_ms}ms, "
-          f"p99<{PERFORMANCE_BUDGET.crud.p99_ms}ms")
-    print(f"[LOAD TEST] AI p50<{PERFORMANCE_BUDGET.ai_analysis.p50_ms}ms, "
-          f"p95<{PERFORMANCE_BUDGET.ai_analysis.p95_ms}ms")
-
-
-@events.test_stop.add_listener
-def on_test_stop(environment, **kwargs):
-    """Called when the load test stops."""
-    stats = environment.stats
-    print(f"\n[LOAD TEST] Test complete: {stats.total.num_requests} requests in "
-          f"{stats.total.total_content_length / 1024:.1f} KB")
-    print(f"[LOAD TEST] Fail ratio: {stats.total.fail_ratio * 100:.2f}%")
-
-    # SLA validation
-    sla_violations = 0
-    for key, entry in stats.entries.items():
-        endpoint = entry.name
-        threshold = PERFORMANCE_BUDGET.get_threshold(endpoint)
-
-        if entry.avg_response_time > threshold.p50_ms:
-            print(f"  ⚠ SLA VIOLATION: {endpoint} avg={entry.avg_response_time:.0f}ms "
-                  f"> p50 threshold={threshold.p50_ms}ms")
-            sla_violations += 1
-        if entry.total_rps and entry.fail_ratio > threshold.max_error_rate:
-            print(f"  ⚠ SLA VIOLATION: {endpoint} error_rate={entry.fail_ratio*100:.2f}% "
-                  f"> threshold={threshold.max_error_rate*100:.2f}%")
-            sla_violations += 1
-
-    if sla_violations == 0:
-        print("[LOAD TEST] ✅ All SLA thresholds passed!")
-    else:
-        print(f"[LOAD TEST] ❌ {sla_violations} SLA violations detected")
-
-    # Write results summary for the report generator
-    report_dir = os.environ.get("LOAD_TEST_REPORT_DIR", "load_test_reports")
-    os.makedirs(report_dir, exist_ok=True)
-    summary_path = os.path.join(report_dir, "summary.json")
-
-    summary = {
-        "total_requests": stats.total.num_requests,
-        "total_failures": stats.total.num_failures,
-        "fail_ratio": stats.total.fail_ratio,
-        "avg_response_time_ms": stats.total.avg_response_time,
-        "p95_response_time_ms": getattr(stats.total, "get_response_time_percentile", lambda x: 0)(0.95)
-        if hasattr(stats.total, "get_response_time_percentile") else 0,
-        "requests_per_second": stats.total.total_rps if hasattr(stats.total, "total_rps") else 0,
-        "total_content_bytes": stats.total.total_content_length,
-        "sla_violations": sla_violations,
-        "sla_passed": sla_violations == 0,
-        "endpoints": {
-            key: {
-                "avg_ms": entry.avg_response_time,
-                "min_ms": entry.min_response_time,
-                "max_ms": entry.max_response_time,
-                "num_requests": entry.num_requests,
-                "num_failures": entry.num_failures,
-                "fail_ratio": entry.fail_ratio,
-                "rps": entry.total_rps if hasattr(entry, "total_rps") else 0,
-            }
-            for key, entry in stats.entries.items()
-        },
-    }
-
-    with open(summary_path, "w") as f:
-        json.dump(summary, f, indent=2)
-
-    print(f"[LOAD TEST] Summary saved to: {summary_path}")
+# --- Report generation (standalone) ---
+if __name__ == "__main__":
+    print("Run with: locust -f locustfile.py --web-port 8089")
+    print("Or headless: locust -f locustfile.py --headless -u 50 -r 10 --run-time 5m --host http://localhost:8000")
