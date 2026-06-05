@@ -9,6 +9,7 @@ import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Select } from "../../components/ui/select";
+import { api } from "../../services/api";
 import { formatTicketId } from "../../utils/format";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import { formatTimelineDate, getTimeZoneAbbr } from "../../utils/dateUtils";
@@ -39,18 +40,13 @@ function MyTickets() {
 
         setLoading(true);
         setError(null);
-        const { data, error: sbError } = await supabase
-            .from('tickets')
-            .select('*') // Select all columns
-            .eq('user_id', user.id) // Filter by the current user's ID
-            .order('created_at', { ascending: false });
-
-        if (sbError) {
+        try {
+            const data = await api.apiGetTickets(user.id);
+            setTickets(data || []);
+        } catch (sbError) {
             console.error("Error fetching tickets:", sbError);
             setError(sbError.message);
             setTickets([]);
-        } else {
-            setTickets(data || []);
         }
         setLoading(false);
     }, [user]);

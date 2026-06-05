@@ -126,4 +126,66 @@ export const api = {
       console.warn("[Correction Log] Failed to save correction:", error);
     }
   }
+    }
+  },
+
+  // ----------------------------------------------------
+  // Decoupled Backend API Calls (Replacing Supabase.from)
+  // ----------------------------------------------------
+  
+  apiGetTickets: async (userId, company) => {
+    let url = `${API_BASE_URL}/api/tickets`;
+    const params = new URLSearchParams();
+    if (userId) params.append("user_id", userId);
+    if (company) params.append("company", company);
+    if (params.toString()) url += `?${params.toString()}`;
+    const res = await axios.get(url);
+    return res.data;
+  },
+
+  apiUpdateTicket: async (ticketId, updates) => {
+    const res = await axios.patch(`${API_BASE_URL}/api/tickets/${ticketId}`, updates);
+    return res.data;
+  },
+
+  apiGetProfiles: async (role, status) => {
+    let url = `${API_BASE_URL}/api/profiles`;
+    const params = new URLSearchParams();
+    if (role) params.append("role", role);
+    if (status) params.append("status", status);
+    if (params.toString()) url += `?${params.toString()}`;
+    const res = await axios.get(url);
+    return res.data;
+  },
+
+  apiUpdateProfile: async (userId, updates) => {
+    const res = await axios.patch(`${API_BASE_URL}/api/profiles/${userId}`, updates);
+    return res.data;
+  },
+
+  apiDeleteProfile: async (userId) => {
+    const res = await axios.delete(`${API_BASE_URL}/api/profiles/${userId}`);
+    return res.data;
+  },
+
+  apiGetCompanies: async () => {
+    const res = await axios.get(`${API_BASE_URL}/api/companies`);
+    return res.data;
+  },
+
+  apiGetAdminRequests: async (status) => {
+    let url = `${API_BASE_URL}/api/admin_requests`;
+    if (status) url += `?status=${status}`;
+    const res = await axios.get(url);
+    return res.data;
+  },
+
+  apiUploadStorage: async (file, bucket, path) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await axios.post(`${API_BASE_URL}/api/storage/upload?bucket=${bucket}&path=${path}`, formData, {
+      headers: { "Content-Type": "multipart/form-data" }
+    });
+    return res.data;
+  }
 };

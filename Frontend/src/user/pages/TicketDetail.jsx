@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { formatFullTimestamp } from '../../utils/dateUtils';
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../services/api";
+import axios from 'axios';
+import { API_CONFIG } from '../../config';
 import { Card } from "../../components/ui/card";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import TicketTimeline from "../components/TicketTimeline";
@@ -29,11 +32,9 @@ const TicketDetail = () => {
         const fetchInitialTicket = async () => {
             setLoading(true);
             try {
-                const { data, error } = await supabase
-                    .from('tickets')
-                    .select('*')
-                    .eq('id', ticket_id)
-                    .single();
+                const response = await axios.get(`${API_CONFIG.BACKEND_URL}/tickets/${ticket_id}`);
+                const data = response.data;
+                const error = null;
 
                 if (error) throw error;
                 if (data) {
@@ -135,10 +136,7 @@ const TicketDetail = () => {
                 }
             };
 
-            const { error: upError } = await supabase
-                .from('tickets')
-                .update(updates)
-                .eq('id', ticket.ticket_id);
+            await api.apiUpdateTicket(ticket.ticket_id, updates); const upError = null;
 
             if (upError) throw upError;
 

@@ -4,6 +4,7 @@ import { Activity } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../services/api";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
 import { formatTimelineDate } from "../../utils/dateUtils";
@@ -78,19 +79,12 @@ const AdminDashboard = () => {
             const fetchStats = async () => {
                 setIsLoading(true);
                 try {
-                    let query = supabase
-                        .from('tickets')
-                        .select(`
-                    *,
-                    creator:profiles!tickets_user_id_fkey(full_name, email, profile_picture)
-                `)
-                        .order('created_at', { ascending: false });
-                    if (profile?.role === 'admin' && profile?.company) query = query.eq('company', profile.company);
-                    const { data, error } = await query;
+                    const data = await api.apiGetTickets(null, profile?.role === 'admin' ? profile?.company : null);
+                    const error = null;
                     if (error) {
                         // Secondary check: If the relation fails, try a simpler select
                         console.warn("Retrying dashboard fetch without relation...", error);
-                        const { data: basicData, error: basicError } = await supabase.from('tickets').select('*').eq('company', profile?.company).order('created_at', { ascending: false });
+                        const basicData = await api.apiGetTickets(null, profile?.company); const basicError = null;
                         if (basicError) throw basicError;
                         setTickets(basicData || []);
                     } else {

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../services/api";
 import useToastStore from "../../store/toastStore";
 // eslint-disable-next-line no-unused-vars
 import { format } from "date-fns";
@@ -22,14 +23,7 @@ function AllAdmins() {
     const fetchAdmins = async () => {
         setLoading(true);
         try {
-            const { data, error } = await supabase
-                .from('profiles')
-                .select(`
-                    *,
-                    company_rel:companies!company_id (name)
-                `)
-                .eq('role', 'admin')
-                .order('created_at', { ascending: false });
+            const data = await api.apiGetProfiles('admin', null); const error = null;
 
             if (error) throw error;
             setAdmins(data || []);

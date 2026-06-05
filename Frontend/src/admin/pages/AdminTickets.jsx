@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
+import { api } from "../../services/api";
 import {
     Search,
     Filter,
@@ -76,30 +77,12 @@ const AdminTickets = () => {
             const { profile } = useAuthStore.getState();
             
             // Join with profiles for both user_id (creator) and assigned_agent_id (assignee)
-            let query = supabase
-                .from('tickets')
-                .select(`
-                    *,
-                    creator:profiles!tickets_user_id_fkey(full_name, email, profile_picture),
-                    assignee:profiles!tickets_assigned_agent_id_fkey(full_name, email, profile_picture)
-                `);
-
-            if (profile?.role === 'admin' && profile?.company) {
-                query = query.eq('company', profile.company);
-            }
-
-            if (statusFilter !== 'All') query = query.eq('status', statusFilter.toLowerCase());
-            if (categoryFilter !== 'All') query = query.eq('category', categoryFilter);
-            if (priorityFilter !== 'All') query = query.eq('priority', priorityFilter.toLowerCase());
-            if (teamFilter !== 'All') query = query.eq('assigned_team', teamFilter);
-
-            let { data, error: sbError } = await query.order('created_at', { ascending: false });
+            let { data, error: sbError } = await api.apiGetTickets(null, profile?.company);
 
             if (sbError) {
                 // Secondary check: If the FK alias fails, try a simpler select
                 console.warn("Retrying fetch without relationship aliases...");
-                const basicQuery = supabase.from('tickets').select('*, profiles(full_name, email)');
-                const { data: basicData, error: basicError } = await basicQuery.eq('company', profile?.company).order('created_at', { ascending: false });
+                const basicData = await api.apiGetTickets(null, profile?.company); const basicError = null;
                 if (basicError) throw basicError;
                 setTickets(basicData || []);
             } else {
@@ -157,10 +140,7 @@ const AdminTickets = () => {
     const handleUpdateTicket = async (id, updates) => {
         setIsUpdating(id);
         try {
-            const { error: upError } = await supabase
-                .from('tickets')
-                .update(updates)
-                .eq('id', id);
+            await api.apiUpdateTicket(id, updates); const upError = null;
 
             if (upError) throw upError;
 
