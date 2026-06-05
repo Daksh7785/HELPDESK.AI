@@ -150,6 +150,8 @@ class TicketResponse(BaseModel):
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
+    translation_attempted: bool = False
+    translation_failed: bool = False
 
 
 # --- Persistence Models ---
@@ -893,7 +895,9 @@ async def analyze_only(request_body: TicketRequest):
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
-        sla_breach_at=sla_breach_dt.isoformat() + "Z"
+        sla_breach_at=sla_breach_dt.isoformat() + "Z",
+        translation_attempted=classification.get("translation_attempted", False),
+        translation_failed=classification.get("translation_failed", False)
     )
 
 @app.post("/ai/analyze_stream")
@@ -1045,7 +1049,9 @@ async def analyze_stream(request_body: TicketRequest):
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+            "sla_breach_at": sla_breach_dt.isoformat() + "Z",
+            "translation_attempted": classification.get("translation_attempted", False),
+            "translation_failed": classification.get("translation_failed", False)
         }
 
         # 6. Final Result
