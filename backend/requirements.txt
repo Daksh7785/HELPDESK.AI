@@ -30,3 +30,4 @@ openai-whisper>=20231117
 python-multipart>=0.0.9
 sentencepiece
 sacremoses
+apscheduler

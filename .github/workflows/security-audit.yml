@@ -34,7 +34,7 @@ jobs:
                     redis langdetect tokenizers openpyxl google-genai google-generativeai pillow \
                     prometheus-fastapi-instrumentator prometheus-client pycryptodome \
                     cryptography websockets openai-whisper python-multipart \
-                    sentencepiece sacremoses accelerate
+                    sentencepiece sacremoses accelerate apscheduler
         pip install -r backend/requirements.txt --ignore-requires-python || true
 
     - name: Run Tenant Isolation Security Tests
