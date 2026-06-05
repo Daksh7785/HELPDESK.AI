@@ -4,3 +4,9 @@
 !.env.example
 !backend/.env.example
 !Frontend/.env.example
+.venv/
+Frontend/node_modules/
+backend/.venv/
+backend/__pycache__/
+backend/services/__pycache__/
+__pycache__/
