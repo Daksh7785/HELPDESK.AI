@@ -106,5 +106,42 @@ If you encounter timeout issues or connection alerts, review the diagnostic guid
 **Symptom**: The AI Ingestion pipeline displays an warning about SentenceTransformer load errors.
 - **Resolution**: The backend includes **self-healing fallback modules** that automatically bypass local ML loading on low-RAM servers, utilizing the API Failover module to ensure 100% platform availability.
     `
+
+  },
+  {
+    id: 'react-routing-optimization',
+    categoryId: 'getting-started',
+    title: 'GSSoC React Routing Optimization',
+    description: 'Reference guide for route-level code splitting with React.lazy and Suspense.',
+    tags: ['gssoc', 'react', 'routing', 'performance'],
+    content: `
+# GSSoC React Routing Optimization
+Use route-level code splitting to keep the HELPDESK.AI frontend's initial JavaScript bundle focused on the shell and the page a user actually opens.
+
+### Recommended pattern
+1. Keep shared layout, providers, auth guards, and navigation imported normally.
+2. Convert heavy page-level imports to \`React.lazy(() => import(...))\`.
+3. Wrap lazy routes in \`Suspense\` with an accessible loading state.
+4. Preserve existing route paths, redirects, and role-based guards.
+
+### Example
+\`\`\`jsx
+import { lazy, Suspense } from 'react';
+
+const Dashboard = lazy(() => import('./user/pages/Dashboard.jsx'));
+
+function RouteFallback() {
+  return <main aria-busy="true">Loading page...</main>;
+}
+\`\`\`
+
+### Contributor checklist
+- Identify page modules that are not needed on first render.
+- Avoid lazy-loading tiny shared UI primitives that are used everywhere.
+- Verify with \`npm run build\` from \`Frontend/\`.
+- Manually open at least one lazy-loaded route after starting Vite.
+
+See \`docs/gssoc-react-routing-optimization.md\` for the full reference guide.
+    `
   }
 ];
