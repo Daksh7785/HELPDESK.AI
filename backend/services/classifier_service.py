@@ -11,6 +11,7 @@ import logging
 import os
 import time
 import json
+import re
 import time
 try:
     import torch
@@ -212,22 +213,19 @@ class ClassifierService:
             # Derive auto_resolve
             auto_resolve = subcategory in AUTO_RESOLVE_SUBS
 
-            # --- Regex Override Layer (Boost for Technical Keywords) ---
-            tech_keywords = {
-                "Network": ["IP address", "hostname", "connection", "network", "bandwidth", "DNS", "firewall", "VPN", "Connectivity", "Latency", "Routing", "Spikes"],
-                "Software": ["crash", "load", "website", "application", "error", "bug", "failing", "software", "SQL", "Cluster", "Database", "Production", "Latency"],
-                "Access": ["login", "password", "access", "authentication", "account", "permission", "MFA", "OAuth"]
-            }
-
-            lower_text = text.lower()
-            for cat, keywords in tech_keywords.items():
-                if any(k.lower() in lower_text for k in keywords):
-                    # If current prediction is generic, or we have a high-value technical keyword
+            # --- Regex Override Layer (Word-boundary matched technical keywords, Fixes #1816) ---
+            import re
+            for cat, patterns in _TECH_KEYWORDS.items():
+                # Fix Bug 2: Use pre-compiled word-boundary patterns (\bkeyword\b) instead of substring matching
+                if any(re.search(p, text) for p in patterns):
+                    # Fix Bug 3: Keep model actual confidence - do NOT boost artificially
                     if category == "General" or confidence < 0.9:
                         category = cat
                         assigned_team = TEAM_MAP.get(cat, "General Support")
-                        # Boost confidence significantly for verified technical signals
-                        confidence = max(confidence, 0.92)
+                        # Fix Bug 1 and 4: Reset subcategory, re-derive priority and auto_resolve
+                        subcategory = _CATEGORY_DEFAULT_SUBCATEGORY.get(cat, "General")
+                        priority = PRIORITY_MAP.get(subcategory, "Medium")
+                        auto_resolve = subcategory in AUTO_RESOLVE_SUBS
                         break
 
             if _METRICS_ENABLED:
