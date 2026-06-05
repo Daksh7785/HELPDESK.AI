@@ -2203,7 +2203,6 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
     Raises:
         HTTPException: 500 if the Supabase database connection is unavailable.
     """
-    request_body.user_id = user.get("id", request_body.user_id) # Enforce IDOR protection
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
@@ -2221,6 +2220,31 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
 
 
     try:
+        final_data = request_body.dict()
+
+        # Resolve tenant linkage from user profile with authorization validation.
+        profile = {}
+        if request_body.user_id:
+            try:
+                profile_res = (
+                    supabase.table("profiles")
+                    .select("company_id, company")
+                    .eq("id", request_body.user_id)
+                    .single()
+                    .execute()
+                )
+                profile = profile_res.data or {}
+                if not profile:
+                    raise HTTPException(status_code=404, detail="User profile not found")
+            except HTTPException:
+                raise
+            except Exception as profile_error:
+                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
+
+        if request_body.company_id and profile.get("company_id") and str(request_body.company_id) != str(profile.get("company_id")):
+            raise HTTPException(status_code=403, detail="Unauthorized company context")
+
         # Backfill company name if missing.
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]

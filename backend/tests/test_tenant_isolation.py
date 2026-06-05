@@ -71,6 +71,13 @@ class MockSupabaseTable:
                     resource_company = parts[2] if len(parts) > 2 else "company-mock-default"
                 else:
                     resource_company = "companyA"
+                
+                # IMPORTANT FIX FOR MOCK: respect company_id filter if set
+                if self.filters.get("company_id") and self.filters.get("company_id") != resource_company:
+                    if self._is_single:
+                        raise Exception("Mock error: single() returned nothing")
+                    return MockResult([])
+
                 ticket_data = {"id": ticket_id, "company_id": resource_company, "subject": "Ticket"}
                 if self._is_single:
                     return MockResult(ticket_data)
@@ -158,11 +165,13 @@ for module_name in [
 
 import pytest
 from fastapi.testclient import TestClient
-from backend.main import app, classifier_service, ner_service
+from backend.main import app, classifier_service, ner_service, duplicate_service, rag_service
 
 # Mock classifier and ner services as loaded for ready checks
 classifier_service._loaded = True
 ner_service._loaded = True
+duplicate_service._loaded = True
+rag_service._loaded = True
 
 # Dependency Override for get_current_user to support mock tokens
 from backend.auth_cookie import get_current_user
@@ -187,12 +196,14 @@ async def mock_get_current_user(request: Request) -> dict:
 app.dependency_overrides[get_current_user] = mock_get_current_user
 
 import backend.main as main
+from backend.auth.tenant_middleware import security_manager
 
 @pytest.fixture(autouse=True)
 def force_mock_supabase():
     original = main.supabase
     main.supabase = mock_supabase
     app.dependency_overrides[get_current_user] = mock_get_current_user
+    app.dependency_overrides[security_manager.get_current_user_profile] = mock_get_current_user
     yield
     main.supabase = original
 
@@ -218,6 +229,8 @@ def test_public_endpoints_accessible_without_token():
     assert response.status_code == 200
     
     response = client.get("/ready")
+    if response.status_code != 200:
+        print("READY ERROR:", response.json())
     assert response.status_code == 200
 
 
