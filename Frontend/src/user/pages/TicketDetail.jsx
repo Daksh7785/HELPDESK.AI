@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logger from '../../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, Clock, Bot, UserCog,
@@ -46,7 +47,7 @@ const TicketDetail = () => {
                     });
                 }
             } catch (err) {
-                console.error("Error fetching ticket:", err);
+                logger.error("Error fetching ticket:", err);
             } finally {
                 setLoading(false);
             }
@@ -66,7 +67,7 @@ const TicketDetail = () => {
                     filter: `id=eq.${ticket_id}`
                 },
                 (payload) => {
-                    console.log("Real-time ticket update received:", payload.new);
+                    logger.log("Real-time ticket update received:", payload.new);
                     setTicket(prev => ({
                         ...prev,
                         ...payload.new,
@@ -143,7 +144,7 @@ const TicketDetail = () => {
             setTicket(prev => ({ ...prev, ...updates }));
 
         } catch (err) {
-            console.error("Failed to reopen ticket:", err);
+            logger.error("Failed to reopen ticket:", err);
         } finally {
             setIsReopening(false);
         }

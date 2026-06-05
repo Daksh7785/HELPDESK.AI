@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import logger from '../../utils/logger';
 import { useNavigate } from 'react-router-dom';
 import useToastStore from '../../store/toastStore';
 import {
@@ -52,7 +53,7 @@ const AdminUsers = () => {
 
                 // If profile is completely missing from public.profiles, create it now!
                 if (!freshProfile) {
-                    console.warn("⚠️ Local profile missing from DB. Initiating Emergency Repair for:", currentUser.email);
+                    logger.warn("⚠️ Local profile missing from DB. Initiating Emergency Repair for:", currentUser.email);
                     const { data: repaired, error: repairErr } = await supabase
                         .from('profiles')
                         .insert([{
@@ -67,7 +68,7 @@ const AdminUsers = () => {
                         .single();
 
                     if (!repairErr) freshProfile = repaired;
-                    else console.error("Identity repair failed:", repairErr);
+                    else logger.error("Identity repair failed:", repairErr);
                 }
 
                 if (freshProfile) {
@@ -94,7 +95,7 @@ const AdminUsers = () => {
                 }
             }
 
-            console.log("Admin session synchronized. Company ID:", activeCompanyId, "Name:", activeCompanyName);
+            logger.log("Admin session synchronized. Company ID:", activeCompanyId, "Name:", activeCompanyName);
 
             // 1. Fetch ACTIVE users
             let query = supabase.from('profiles').select('id, full_name, email, role, status, company, created_at, profile_picture').eq('status', 'active').limit(50);
@@ -151,7 +152,7 @@ const AdminUsers = () => {
             }
             setPendingRequests(allPending);
         } catch (err) {
-            console.error("Admin user sync error:", err);
+            logger.error("Admin user sync error:", err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -216,7 +217,7 @@ const AdminUsers = () => {
 
             // Deep fetch if still missing — ensures we aren't blocked by stale local state
             if (!targetCompanyId && currentUser) {
-                console.log("⚠️ Target Company ID missing in state, reaching out to database...");
+                logger.log("⚠️ Target Company ID missing in state, reaching out to database...");
                 const { data: freshProfile, error: _profileFetchErr } = await supabase
                     .from('profiles')
                     .select('company_id, company')
@@ -239,10 +240,10 @@ const AdminUsers = () => {
                 }
             }
 
-            console.log("🚀 Initiating approval for:", request.user_id, "Company ID:", targetCompanyId);
+            logger.log("🚀 Initiating approval for:", request.user_id, "Company ID:", targetCompanyId);
 
             if (!targetCompanyId) {
-                console.error("❌ Critical: Could not resolve Company Association.");
+                logger.error("❌ Critical: Could not resolve Company Association.");
                 throw new Error("Security Protocol Error: Your administrator account is not linked to a registered company. Please contact support.");
             }
 
@@ -257,11 +258,11 @@ const AdminUsers = () => {
                 .select(); // Requesting data back to confirm it worked
 
             if (profileErr) {
-                console.error("Supabase Profile Update Error:", profileErr);
+                logger.error("Supabase Profile Update Error:", profileErr);
                 throw profileErr;
             }
 
-            console.log("✅ Profile updated successfully:", updateResult);
+            logger.log("✅ Profile updated successfully:", updateResult);
 
             // 3. Log the request audit (Non-blocking)
             if (!request.isManual) {
@@ -273,7 +274,7 @@ const AdminUsers = () => {
                         reviewed_at: new Date().toISOString()
                     })
                     .eq('id', request.id);
-                if (requestErr) console.warn("Audit log update failed:", requestErr.message);
+                if (requestErr) logger.warn("Audit log update failed:", requestErr.message);
             }
 
             // 4. Send notification (Non-blocking)
@@ -290,7 +291,7 @@ const AdminUsers = () => {
             await fetchUsers();
             showToast(`Protocol: Identity verified. ${request.user?.full_name} is now active.`, "success");
         } catch (err) {
-            console.error("Critical Approval Failure:", err);
+            logger.error("Critical Approval Failure:", err);
             showToast("Approval failed: " + err.message, "error");
         } finally {
             setIsProcessing(null);
@@ -318,7 +319,7 @@ const AdminUsers = () => {
                         reviewed_at: new Date().toISOString()
                     })
                     .eq('id', request.id);
-                if (requestErr) console.warn("Request log rejection failed:", requestErr.message);
+                if (requestErr) logger.warn("Request log rejection failed:", requestErr.message);
             }
 
             // Remove from local state

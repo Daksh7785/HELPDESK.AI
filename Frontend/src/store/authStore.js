@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import logger from '../utils/logger';
 import { persist } from 'zustand/middleware';
 import { supabase } from '../lib/supabaseClient';
 import useTicketStore from './ticketStore';
@@ -24,7 +25,7 @@ const useAuthStore = create(
                 // Priority 1: If we have a persisted session for THIS user and it's active, keep it 
                 // to prevent temporary lobbies during refresh/tab switching.
                 if (currentProfile && currentProfile.id === user.id && currentProfile.status === 'active') {
-                    console.log("Active profile retained from state.");
+                    logger.log("Active profile retained from state.");
                     // Background fetch to ensure session is still valid/synced
                     get()._syncProfile(user.id);
                     return currentProfile;
@@ -49,7 +50,7 @@ const useAuthStore = create(
                     return dbProfile;
                 }
 
-                console.log("Falling back to instant profile resolved from metadata:", instantProfile.role);
+                logger.log("Falling back to instant profile resolved from metadata:", instantProfile.role);
                 set({ profile: instantProfile });
                 return instantProfile;
             },
@@ -64,16 +65,16 @@ const useAuthStore = create(
                         .single();
 
                     if (data) {
-                        console.log("Database profile found, upgrading state.");
+                        logger.log("Database profile found, upgrading state.");
                         set({ profile: data });
                         return data;
                     }
 
                     if (error && error.code !== 'PGRST116') {
-                        console.warn("DB Profile fetch error:", error.message);
+                        logger.warn("DB Profile fetch error:", error.message);
                     }
                 } catch (e) {
-                    console.error("Background profile fetch error:", e);
+                    logger.error("Background profile fetch error:", e);
                 }
                 return null;
             },
@@ -102,7 +103,7 @@ const useAuthStore = create(
 
             login: async (email, password) => {
                 set({ loading: true });
-                console.log("Attempting login for:", email);
+                logger.log("Attempting login for:", email);
                 try {
                     const { data, error } = await supabase.auth.signInWithPassword({
                         email,
@@ -114,7 +115,7 @@ const useAuthStore = create(
                     const user = data.user;
                     set({ user });
 
-                    console.log("Login successful, resolving profile...");
+                    logger.log("Login successful, resolving profile...");
                     // This will resolve instantly from metadata AND try to update from DB
                     const profile = await get().getProfile(user);
 
@@ -127,7 +128,7 @@ const useAuthStore = create(
 
                     return { user, profile };
                 } catch (error) {
-                    console.error("Login operation failed:", error.message);
+                    logger.error("Login operation failed:", error.message);
                     throw error;
                 } finally {
                     set({ loading: false });
@@ -136,7 +137,7 @@ const useAuthStore = create(
 
             signInWithMagicLink: async (email) => {
                 set({ loading: true });
-                console.log("Attempting magic link / OTP login for:", email);
+                logger.log("Attempting magic link / OTP login for:", email);
                 try {
                     const { error } = await supabase.auth.signInWithOtp({
                         email,
@@ -148,7 +149,7 @@ const useAuthStore = create(
                     if (error) throw error;
                     return true;
                 } catch (error) {
-                    console.error("Magic link operation failed:", error.message);
+                    logger.error("Magic link operation failed:", error.message);
                     throw error;
                 } finally {
                     set({ loading: false });
@@ -157,7 +158,7 @@ const useAuthStore = create(
 
             verifyOtpAndLogin: async (email, token, type = 'magiclink') => {
                 set({ loading: true });
-                console.log("Attempting OTP verification for:", email);
+                logger.log("Attempting OTP verification for:", email);
                 try {
                     const { data, error } = await supabase.auth.verifyOtp({
                         email,
@@ -170,7 +171,7 @@ const useAuthStore = create(
                     const user = data.user;
                     set({ user });
 
-                    console.log("OTP Login successful, resolving profile...");
+                    logger.log("OTP Login successful, resolving profile...");
                     const profile = await get().getProfile(user);
 
                     if (profile?.status === 'pending_email_verification') {
@@ -180,7 +181,7 @@ const useAuthStore = create(
                     }
                     return { user, profile };
                 } catch (error) {
-                    console.error("OTP verification failed:", error.message);
+                    logger.error("OTP verification failed:", error.message);
                     throw error;
                 } finally {
                     set({ loading: false });
@@ -189,11 +190,11 @@ const useAuthStore = create(
 
             signup: async (email, password, fullName, role = 'user', company = '', extraMetadata = {}, emailRedirectTo = undefined) => {
                 set({ loading: true });
-                console.log("Starting signup for:", email);
+                logger.log("Starting signup for:", email);
 
                 try {
                     // 1. Auth Signup with Metadata
-                    console.log("Step 1: Auth.signUp...");
+                    logger.log("Step 1: Auth.signUp...");
                     const { data, error } = await supabase.auth.signUp({
                         email,
                         password,
@@ -209,20 +210,20 @@ const useAuthStore = create(
                     });
 
                     if (error) {
-                        console.error("Auth.signUp error:", error.message);
+                        logger.error("Auth.signUp error:", error.message);
                         throw error;
                     }
 
                     if (data.user) {
-                        console.log("Step 2: User created, resolving profile...");
+                        logger.log("Step 2: User created, resolving profile...");
                         set({ user: data.user });
                         await get().getProfile(data.user);
                     }
 
-                    console.log("Signup complete!");
+                    logger.log("Signup complete!");
                     return data.user;
                 } catch (error) {
-                    console.error("Signup operation failed:", error.message);
+                    logger.error("Signup operation failed:", error.message);
                     throw error;
                 } finally {
                     set({ loading: false });
@@ -263,7 +264,7 @@ const useAuthStore = create(
                         return data;
                     }
                 } catch (err) {
-                    console.error("Profile update failed:", err);
+                    logger.error("Profile update failed:", err);
                     throw err;
                 } finally {
                     set({ loading: false });
@@ -278,7 +279,7 @@ const useAuthStore = create(
                 get().getCurrentUser();
 
                 supabase.auth.onAuthStateChange(async (event, session) => {
-                    console.log("Auth state change:", event);
+                    logger.log("Auth state change:", event);
                     if (session?.user) {
                         set({ user: session.user });
                         get().getProfile(session.user);

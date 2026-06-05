@@ -1,11 +1,40 @@
 import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
+import useToastStore from '../store/toastStore';
+import logger from '../utils/logger';
 
 const USE_MOCK = true;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+// --- Global Axios Interceptor ---
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    logger.error("API Error intercepted:", error);
+    
+    // Extract message
+    let message = "An unexpected error occurred.";
+    if (error.response?.data?.detail) {
+      message = error.response.data.detail;
+    } else if (error.response?.data?.message) {
+      message = error.response.data.message;
+    } else if (error.message) {
+      message = error.message;
+    }
+
+    // Trigger toast
+    const showToast = useToastStore.getState().showToast;
+    if (showToast) {
+      showToast(`Network Error: ${message}`, 'error', 5000);
+    }
+    
+    return Promise.reject(new Error(message));
+  }
+);
+
 
 // Safe helper to get data from storage or default
 const getStorage = (key, defaultData) => {
@@ -17,7 +46,7 @@ const getStorage = (key, defaultData) => {
     }
     return JSON.parse(stored);
   } catch (error) {
-    console.warn(`[Storage Error] Failed to read or parse '${key}':`, error);
+    logger.warn(`[Storage Error] Failed to read or parse '${key}':`, error);
     return defaultData;
   }
 };
@@ -27,7 +56,7 @@ const setStorage = (key, data) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
-    console.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
+    logger.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
     // If quota exceeded, we could trim the data, but for now we fail gracefully.
   }
 };
@@ -99,7 +128,7 @@ export const api = {
       }
     };
     } catch (error) {
-      console.error("AI Backend Error, falling back to mock:", error);
+      logger.error("AI Backend Error, falling back to mock:", error);
       // Fallback to mock logic if backend fails
       await delay(1000);
       return {
@@ -123,7 +152,7 @@ export const api = {
       await axios.post(`${API_BASE_URL}/ai/log_correction`, correctionPayload);
     } catch (error) {
       // Non-fatal: log but don't break the UI flow
-      console.warn("[Correction Log] Failed to save correction:", error);
+      logger.warn("[Correction Log] Failed to save correction:", error);
     }
   },
 

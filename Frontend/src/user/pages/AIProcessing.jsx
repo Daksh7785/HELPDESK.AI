@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import logger from '../../utils/logger';
 
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -34,7 +35,7 @@ const AIProcessing = () => {
 
     useEffect(() => {
         if (!text) {
-            console.warn("[AIProcessing] No ticket text found. Redirecting to /create-ticket");
+            logger.warn("[AIProcessing] No ticket text found. Redirecting to /create-ticket");
             navigate('/create-ticket');
             return;
         }
@@ -43,7 +44,7 @@ const AIProcessing = () => {
         hasCalledAPI.current = true;
 
         const analyzeTicket = async () => {
-            console.log("[AIProcessing] Starting analysis for:", text);
+            logger.log("[AIProcessing] Starting analysis for:", text);
 
             try {
 
@@ -99,7 +100,7 @@ const AIProcessing = () => {
                         }
 
                     } catch (err) {
-                        console.error("[AIProcessing] Image upload failed:", err);
+                        logger.error("[AIProcessing] Image upload failed:", err);
                     }
                 }
 
@@ -211,7 +212,7 @@ const AIProcessing = () => {
 
 
 
-                                    console.error(
+                                    logger.error(
                                         "Error parsing stream data",
                                         e,
                                         line
@@ -244,7 +245,7 @@ const AIProcessing = () => {
 
                         } catch (e) {
 
-                            console.error(
+                            logger.error(
                                 "Final buffer parse error",
                                 e,
                                 line
@@ -275,7 +276,7 @@ const AIProcessing = () => {
                         finalTicket.confidence = aiResult.confidence || 0.95;
                     }
                 } catch (aiErr) {
-                    console.warn("[AIProcessing] Frontend summary generation failed:", aiErr);
+                    logger.warn("[AIProcessing] Frontend summary generation failed:", aiErr);
                 }
 
                 const aiTicketObject = {
@@ -294,7 +295,7 @@ const AIProcessing = () => {
 
             } catch (error) {
 
-                console.error("[AIProcessing] Analysis Failed:", error);
+                logger.error("[AIProcessing] Analysis Failed:", error);
 
                 // Graceful fallback for any error (e.g. backend 503 offline, streaming failed, or network protocol errors)
                 if (
@@ -302,7 +303,7 @@ const AIProcessing = () => {
                 ) {
 
 
-                    console.warn(
+                    logger.warn(
                         "[AIProcessing] Backend unreachable or preparing. Using local fallback."
                     );
 
@@ -328,7 +329,7 @@ const AIProcessing = () => {
                             fallbackTeam = aiResult.assigned_team || fallbackTeam;
                         }
                     } catch (aiErr) {
-                        console.warn("[AIProcessing] Fallback AI summary failed:", aiErr);
+                        logger.warn("[AIProcessing] Fallback AI summary failed:", aiErr);
                     }
 
                     const fallbackTicket = {

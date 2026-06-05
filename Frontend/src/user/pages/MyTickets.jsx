@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import logger from '../../utils/logger';
 import { useNavigate } from 'react-router-dom';
 import {
     Ticket, Inbox, Search, Filter,
@@ -44,7 +45,7 @@ function MyTickets() {
             const data = await api.apiGetTickets(user.id, null, 50);
             setTickets(data || []);
         } catch (sbError) {
-            console.error("Error fetching tickets:", sbError);
+            logger.error("Error fetching tickets:", sbError);
             setError(sbError.message);
             setTickets([]);
         }
@@ -69,7 +70,7 @@ function MyTickets() {
                     filter: `user_id=eq.${user.id}`
                 },
                 (payload) => {
-                    console.log("User tickets real-time event:", payload.eventType, payload.new);
+                    logger.log("User tickets real-time event:", payload.eventType, payload.new);
                     if (payload.eventType === 'INSERT') {
                         setTickets(prev => [payload.new, ...prev]);
                     } else if (payload.eventType === 'UPDATE') {
