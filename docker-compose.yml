@@ -1,0 +1,63 @@
+# ============================================================
+# HELPDESK.AI — Docker Compose (local development)
+# ============================================================
+# Usage:
+#   docker compose up              # start all services
+#   docker compose up backend      # start backend only
+#   docker compose up --build      # rebuild images before starting
+#   docker compose down            # stop and remove containers
+# ============================================================
+
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    image: helpdesk-ai-backend:dev
+    container_name: helpdesk_backend
+    ports:
+      - "8000:8000"
+    volumes:
+      # Live-reload: mount backend source into the container
+      - ./backend:/app/backend
+    env_file:
+      - backend/.env
+    environment:
+      - PYTHONPATH=/app
+      - ENVIRONMENT=development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - helpdesk_net
+
+  frontend:
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+    image: helpdesk-ai-frontend:dev
+    container_name: helpdesk_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./Frontend/src:/app/src
+    env_file:
+      - Frontend/.env.local
+    environment:
+      - VITE_API_BASE_URL=http://localhost:8000
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - helpdesk_net
+
+networks:
+  helpdesk_net:
+    driver: bridge
