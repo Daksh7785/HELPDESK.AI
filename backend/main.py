@@ -638,27 +638,81 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.get("/tickets/search")
-async def search_tickets(q: str | None = None, company_id: str | None = None, limit: int = 50, offset: int = 0):
-    """Search tickets using tenant-safe full-text search."""
+async def search_tickets(
+    company_id: str | None = None,
+    q: str | None = None,
+    status: str | None = None,
+    priority: str | None = None,
+    category: str | None = None,
+    assigned_to: str | None = None,
+    created_by: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    sort: str = "created_at:desc",
+    page: int = 1,
+    per_page: int = 25,
+):
+    """Advanced ticket search with multi-filter support.
+
+    Query parameters:
+    - q            Full-text search across title, description, category, subcategory, team
+    - company_id   Required — enforces tenant isolation
+    - status       Comma-separated: open,in_progress,resolved,closed
+    - priority     Comma-separated: low,medium,high,critical
+    - category     Comma-separated: Network,Hardware,Software,Access
+    - assigned_to  Agent user_id or "unassigned"
+    - created_by   Creator user_id
+    - date_from    ISO 8601 date string (inclusive)
+    - date_to      ISO 8601 date string (inclusive)
+    - sort         Field:direction — created_at:desc | created_at:asc | updated_at:desc | priority:desc
+    - page         1-based page number (default 1)
+    - per_page     Results per page (default 25, max 100)
+    """
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-
-    if not q:
-        raise HTTPException(status_code=400, detail="Search query is required")
     if not company_id:
         raise HTTPException(status_code=400, detail="company_id is required for tenant-safe search")
 
+    # Clamp per_page to prevent abuse
+    per_page = min(max(int(per_page), 1), 100)
+    offset = (max(int(page), 1) - 1) * per_page
+
+    # Parse comma-separated filter lists
+    status_list: list[str] | None = [s.strip() for s in status.split(",") if s.strip()] if status else None
+    priority_list: list[str] | None = [p.strip() for p in priority.split(",") if p.strip()] if priority else None
+    category_list: list[str] | None = [c.strip() for c in category.split(",") if c.strip()] if category else None
+
     try:
         result = supabase.rpc(
-            "search_tickets",
+            "advanced_search_tickets",
             {
-                "query_text": q,
-                "company_id": company_id,
-                "limit_rows": limit,
-                "offset_rows": offset,
+                "p_company_id":  company_id,
+                "p_query":       q or None,
+                "p_status":      status_list,
+                "p_priority":    priority_list,
+                "p_category":    category_list,
+                "p_assigned_to": assigned_to or None,
+                "p_created_by":  created_by or None,
+                "p_date_from":   date_from or None,
+                "p_date_to":     date_to or None,
+                "p_sort":        sort,
+                "p_limit":       per_page,
+                "p_offset":      offset,
             },
         ).execute()
-        return result.data or []
+
+        rows = result.data or []
+        total = rows[0]["total_count"] if rows else 0
+
+        return {
+            "data": [{k: v for k, v in row.items() if k != "total_count"} for row in rows],
+            "pagination": {
+                "page":      page,
+                "per_page":  per_page,
+                "total":     total,
+                "pages":     (total + per_page - 1) // per_page if total else 0,
+            },
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 

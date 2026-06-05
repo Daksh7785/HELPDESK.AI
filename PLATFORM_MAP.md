@@ -16,7 +16,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | :--- | :--- | :--- |
 | **User Lobby** | Central entry point for employees. | Quick-start actions, high-level ticket status. |
 | **Create Ticket** | The core submission engine. | AI Processing simulator, OCR image analysis, semantic duplicate detection, parent-ticket warnings. |
-| **My Tickets** | Personal ticket ledger. | Live status tracking, filterable history. |
+| **My Tickets** | Personal ticket ledger. | Advanced search with 300ms debounced full-text input, collapsible multi-filter panel (status, priority, category, date range), active filter pills with individual removal, URL query-param sync (filters survive reload), server-side pagination (25/page), saved searches (bookmark named filter sets), CSV export, keyboard shortcuts (/ to focus, Esc to clear). |
 | **Ticket Detail** | Deep-dive into a specific issue. | Timeline tracking, resolution summaries. |
 | **AI Processing** | Real-time analysis view. | Visual feedback of DistilBERT and NER extraction in progress, semantic duplicate scoring. |
 | **Auto-Resolve** | AI troubleshooting hub. | Interactive chat for self-resolution. |
@@ -27,7 +27,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | Page | Description | Key Features |
 | :--- | :--- | :--- |
 | **Admin Lobby** | Central IT management hub. | Quick metrics (Pending, Resolved, Critical). |
-| **Admin Tickets** | Organizational ticket queue. | Bulk actions, advanced filtering, priority management. |
+| **Admin Tickets** | Organizational ticket queue. | Advanced multi-filter search (status, priority, category, date range, sort), active filter pills, URL query-param sync, saved searches, CSV export, real-time SLA breach alerts, priority & status inline editing, agent assignment. |
 | **Admin Users** | Workforce management. | Invite-only onboarding, user role auditing. |
 | **Admin Analytics** | Performance dashboard. | Sentiment heatmaps, tech-stack recurring issue analysis. |
 | **Admin Settings** | Organizational configuration. | Custom branding, SLA threshold definitions. |

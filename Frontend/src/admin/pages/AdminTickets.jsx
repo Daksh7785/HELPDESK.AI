@@ -1,34 +1,99 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import useAuthStore from "../../store/authStore";
 import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import {
-    Search,
-    Filter,
     Inbox,
     Activity,
     ShieldAlert,
-    Clock,
-    ChevronRight,
-    BarChart3,
-    User,
     ArrowUpRight,
-    ExternalLink,
     AlertCircle,
-    CheckCircle2,
     Loader2,
-    Save,
-    RotateCcw,
+    Download,
 } from 'lucide-react';
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import AdvancedSearchBar from "../../components/shared/AdvancedSearchBar";
+import SavedSearches from "../../components/shared/SavedSearches";
+
+// ── Search option constants ──────────────────────────────────────────────────
+const ADMIN_STATUS_OPTIONS = [
+    { value: 'open',        label: 'Open' },
+    { value: 'in progress', label: 'In Progress' },
+    { value: 'resolved',    label: 'Resolved' },
+    { value: 'closed',      label: 'Closed' },
+    { value: 'spam',        label: 'Spam' },
+];
+const ADMIN_PRIORITY_OPTIONS = [
+    { value: 'critical', label: 'Critical' },
+    { value: 'high',     label: 'High' },
+    { value: 'medium',   label: 'Medium' },
+    { value: 'low',      label: 'Low' },
+];
+const ADMIN_CATEGORY_OPTIONS = [
+    { value: 'Network',  label: 'Network' },
+    { value: 'Hardware', label: 'Hardware' },
+    { value: 'Software', label: 'Software' },
+    { value: 'Access',   label: 'Access' },
+    { value: 'Account',  label: 'Account' },
+];
+const ADMIN_SORT_OPTIONS = [
+    { value: 'created_at:desc', label: 'Newest first' },
+    { value: 'created_at:asc',  label: 'Oldest first' },
+    { value: 'updated_at:desc', label: 'Recently updated' },
+    { value: 'priority:desc',   label: 'Priority ↓' },
+];
+
+// ── Helper: export visible tickets as CSV ────────────────────────────────────
+const exportCSV = (tickets) => {
+    const header = ['ID', 'Subject', 'Category', 'Priority', 'Status', 'Team', 'Created At'];
+    const rows = tickets.map(t => [
+        formatTicketId(t.id),
+        `"${(t.subject || t.summary || '').replace(/"/g, '""')}"`,
+        t.category      || '',
+        t.priority      || '',
+        t.status        || '',
+        t.assigned_team || '',
+        t.created_at ? new Date(t.created_at).toISOString() : '',
+    ]);
+    const csv  = [header, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href     = url;
+    link.download = `tickets-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+};
+
+// ── URL ↔ filter helpers ─────────────────────────────────────────────────────
+const filtersToParams = (f) => {
+    const p = new URLSearchParams();
+    if (f.q)        p.set('q',        f.q);
+    if (f.status)   p.set('status',   f.status);
+    if (f.priority) p.set('priority', f.priority);
+    if (f.category) p.set('category', f.category);
+    if (f.dateFrom) p.set('dateFrom', f.dateFrom);
+    if (f.dateTo)   p.set('dateTo',   f.dateTo);
+    if (f.sort && f.sort !== 'created_at:desc') p.set('sort', f.sort);
+    return p;
+};
+const paramsToFilters = (params) => ({
+    q:        params.get('q')        || undefined,
+    status:   params.get('status')   || undefined,
+    priority: params.get('priority') || undefined,
+    category: params.get('category') || undefined,
+    dateFrom: params.get('dateFrom') || undefined,
+    dateTo:   params.get('dateTo')   || undefined,
+    sort:     params.get('sort')     || 'created_at:desc',
+});
 
 const AdminTickets = () => {
     const navigate = useNavigate();
-    const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { user } = useAuthStore();
     const { showToast } = useToastStore();
 
@@ -36,47 +101,24 @@ const AdminTickets = () => {
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [isUpdating, setIsUpdating] = useState(null); // ID of ticket being updated
+    const [isUpdating, setIsUpdating] = useState(null);
     const [newlyBreachedTicketIds, setNewlyBreachedTicketIds] = useState([]);
+    const [agents, setAgents] = useState([]);
 
-    // Filter States
-    const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState('All');
-    const [categoryFilter, setCategoryFilter] = useState('All');
-    const [priorityFilter, setPriorityFilter] = useState('All');
-    const [teamFilter, setTeamFilter] = useState('All');
-    const [agents, setAgents] = useState([]); // All staff/admins in the company
+    // Unified filter state — synced with URL params
+    const [filters, setFilters] = useState(() => paramsToFilters(searchParams));
 
-    const fetchInitialData = async () => {
+    // ── URL sync: push filter state into query params ───────────────────────
+    useEffect(() => {
+        setSearchParams(filtersToParams(filters), { replace: true });
+    }, [filters]);
+
+    const fetchTickets = useCallback(async () => {
+        setError(null);
         setLoading(true);
         try {
             const { profile } = useAuthStore.getState();
-            
-            // 1. Fetch Agents for this company
-            if (profile?.company) {
-                const { data: agentData } = await supabase
-                    .from('profiles')
-                    .select('id, full_name, role')
-                    .eq('company', profile.company)
-                    .in('role', ['admin', 'super_admin', 'agent']);
-                setAgents(agentData || []);
-            }
 
-            // 2. Fetch Tickets (Join with both Creator and Assignee)
-            fetchTickets();
-        } catch (err) {
-            console.error("Initialization error:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchTickets = async () => {
-        setError(null);
-        try {
-            const { profile } = useAuthStore.getState();
-            
-            // Join with profiles for both user_id (creator) and assigned_agent_id (assignee)
             let query = supabase
                 .from('tickets')
                 .select(`
@@ -89,33 +131,55 @@ const AdminTickets = () => {
                 query = query.eq('company', profile.company);
             }
 
-            if (statusFilter !== 'All') query = query.eq('status', statusFilter.toLowerCase());
-            if (categoryFilter !== 'All') query = query.eq('category', categoryFilter);
-            if (priorityFilter !== 'All') query = query.eq('priority', priorityFilter.toLowerCase());
-            if (teamFilter !== 'All') query = query.eq('assigned_team', teamFilter);
+            // Apply filters
+            if (filters.status)   query = query.eq('status',   filters.status);
+            if (filters.category) query = query.eq('category', filters.category);
+            if (filters.priority) query = query.eq('priority', filters.priority);
+            if (filters.dateFrom) query = query.gte('created_at', filters.dateFrom);
+            if (filters.dateTo)   query = query.lte('created_at', filters.dateTo + 'T23:59:59Z');
 
-            let { data, error: sbError } = await query.order('created_at', { ascending: false });
+            // Sort
+            const [sortCol, sortDir] = (filters.sort || 'created_at:desc').split(':');
+            query = query.order(sortCol || 'created_at', { ascending: sortDir === 'asc' });
+
+            let { data, error: sbError } = await query;
 
             if (sbError) {
-                // Secondary check: If the FK alias fails, try a simpler select
-                console.warn("Retrying fetch without relationship aliases...");
-                const basicQuery = supabase.from('tickets').select('*, profiles(full_name, email)');
-                const { data: basicData, error: basicError } = await basicQuery.eq('company', profile?.company).order('created_at', { ascending: false });
+                console.warn('Retrying fetch without relationship aliases...');
+                const { data: basicData, error: basicError } = await supabase
+                    .from('tickets')
+                    .select('*, profiles(full_name, email)')
+                    .eq('company', profile?.company)
+                    .order('created_at', { ascending: false });
                 if (basicError) throw basicError;
                 setTickets(basicData || []);
             } else {
                 setTickets(data || []);
             }
         } catch (err) {
-            console.error("Admin fetch error:", err);
+            console.error('Admin fetch error:', err);
             setError(err.message);
+        } finally {
+            setLoading(false);
         }
-    };
+    }, [filters]);
+
+    const fetchInitialData = useCallback(async () => {
+        const { profile } = useAuthStore.getState();
+        if (profile?.company) {
+            const { data: agentData } = await supabase
+                .from('profiles')
+                .select('id, full_name, role')
+                .eq('company', profile.company)
+                .in('role', ['admin', 'super_admin', 'agent']);
+            setAgents(agentData || []);
+        }
+        fetchTickets();
+    }, [fetchTickets]);
 
     useEffect(() => {
         fetchInitialData();
 
-        // 4. Real-time subscription to ticket changes
         const { profile } = useAuthStore.getState();
         const channel = supabase
             .channel('admin_tickets_realtime')
@@ -146,7 +210,7 @@ const AdminTickets = () => {
             supabase.removeChannel(channel);
         };
      
-    }, [statusFilter, categoryFilter, priorityFilter, teamFilter]);
+    }, [filters, fetchInitialData]);
 
     useEffect(() => {
         const channelSla = supabase
@@ -156,50 +220,28 @@ const AdminTickets = () => {
                 { event: 'breach' },
                 (payload) => {
                     const { ticketId, subject, originalTeam, escalatedTeam, companyId } = payload.payload;
-                    console.log("Realtime SLA breach event:", payload);
-                    
                     const { profile } = useAuthStore.getState();
-                    if (profile?.company_id && companyId && profile.company_id !== companyId) {
-                        return;
-                    }
+                    if (profile?.company_id && companyId && profile.company_id !== companyId) return;
 
-                    // Show custom toast
                     const formattedId = String(ticketId).slice(0, 8).toUpperCase();
-                    showToast(`⚠️ SLA BREACH: Ticket #${formattedId} ("${subject}") escalated from '${originalTeam}' to '${escalatedTeam}'!`, "error");
+                    showToast(`⚠️ SLA BREACH: Ticket #${formattedId} ("${subject}") escalated from '${originalTeam}' to '${escalatedTeam}'!`, 'error');
 
-                    // Highlight the row
                     setNewlyBreachedTicketIds(prev => [...prev, ticketId]);
                     setTimeout(() => {
                         setNewlyBreachedTicketIds(prev => prev.filter(id => id !== ticketId));
                     }, 12000);
 
-                    // Update ticket in state
-                    setTickets(prev => prev.map(t => 
-                        t.id === ticketId 
-                            ? { 
-                                ...t, 
-                                sla_status: 'BREACHED', 
-                                assigned_team: escalatedTeam, 
-                                escalation_level: (t.escalation_level || 0) + 1,
-                                updated_at: new Date().toISOString()
-                              }
+                    setTickets(prev => prev.map(t =>
+                        t.id === ticketId
+                            ? { ...t, sla_status: 'BREACHED', assigned_team: escalatedTeam, escalation_level: (t.escalation_level || 0) + 1, updated_at: new Date().toISOString() }
                             : t
                     ));
                 }
             )
             .subscribe();
 
-        return () => {
-            supabase.removeChannel(channelSla);
-        };
-    }, []);
-
-    // Seed search from URL
-    useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const q = params.get('q');
-        if (q) setSearchQuery(decodeURIComponent(q));
-    }, [location.search]);
+        return () => supabase.removeChannel(channelSla);
+    }, [showToast]);
 
     const handleUpdateTicket = async (id, updates) => {
         setIsUpdating(id);
@@ -223,22 +265,21 @@ const AdminTickets = () => {
         }
     };
 
-    const categories = ['All', 'Network', 'Hardware', 'Software', 'Access', 'Account'];
-    const priorities = ['All', 'Low', 'Medium', 'High'];
-    const statuses = ['All', 'Open', 'In Progress', 'Resolved', 'Closed', 'Spam'];
-    const teams = ['All', 'Software Team', 'Hardware Support', 'Network Ops', 'Security Unit', 'General Support'];
+    const priorities = ['Low', 'Medium', 'High', 'Critical'];
+    const statuses   = ['Open', 'In Progress', 'Resolved', 'Closed', 'Spam'];
 
+    // Client-side text filter on top of server-side results (covers creator name search)
     const filteredTickets = useMemo(() => {
-        if (!searchQuery) return tickets;
-        const q = searchQuery.toLowerCase();
+        if (!filters.q) return tickets;
+        const q = filters.q.toLowerCase();
         return tickets.filter(t =>
             String(t.id).includes(q) ||
-            (t.subject || '').toLowerCase().includes(q) ||
-            (t.summary || '').toLowerCase().includes(q) ||
+            (t.subject  || '').toLowerCase().includes(q) ||
+            (t.summary  || '').toLowerCase().includes(q) ||
             (t.description || '').toLowerCase().includes(q) ||
-            (t.profiles?.full_name || '').toLowerCase().includes(q)
+            (t.creator?.full_name  || t.profiles?.full_name || '').toLowerCase().includes(q)
         );
-    }, [tickets, searchQuery]);
+    }, [tickets, filters.q]);
 
     const getPriorityStyle = (priority) => {
         const p = String(priority || '').toLowerCase();
@@ -264,55 +305,37 @@ const AdminTickets = () => {
                         <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} tickets matching current filters.
                     </p>
                 </div>
+                {/* CSV Export */}
+                {filteredTickets.length > 0 && (
+                    <button
+                        id="admin-export-csv-btn"
+                        onClick={() => exportCSV(filteredTickets)}
+                        title="Export results as CSV"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-all shadow-sm"
+                    >
+                        <Download size={16} />
+                        Export CSV
+                    </button>
+                )}
             </div>
 
             {/* 2. Advanced Filtering Station */}
-            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50 space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    {/* Search Field */}
-                    <div className="relative group lg:col-span-1">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-emerald-500 transition-colors w-5 h-5" />
-                        <input
-                            type="text"
-                            placeholder="Search..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3 text-sm font-bold focus:outline-none focus:ring-4 focus:ring-emerald-500/5 focus:border-emerald-500 focus:bg-white transition-all text-slate-700 placeholder:text-slate-400"
-                        />
-                    </div>
-
-                    {/* Status Filter */}
-                    <Select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
-                        options={statuses.map(s => ({ value: s, label: s === 'All' ? 'All Statuses' : s }))}
+            <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-xl shadow-slate-200/50">
+                <AdvancedSearchBar
+                    filters={filters}
+                    onChange={setFilters}
+                    onClear={() => setFilters({ sort: 'created_at:desc' })}
+                    statusOptions={ADMIN_STATUS_OPTIONS}
+                    priorityOptions={ADMIN_PRIORITY_OPTIONS}
+                    categoryOptions={ADMIN_CATEGORY_OPTIONS}
+                    sortOptions={ADMIN_SORT_OPTIONS}
+                    placeholder="Search tickets, subjects, descriptions… (press / to focus)"
+                >
+                    <SavedSearches
+                        currentFilters={filters}
+                        onLoad={setFilters}
                     />
-
-                    {/* Category Filter */}
-                    <Select
-                        value={categoryFilter}
-                        onChange={(e) => setCategoryFilter(e.target.value)}
-                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
-                        options={categories.map(c => ({ value: c, label: c === 'All' ? 'All Categories' : c }))}
-                    />
-
-                    {/* Priority Filter */}
-                    <Select
-                        value={priorityFilter}
-                        onChange={(e) => setPriorityFilter(e.target.value)}
-                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
-                        options={priorities.map(p => ({ value: p, label: p === 'All' ? 'All Priorities' : p }))}
-                    />
-
-                    {/* Team Filter */}
-                    <Select
-                        value={teamFilter}
-                        onChange={(e) => setTeamFilter(e.target.value)}
-                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
-                        options={teams.map(t => ({ value: t, label: t === 'All' ? 'All Teams' : t }))}
-                    />
-                </div>
+                </AdvancedSearchBar>
             </div>
 
             {/* 3. High-Density Data Terminal */}
