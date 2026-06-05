@@ -250,6 +250,29 @@ npm install
 npm run dev
 ```
 
+### Local Docker Deployment Verification Checklist
+
+Before promoting the local container image to staging or production, run the
+backend stack from the repository root and verify each operational dependency:
+
+```bash
+docker compose up --build -d
+docker compose ps
+```
+
+- [ ] **Port binding**: confirm the backend container publishes `0.0.0.0:7860->7860/tcp`, then open `http://localhost:7860/docs`.
+- [ ] **Persistent volumes**: confirm `model_cache`, `ticket_data`, and `redis_data` are mounted with `docker volume ls | grep helpdesk`.
+- [ ] **Database settings**: set `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, and `TICKET_ENCRYPTION_KEY` in `.env`, then confirm they are visible with `docker compose exec backend env | grep SUPABASE`.
+- [ ] **Redis connection**: verify the backend uses `REDIS_URL=redis://redis:6379/0` and the `redis` service reports `healthy` in `docker compose ps`.
+- [ ] **Health check**: run `docker inspect --format='{{json .State.Health}}' helpdesk_backend` and confirm the status is `healthy`.
+- [ ] **Smoke request**: confirm the API responds locally with `curl http://localhost:7860/health` or the project health endpoint configured for the deployment.
+
+After verification, stop the local stack with:
+
+```bash
+docker compose down
+```
+
 ---
 
 <h2 id="roadmap">🗺️ Roadmap</h2>
@@ -288,12 +311,3 @@ Thanks goes to these wonderful people for contributing to this project ❤️
 <div align="center">
 Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team.
 </div>
-
-
-## Local Docker Deployment Verification Checklist
-
-Before deploying your container to staging or production, verify:
-- [ ] Port binding configuration maps correctly (default `7860`).
-- [ ] Volumetric storage binds persist datasets like `final_dataset.xlsx`.
-- [ ] Database credentials (`SUPABASE_URL`, `SUPABASE_KEY`) are passed correctly.
-- [ ] Container health check is active and returns status green.
