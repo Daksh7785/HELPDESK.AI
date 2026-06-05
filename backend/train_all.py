@@ -14,7 +14,7 @@ SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
 sys.path.insert(0, PROJECT_ROOT)
 
-from backend.training.classifier_trainer import train_classifier
+from backend.training.classifier_trainer_v3 import train_classifier
 from backend.training.ner_trainer import train_ner
 
 
@@ -26,7 +26,7 @@ def main():
 
     overall_start = time.time()
 
-    # ── Step 1: Classifier ────────────────────────────────────
+    # ── Step 1: Classifier ─────────────────────────────────────
     print("[1/2] Training Classifier Model …\n")
     t0 = time.time()
     try:
