@@ -27,7 +27,7 @@ class GeminiService:
         else:
             print("[GeminiService] WARNING: GEMINI_API_KEY not found in environment.")
 
-    def analyze_image(self, image_base64: str) -> dict:
+    def analyze_image(self, image_base64: str, context_text: str = None) -> dict:
         """
         Perform OCR and image analysis using Gemini logic.
         """
@@ -44,8 +44,10 @@ class GeminiService:
             image_bytes = base64.b64decode(image_base64)
             img = Image.open(io.BytesIO(image_bytes))
 
-            prompt = (
-                "Analyze this screenshot from a user reporting a technical issue. "
+            prompt = "Analyze this screenshot from a user reporting a technical issue. "
+            if context_text:
+                prompt += f"The user provided the following context/description: '{context_text}'. "
+            prompt += (
                 "1. Provide a concise description of what is shown in the image. "
                 "2. Perform OCR and extract any error messages or key text. "
                 "3. Identify the main technical problem depicted. "
