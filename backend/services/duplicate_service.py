@@ -232,26 +232,31 @@ class DuplicateService:
     # ------------------------------------------------------------------
 
     def save_to_disk(self, ticket_id: str, text: str) -> None:
-        """Append a new ticket entry to the JSON persistence file."""
-        data: list = []
-        try:
-            os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
-            if os.path.exists(self.storage_file):
-                with open(self.storage_file, "r") as f:
-                    try:
-                        data = json.load(f)
-                        if not isinstance(data, list):
-                            data = []
-                    except Exception:
-                        data = []
+        """Append a new ticket entry to the JSON persistence file.
 
-            data.append({"ticket_id": ticket_id, "text": text})
-            data = data[-MAX_CACHE_ENTRIES:]
-            with open(self.storage_file, "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
-        except Exception as exc:
-            print(f"[DuplicateService] Failed to save to disk: {exc}")
+        Thread-safe: acquires ``self._lock`` to prevent torn writes when
+        concurrent FastAPI workers call ``add_ticket()`` simultaneously.
+        """
+        with self._lock:
+            data: list = []
+            try:
+                os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
+                if os.path.exists(self.storage_file):
+                    with open(self.storage_file, "r") as f:
+                        try:
+                            data = json.load(f)
+                            if not isinstance(data, list):
+                                data = []
+                        except Exception:
+                            data = []
+
+                data.append({"ticket_id": ticket_id, "text": text})
+                data = data[-MAX_CACHE_ENTRIES:]
+                with open(self.storage_file, "w") as f:
+                    json.dump(data, f, indent=2)
+                print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
+            except Exception as exc:
+                print(f"[DuplicateService] Failed to save to disk: {exc}")
 
     def add_ticket(self, ticket_id: str, text: str) -> None:
         """Add a ticket to the in-memory store and persist to disk.
@@ -338,13 +343,10 @@ class DuplicateService:
 
         # If model is not available, return no duplicate found
         if not self.is_available():
-            print(
-                "[DuplicateService] DEGRADED: Duplicate check skipped (model not available)"
-            )
             return {
-                "duplicate_ticket_id": ticket_id,
-                "similarity_score": round(best_score, 4),
-                "original_text": original_text,
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "similarity": 0.0,
             }
 
         use_default_threshold = threshold is None
