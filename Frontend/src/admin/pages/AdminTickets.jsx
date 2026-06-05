@@ -20,11 +20,15 @@ import {
     Loader2,
     Save,
     RotateCcw,
+    Download,
+    FileText,
+    Table2,
 } from 'lucide-react';
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import { exportTicketsToCSV, exportTicketsToPDF } from "../services/exportService";
 
 const AdminTickets = () => {
     const navigate = useNavigate();
@@ -193,6 +197,35 @@ const AdminTickets = () => {
         );
     }, [tickets, searchQuery]);
 
+    const [isExporting, setIsExporting] = useState(false);
+
+    const handleExportCSV = () => {
+        try {
+            const result = exportTicketsToCSV(
+                filteredTickets,
+                `tickets-export-${new Date().toISOString().slice(0, 10)}.csv`
+            );
+            showToast(`Exported ${result.count} tickets to CSV`, 'success');
+        } catch (err) {
+            showToast(err.message || 'CSV export failed', 'error');
+        }
+    };
+
+    const handleExportPDF = async () => {
+        setIsExporting(true);
+        try {
+            const result = await exportTicketsToPDF(
+                filteredTickets,
+                `tickets-export-${new Date().toISOString().slice(0, 10)}.pdf`
+            );
+            showToast(`Exported ${result.count} tickets to PDF`, 'success');
+        } catch (err) {
+            showToast(err.message || 'PDF export failed', 'error');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     const getPriorityStyle = (priority) => {
         const p = String(priority || '').toLowerCase();
         if (p === 'high' || p === 'critical') return 'text-red-600 bg-red-50 border-red-100';
@@ -216,6 +249,31 @@ const AdminTickets = () => {
                     <p className="text-sm font-bold text-slate-400 mt-1 flex items-center gap-2">
                         <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} tickets matching current filters.
                     </p>
+                </div>
+                {/* Export Controls */}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleExportCSV}
+                        disabled={filteredTickets.length === 0}
+                        title="Export visible tickets to CSV"
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        <Table2 size={13} />
+                        Export CSV
+                    </button>
+                    <button
+                        onClick={handleExportPDF}
+                        disabled={filteredTickets.length === 0 || isExporting}
+                        title="Export visible tickets to PDF"
+                        className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-xl transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                        {isExporting ? (
+                            <Loader2 size={13} className="animate-spin" />
+                        ) : (
+                            <FileText size={13} />
+                        )}
+                        {isExporting ? 'Generating…' : 'Export PDF'}
+                    </button>
                 </div>
             </div>
 
