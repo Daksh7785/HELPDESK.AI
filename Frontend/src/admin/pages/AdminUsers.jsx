@@ -97,7 +97,7 @@ const AdminUsers = () => {
             console.log("Admin session synchronized. Company ID:", activeCompanyId, "Name:", activeCompanyName);
 
             // 1. Fetch ACTIVE users
-            let query = supabase.from('profiles').select('*').eq('status', 'active');
+            let query = supabase.from('profiles').select('id, full_name, email, role, status, company, created_at, profile_picture').eq('status', 'active').limit(50);
 
             if (activeCompanyId) {
                 query = query.eq('company_id', activeCompanyId);
@@ -118,7 +118,8 @@ const AdminUsers = () => {
 
             // Path B: Direct profile lookup (Ensure Anjali is visible even if request row failed)
             let profileQuery = supabase.from('profiles')
-                .select('*')
+                .select('id, full_name, email, company, company_id, created_at, status')
+                .limit(50)
                 .eq('status', 'pending_approval');
 
             // Inclusion Logic: Find any user that matches our ID OR our Name

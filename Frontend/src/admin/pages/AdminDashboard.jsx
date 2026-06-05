@@ -79,12 +79,12 @@ const AdminDashboard = () => {
             const fetchStats = async () => {
                 setIsLoading(true);
                 try {
-                    const data = await api.apiGetTickets(null, profile?.role === 'admin' ? profile?.company : null);
+                    const data = await api.apiGetTickets(null, profile?.role === 'admin' ? profile?.company : null, 100);
                     const error = null;
                     if (error) {
                         // Secondary check: If the relation fails, try a simpler select
                         console.warn("Retrying dashboard fetch without relation...", error);
-                        const basicData = await api.apiGetTickets(null, profile?.company); const basicError = null;
+                        const basicData = await api.apiGetTickets(null, profile?.company, 100); const basicError = null;
                         if (basicError) throw basicError;
                         setTickets(basicData || []);
                     } else {

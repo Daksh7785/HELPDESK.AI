@@ -40,7 +40,7 @@ const MasterBugReports = () => {
             const { data, error: sbError } = await supabase
                 .from('bug_reports')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false }).limit(50);
 
             if (sbError) throw sbError;
             setBugs(data || []);

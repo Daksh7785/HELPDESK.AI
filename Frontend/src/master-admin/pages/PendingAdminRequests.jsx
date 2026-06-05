@@ -45,7 +45,7 @@ function PendingAdminRequests() {
                     admin:profiles!admin_id (*)
                 `)
                 .eq('status', 'pending')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false }).limit(50);
 
             if (error) throw error;
             setRequests(data || []);

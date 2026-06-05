@@ -41,7 +41,7 @@ function MyTickets() {
         setLoading(true);
         setError(null);
         try {
-            const data = await api.apiGetTickets(user.id);
+            const data = await api.apiGetTickets(user.id, null, 50);
             setTickets(data || []);
         } catch (sbError) {
             console.error("Error fetching tickets:", sbError);

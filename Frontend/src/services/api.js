@@ -133,11 +133,13 @@ export const api = {
   // Decoupled Backend API Calls (Replacing Supabase.from)
   // ----------------------------------------------------
   
-  apiGetTickets: async (userId, company) => {
+  apiGetTickets: async (userId, company, limit = 50, offset = 0) => {
     let url = `${API_BASE_URL}/api/tickets`;
     const params = new URLSearchParams();
     if (userId) params.append("user_id", userId);
     if (company) params.append("company", company);
+    params.append("limit", limit);
+    params.append("offset", offset);
     if (params.toString()) url += `?${params.toString()}`;
     const res = await axios.get(url);
     return res.data;
@@ -148,11 +150,13 @@ export const api = {
     return res.data;
   },
 
-  apiGetProfiles: async (role, status) => {
+  apiGetProfiles: async (role, status, limit = 50, offset = 0) => {
     let url = `${API_BASE_URL}/api/profiles`;
     const params = new URLSearchParams();
     if (role) params.append("role", role);
     if (status) params.append("status", status);
+    params.append("limit", limit);
+    params.append("offset", offset);
     if (params.toString()) url += `?${params.toString()}`;
     const res = await axios.get(url);
     return res.data;
@@ -173,9 +177,13 @@ export const api = {
     return res.data;
   },
 
-  apiGetAdminRequests: async (status) => {
+  apiGetAdminRequests: async (status, limit = 50, offset = 0) => {
     let url = `${API_BASE_URL}/api/admin_requests`;
-    if (status) url += `?status=${status}`;
+    let params = new URLSearchParams();
+    if (status) params.append("status", status);
+    params.append("limit", limit);
+    params.append("offset", offset);
+    url += `?${params.toString()}`;
     const res = await axios.get(url);
     return res.data;
   },

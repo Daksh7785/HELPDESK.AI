@@ -569,7 +569,7 @@ async def get_tickets(company_id: str | None = None):
     if company_id:
         query = query.eq("company_id", company_id)
         
-    res = query.execute()
+    res = query.range(offset, offset + limit - 1).execute()
     return res.data
 
 @app.post("/tickets/save")
@@ -1239,12 +1239,12 @@ async def auth_me(user: dict = Depends(get_current_user)):
 # ---------------------------------------------------------------------------
 
 @app.get("/api/tickets")
-async def api_get_tickets(user_id: str = None, company: str = None):
+async def api_get_tickets(user_id: str = None, company: str = None, limit: int = 50, offset: int = 0):
     if not supabase: return []
     query = supabase.table("tickets").select("*")
     if user_id: query = query.eq("user_id", user_id)
     if company: query = query.eq("company", company)
-    res = query.order("created_at", desc=True).execute()
+    res = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
     return res.data
 
 @app.patch("/api/tickets/{ticket_id}")
@@ -1254,12 +1254,12 @@ async def api_update_ticket(ticket_id: str, updates: dict):
     return res.data[0] if res.data else {}
 
 @app.get("/api/profiles")
-async def api_get_profiles(role: str = None, status: str = None):
+async def api_get_profiles(role: str = None, status: str = None, limit: int = 50, offset: int = 0):
     if not supabase: return []
     query = supabase.table("profiles").select("*")
     if role: query = query.eq("role", role)
     if status: query = query.eq("status", status)
-    res = query.execute()
+    res = query.range(offset, offset + limit - 1).execute()
     return res.data
 
 @app.patch("/api/profiles/{user_id}")
@@ -1286,11 +1286,11 @@ async def api_get_companies():
     return res.data
 
 @app.get("/api/admin_requests")
-async def api_get_admin_requests(status: str = None):
+async def api_get_admin_requests(status: str = None, limit: int = 50, offset: int = 0):
     if not supabase: return []
     query = supabase.table("admin_requests").select("*")
     if status: query = query.eq("status", status)
-    res = query.execute()
+    res = query.range(offset, offset + limit - 1).execute()
     return res.data
 
 @app.post("/api/storage/upload")

@@ -23,7 +23,7 @@ const RecentTickets = () => {
         try {
             const { data, error: sbError } = await supabase
                 .from('tickets')
-                .select('*')
+                .select('id, subject, summary, status, created_at')
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
                 .limit(5);
