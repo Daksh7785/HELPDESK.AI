@@ -26,14 +26,47 @@ const useTicketStore = create(
                 ]
             })),
             addTicket: (ticket) => set((state) => {
-                return {
-                    tickets: [...state.tickets, ticket]
-                };
-            }),
+    const ticketWithTimeline = {
+        ...ticket,
+        timeline: [
+            {
+                type: 'created',
+                timestamp: new Date().toISOString(),
+                actor: 'User',
+                description: 'Ticket created'
+            }
+        ]
+    };
+
+    return {
+        tickets: [...state.tickets, ticketWithTimeline]
+    };
+}),
             updateTicket: (ticketId, updates) => set((state) => {
 // eslint-disable-next-line no-unused-vars
                 const existingTicket = state.tickets.find(t => t.ticket_id === ticketId);
-                const updatedTickets = state.tickets.map(t => t.ticket_id === ticketId ? { ...t, ...updates } : t);
+                const updatedTickets = state.tickets.map(t =>
+    t.ticket_id === ticketId
+        ? {
+            ...t,
+            ...updates,
+            timeline: [
+                ...(t.timeline || []),
+                {
+                    type: 'updated',
+                    timestamp: new Date().toISOString(),
+                    actor: 'System',
+                    description:
+                        updates.status
+                            ? `Status changed to ${updates.status}`
+                            : updates.assigned_team
+                            ? `Assigned to ${updates.assigned_team}`
+                            : 'Ticket updated'
+                }
+            ]
+        }
+        : t
+);
                 const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
 
 
@@ -41,7 +74,26 @@ const useTicketStore = create(
 
                 return {
                     tickets: updatedTickets,
-                    activeTicket: shouldUpdateActive ? { ...state.activeTicket, ...updates } : state.activeTicket
+                    activeTicket: shouldUpdateActive
+    ? {
+        ...state.activeTicket,
+        ...updates,
+        timeline: [
+            ...(state.activeTicket?.timeline || []),
+            {
+                type: 'updated',
+                timestamp: new Date().toISOString(),
+                actor: 'System',
+                description:
+                    updates.status
+                        ? `Status changed to ${updates.status}`
+                        : updates.assigned_team
+                        ? `Assigned to ${updates.assigned_team}`
+                        : 'Ticket updated'
+            }
+        ]
+    }
+    : state.activeTicket
                 };
             }),
 
@@ -54,13 +106,25 @@ const useTicketStore = create(
             appendMessage: (ticketId, message) => set((state) => {
                 const updatedTickets = state.tickets.map(t =>
                     t.ticket_id === ticketId
-                        ? { ...t, messages: [...(t.messages || []), message] }
+                        ? {
+    ...t,
+    messages: [...(t.messages || []), message],
+    timeline: [
+        ...(t.timeline || []),
+        {
+            type: 'comment',
+            timestamp: message.timestamp,
+            actor: message.sender,
+            description: 'Comment added'
+        }
+    ]
+}
                         : t
                 );
                 const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
 
                 return {
-                    tickets: updatedTickets,
+                    tickets: updatedTickets,    
                     activeTicket: shouldUpdateActive
                         ? { ...state.activeTicket, messages: [...(state.activeTicket?.messages || []), message] }
                         : state.activeTicket
