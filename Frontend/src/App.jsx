@@ -5,7 +5,7 @@ import {
   Navigate,
   useLocation
 } from "react-router-dom";
-import React, { useEffect } from "react";
+import React, { useEffect, Suspense } from "react";
 import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
@@ -13,72 +13,75 @@ import Toaster from "./components/shared/Toaster";
 import BugReportWidget from "./components/shared/BugReportWidget";
 import useRealtimeNotifications from "./hooks/useRealtimeNotifications";
 
-// Auth Components
-import Login from "./pages/Login";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Signup from "./pages/Signup";
-import AdminSignup from "./pages/AdminSignup";
-import AdminLobby from "./pages/AdminLobby";
-import UserLobby from "./pages/UserLobby";
-import LandingPage from "./pages/LandingPage";
-import ContactSales from "./pages/ContactSales";
+import React, { lazy, Suspense, useEffect, useState } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { ThemeProvider } from 'next-themes';
+import { PageSkeleton, MinimalSkeleton } from './components/ui/page-skeleton';
+import { NotFound } from './components/ui/not-found-2';
+import Toaster from './components/shared/Toaster';
+import BugReportWidget from './components/shared/BugReportWidget';
+import useAuthStore from './store/authStore';
+import useKeyboardShortcuts from './hooks/useKeyboardShortcuts';
+import ShortcutsHelp from './components/shared/ShortcutsHelp';
+import BackToTop from './components/shared/BackToTop';
+import BackToTopButton from './components/shared/BackToTopButton';
+import ScrollToTopButton from './components/ScrollToTopButton';
 
 // Legacy components
-import DuplicateDetection from "./user/pages/DuplicateDetection";
-import AutoResolveChat from "./user/pages/AutoResolveChat";
-import Resolved from "./user/pages/Resolved";
-import TicketTracking from "./user/pages/TicketTracking";
+const DuplicateDetection = React.lazy(() => import("./user/pages/DuplicateDetection"));
+const AutoResolveChat = React.lazy(() => import("./user/pages/AutoResolveChat"));
+const Resolved = React.lazy(() => import("./user/pages/Resolved"));
+const TicketTracking = React.lazy(() => import("./user/pages/TicketTracking"));
 // Layouts
-import UserLayout from "./user/UserLayout";
-import AdminLayout from "./admin/layout/AdminLayout";
+const UserLayout = React.lazy(() => import("./user/UserLayout"));
+const AdminLayout = React.lazy(() => import("./admin/layout/AdminLayout"));
 
 // User Pages
-import Dashboard from "./user/pages/Dashboard";
-import CreateTicket from "./user/pages/CreateTicket";
-import MyTickets from "./user/pages/MyTickets";
-import TicketResult from "./user/pages/TicketResult";
-import Profile from "./user/pages/Profile";
-import TicketDetail from "./user/pages/TicketDetail";
+const Dashboard = React.lazy(() => import("./user/pages/Dashboard"));
+const CreateTicket = React.lazy(() => import("./user/pages/CreateTicket"));
+const MyTickets = React.lazy(() => import("./user/pages/MyTickets"));
+const TicketResult = React.lazy(() => import("./user/pages/TicketResult"));
+const Profile = React.lazy(() => import("./user/pages/Profile"));
+const TicketDetail = React.lazy(() => import("./user/pages/TicketDetail"));
 import TicketProcessing from "./user/pages/AIProcessing"; // Renamed generic import just in case, but keeping AIProcessing
-import AIProcessing from "./user/pages/AIProcessing";
-import AIUnderstanding from "./user/pages/AIUnderstanding";
-import Notifications from "./user/pages/Notifications";
-import Help from "./user/pages/Help";
-import DocsPortal from "./docs/pages/DocsPortal";
+const AIProcessing = React.lazy(() => import("./user/pages/AIProcessing"));
+const AIUnderstanding = React.lazy(() => import("./user/pages/AIUnderstanding"));
+const Notifications = React.lazy(() => import("./user/pages/Notifications"));
+const Help = React.lazy(() => import("./user/pages/Help"));
+const DocsPortal = React.lazy(() => import("./docs/pages/DocsPortal"));
 
 // New Showcase Pages
-import ApiReference from "./pages/ApiReference";
-import Changelog from "./pages/Changelog";
-import StatusPage from "./pages/StatusPage";
-import AboutUs from "./pages/AboutUs";
-import Careers from "./pages/Careers";
-import CookiePolicy from "./pages/legal/CookiePolicy";
+const ApiReference = React.lazy(() => import("./pages/ApiReference"));
+const Changelog = React.lazy(() => import("./pages/Changelog"));
+const StatusPage = React.lazy(() => import("./pages/StatusPage"));
+const AboutUs = React.lazy(() => import("./pages/AboutUs"));
+const Careers = React.lazy(() => import("./pages/Careers"));
+const CookiePolicy = React.lazy(() => import("./pages/legal/CookiePolicy"));
 
 // NEW Admin Pages (Refactored)
-import AdminDashboard from "./admin/pages/AdminDashboard";
-import AdminTickets from "./admin/pages/AdminTickets";
-import AdminTicketDetail from "./admin/pages/AdminTicketDetail";
-import AdminUsers from "./admin/pages/AdminUsers";
-import AdminAnalytics from "./admin/pages/AdminAnalytics";
-import AdminProfile from "./admin/pages/AdminProfile";
-import AdminSettings from "./admin/pages/AdminSettings";
-import MasterBugReports from "./master-admin/pages/MasterBugReports";
+const AdminDashboard = React.lazy(() => import("./admin/pages/AdminDashboard"));
+const AdminTickets = React.lazy(() => import("./admin/pages/AdminTickets"));
+const AdminTicketDetail = React.lazy(() => import("./admin/pages/AdminTicketDetail"));
+const AdminUsers = React.lazy(() => import("./admin/pages/AdminUsers"));
+const AdminAnalytics = React.lazy(() => import("./admin/pages/AdminAnalytics"));
+const AdminProfile = React.lazy(() => import("./admin/pages/AdminProfile"));
+const AdminSettings = React.lazy(() => import("./admin/pages/AdminSettings"));
+const MasterBugReports = React.lazy(() => import("./master-admin/pages/MasterBugReports"));
 
 // Feature Pages
-import AutoCategorizationFeature from "./pages/features/AutoCategorizationFeature";
-import PriorityDetectionFeature from "./pages/features/PriorityDetectionFeature";
-import SmartResolutionFeature from "./pages/features/SmartResolutionFeature";
+const AutoCategorizationFeature = React.lazy(() => import("./pages/features/AutoCategorizationFeature"));
+const PriorityDetectionFeature = React.lazy(() => import("./pages/features/PriorityDetectionFeature"));
+const SmartResolutionFeature = React.lazy(() => import("./pages/features/SmartResolutionFeature"));
 
 // Legal Pages
-import TermsOfService from "./pages/legal/TermsOfService";
-import PrivacyPolicy from "./pages/legal/PrivacyPolicy";
-import Security from "./pages/legal/Security";
+const TermsOfService = React.lazy(() => import("./pages/legal/TermsOfService"));
+const PrivacyPolicy = React.lazy(() => import("./pages/legal/PrivacyPolicy"));
+const Security = React.lazy(() => import("./pages/legal/Security"));
 import AdminProtectedRoute from "./components/shared/AdminProtectedRoute";
 import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedRoute";
 import ProtectedRoute from "./components/shared/ProtectedRoute";
 import useAuthStore from "./store/authStore";
-import NotApproved from "./pages/NotApproved";
+const NotApproved = React.lazy(() => import("./pages/NotApproved"));
 
 // Master Admin Components
 import MasterAdminLogin from "./pages/MasterAdminLogin";
@@ -87,11 +90,70 @@ import MasterAdminDashboard from "./master-admin/pages/MasterAdminDashboard";
 import PendingAdminRequests from "./master-admin/pages/PendingAdminRequests";
 import AllCompanies from "./master-admin/pages/AllCompanies";
 import AllAdmins from "./master-admin/pages/AllAdmins";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
+const ContactSales    = lazy(() => import('./pages/ContactSales'));
+const ApiReference    = lazy(() => import('./pages/ApiReference'));
+const Changelog       = lazy(() => import('./pages/Changelog'));
+const StatusPage      = lazy(() => import('./pages/StatusPage'));
+const AboutUs         = lazy(() => import('./pages/AboutUs'));
+const Careers         = lazy(() => import('./pages/Careers'));
+const DocsPortal      = lazy(() => import('./docs/pages/DocsPortal'));
+
+const AutoCategorizationFeature = lazy(() => import('./pages/features/AutoCategorizationFeature'));
+const PriorityDetectionFeature = lazy(() => import('./pages/features/PriorityDetectionFeature'));
+const SmartResolutionFeature = lazy(() => import('./pages/features/SmartResolutionFeature'));
+
+const TermsOfService = lazy(() => import('./pages/legal/TermsOfService'));
+const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
+const Security = lazy(() => import('./pages/legal/Security'));
+const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
+
+// Tenant Core Workspace Layout Shells
+const UserLayout = lazy(() => import('./user/UserLayout'));
+const AdminLayout = lazy(() => import('./admin/layout/AdminLayout'));
+const MasterAdminLayout = lazy(() => import('./master-admin/layout/MasterAdminLayout'));
+
+// User Telemetry Target Node Matrix
+const Dashboard = lazy(() => import('./user/pages/Dashboard'));
+const CreateTicket = lazy(() => import('./user/pages/CreateTicket'));
+const MyTickets = lazy(() => import('./user/pages/MyTickets'));
+const TicketResult = lazy(() => import('./user/pages/TicketResult'));
+const Profile = lazy(() => import('./user/pages/Profile'));
+const TicketDetail = lazy(() => import('./user/pages/TicketDetail'));
+const AIProcessing = lazy(() => import('./user/pages/AIProcessing'));
+const AIUnderstanding = lazy(() => import('./user/pages/AIUnderstanding'));
+const Notifications = lazy(() => import('./user/pages/Notifications'));
+const Help = lazy(() => import('./user/pages/Help'));
+const DuplicateDetection = lazy(() => import('./user/pages/DuplicateDetection'));
+const AutoResolveChat = lazy(() => import('./user/pages/AutoResolveChat'));
+const Resolved = lazy(() => import('./user/pages/Resolved'));
+const TicketTracking = lazy(() => import('./user/pages/TicketTracking'));
+
+// Operational Support Admin Nodes
+const AdminDashboard = lazy(() => import('./admin/pages/AdminDashboard'));
+const AdminTickets = lazy(() => import('./admin/pages/AdminTickets'));
+const AdminTicketDetail = lazy(() => import('./admin/pages/AdminTicketDetail'));
+const AdminUsers = lazy(() => import('./admin/pages/AdminUsers'));
+const AdminAnalytics = lazy(() => import('./admin/pages/AdminAnalytics'));
+const AdminProfile = lazy(() => import('./admin/pages/AdminProfile'));
+const AdminSettings = lazy(() => import('./admin/pages/AdminSettings'));
+const AdminScorecard = lazy(() => import('./admin/pages/AdminScorecard'));
+const SLAPage = lazy(() => import('./admin/pages/SLAPage'));
+
+// Master Root Governance Matrix
+const MasterAdminLogin = lazy(() => import('./pages/MasterAdminLogin'));
+const MasterAdminDashboard = lazy(() => import('./master-admin/pages/MasterAdminDashboard'));
+const PendingAdminRequests = lazy(() => import('./master-admin/pages/PendingAdminRequests'));
+const AllCompanies = lazy(() => import('./master-admin/pages/AllCompanies'));
+const AllAdmins = lazy(() => import('./master-admin/pages/AllAdmins'));
+const MasterBugReports = lazy(() => import('./master-admin/pages/MasterBugReports'));
+
+// Dynamic Inline Fallbacks
+const NotFoundPage = lazy(() => import('./components/ui/not-found-2').then((module) => ({ default: module.NotFound })));
 
 function TitleUpdater() {
   const location = useLocation();
-
   useEffect(() => {
     const path = location.pathname;
     let title = 'HELPDESK.AI';
@@ -106,10 +168,12 @@ function TitleUpdater() {
     else if (path.startsWith('/admin/settings')) title = 'Settings | Admin';
     // Master Admin Routes
     else if (path.startsWith('/master-admin/dashboard')) title = 'Master Dashboard';
-    else if (path.startsWith('/master-admin/admin-requests')) title = 'Pending Requests | Master Admin';
+    else if (path.startsWith('/master-admin/admin-requests'))
+      title = 'Pending Requests | Master Admin';
     else if (path.startsWith('/master-admin/companies')) title = 'Companies | Master Admin';
     else if (path.startsWith('/master-admin/all-admins')) title = 'All Admins | Master Admin';
-    else if (path.startsWith('/master-admin/bug-reports')) title = 'System Bug Radar | Master Admin';
+    else if (path.startsWith('/master-admin/bug-reports'))
+      title = 'System Bug Radar | Master Admin';
     // User Routes
     else if (path.startsWith('/ticket/')) title = 'Ticket Detail';
     else if (path.startsWith('/ai-understanding')) title = 'AI Understanding';
@@ -118,6 +182,7 @@ function TitleUpdater() {
     else if (path === '/create-ticket') title = 'Create Ticket';
     else if (path === '/my-tickets') title = 'My Tickets';
     else if (path === '/profile') title = 'User Profile';
+    else if (path === '/privacy') title = 'Privacy & Data Controls';
     else if (path === '/notifications') title = 'Notifications';
     else if (path === '/docs') title = 'Documentation';
     else if (path === '/api-reference') title = 'API Reference';
@@ -128,48 +193,59 @@ function TitleUpdater() {
     else if (path === '/cookie-policy') title = 'Cookie Policy';
     // Public / Lobby Routes
     else if (path === '/login') title = 'Login';
-    else if (path === '/signup') title = 'Create Account';
-    else if (path === '/admin-signup') title = 'Admin Signup';
-    else if (path === '/user-lobby') title = 'User Lobby';
-    else if (path === '/admin-lobby') title = 'Admin Lobby';
-    else if (path === '/') title = 'Welcome';
-
-    document.title = title === 'HELPDESK.AI' ? title : `${title} | HELPDESK.AI`;
+    else if (path === '/signup') title = 'Sign Up';
+    document.title = `${title} | HELPDESK.AI`;
   }, [location]);
-
   return null;
 }
 
-// Scrolls to top on every route change
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' });
+    window.scrollTo(0, 0);
   }, [pathname]);
   return null;
 }
 
-function AppLayout() {
-  const { user, profile } = useAuthStore();
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(error, info) { console.error(error, info); }
+  render() {
+    if (this.state.hasError) return (
+      <div className="flex min-h-[40vh] items-center justify-center px-6 py-16">
+        <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-4 text-sm font-semibold text-red-600 shadow-sm">
+          Something went wrong. Please refresh the page.
+        </div>
+      </div>
+    );
+    return this.props.children;
+  }
+}
 
-  // Initialize Global Realtime Notifications Listener
+function AppContent() {
+  const { profile } = useAuthStore();
+  const { pathname } = useLocation();
+  const [showShortcuts, setShowShortcuts] = useState(false);
   useRealtimeNotifications();
 
-  useEffect(() => {
-    if (!user) return;
-    const handleFocus = () => {
-      useTicketStore.persist.rehydrate();
-    };
+  const isAdminRoute = pathname.startsWith('/admin');
+  const { shortcuts } = useKeyboardShortcuts(
+    {},
+    {
+      enabled: !isAdminRoute,
+      role: profile?.role,
+      onShortcutsHelp: () => setShowShortcuts(true),
+    }
+  );
 
-    window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
-  }, [user]);
-
-  // ProtectedRoute handles the redirect to /login if user is not present
-  // but we still need to handle role-based navigation here
   return (
     <>
-      <Routes>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <Routes>
         <Route path="/knowledge-check" element={<DuplicateDetection />} />
         <Route path="/auto-resolve" element={<AutoResolveChat />} />
         <Route path="/resolved" element={<Resolved />} />
@@ -191,66 +267,90 @@ function AppLayout() {
           <Route path="/ticket-tracking" element={<TicketTracking />} />
           <Route path="/ticket-result" element={<TicketResult />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/privacy" element={<PrivacySettings />} />
           <Route path="/help" element={<Help />} />
           <Route path="/notifications" element={<Notifications />} />
         </Route>
 
-        {/* --- Admin Portal (Protected) --- */}
+        {/* Protected Admin Routes */}
         <Route element={<AdminProtectedRoute />}>
-          <Route element={<AdminLayout />}>
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-            <Route path="/admin/dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/tickets" element={<AdminTickets />} />
-            <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
-            <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/analytics" element={<AdminAnalytics />} />
-            <Route path="/admin/profile" element={<AdminProfile />} />
-            <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin" element={<Suspense fallback={<PageSkeleton />}><AdminLayout /></Suspense>}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="tickets"   element={<AdminTickets />} />
+            <Route path="tickets/:id" element={<AdminTicketDetail />} />
+            <Route path="users"     element={<AdminUsers />} />
+            <Route path="analytics" element={<AdminAnalytics />} />
+            <Route path="settings"  element={<AdminSettings />} />
+            <Route path="profile"   element={<AdminProfile />} />
+            <Route path="scorecard" element={<AdminScorecard />} />
+            <Route path="sla"       element={<SLAPage />} />
+          </Route>
+        </Route>
+
+        {/* Master Admin Routes */}
+        <Route path="/master-admin-login" element={<MasterAdminLogin />} />
+        <Route element={<MasterAdminProtectedRoute />}>
+          <Route path="/master-admin" element={<Suspense fallback={<PageSkeleton />}><MasterAdminLayout /></Suspense>}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard"        element={<MasterAdminDashboard />} />
+            <Route path="admins"           element={<AllAdmins />} />
+            <Route path="companies"        element={<AllCompanies />} />
+            <Route path="pending-requests" element={<PendingAdminRequests />} />
+            <Route path="bug-reports"      element={<MasterBugReports />} />
           </Route>
         </Route>
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+        </Suspense>
     </>
   );
 }
 
 
+import useThemeStore from "./store/themeStore";
+
 function App() {
   const { initialize } = useAuthStore();
+  // Initialize and subscribe to theme changes
+  useThemeStore();
 
   useEffect(() => {
     initialize();
   }, [initialize]);
 
-  const isDocsSubdomain = window.location.hostname.startsWith('docs.');
+  const isDocsSubdomain = typeof window !== 'undefined' && window.location.hostname.startsWith('docs.');
 
   if (isDocsSubdomain) {
     return (
-      <BrowserRouter>
-        <TitleUpdater />
-        <ScrollToTop />
-        <Toaster />
-        <BugReportWidget />
-        <Routes>
-          <Route path="/" element={<DocsPortal />} />
-          <Route path="/docs" element={<Navigate to="/" replace />} />
-          <Route path="/api-reference" element={<ApiReference />} />
-          <Route path="/changelog" element={<Changelog />} />
-          <Route path="/status" element={<StatusPage />} />
-          <Route path="*" element={<DocsPortal />} />
-        </Routes>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <TitleUpdater />
+          <ScrollToTop />
+          <Toaster />
+          <BugReportWidget />
+          <Routes>
+            <Route path="/" element={<DocsPortal />} />
+            <Route path="/docs" element={<Navigate to="/" replace />} />
+            <Route path="/api-reference" element={<ApiReference />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/status" element={<StatusPage />} />
+            <Route path="*" element={<DocsPortal />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     );
   }
 
   return (
+    <ThemeProvider>
     <BrowserRouter>
-      <TitleUpdater />
       <ScrollToTop />
       <Toaster />
       <BugReportWidget />
-      <Routes>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div></div>}>
+          <Routes>
         {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<Login />} />
@@ -298,9 +398,10 @@ function App() {
           <Route path="/*" element={<AppLayout />} />
         </Route>
       </Routes>
+        </Suspense>
     </BrowserRouter>
+  </ThemeProvider>
   );
 }
 
 export default App;
-

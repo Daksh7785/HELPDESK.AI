@@ -1,21 +1,22 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import useAuthStore from '../store/authStore';
 import { ShieldX, LogOut, MailQuestion } from 'lucide-react';
 
 const NotApproved = () => {
-    const navigate = useNavigate();
-    const { logout, profile } = useAuthStore();
+  const navigate = useNavigate();
+  const { logout, profile } = useAuthStore();
 
-    const handleLogout = async () => {
-        await logout();
-        navigate('/login');
-    };
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
-    const isUser = profile?.role === 'user';
-    const message = isUser
-        ? "Your account request was rejected by your company's administrator."
-        : "Your admin registration request was rejected by the system administrator.";
+  const isUser = profile?.role === 'user';
+  const message = isUser
+    ? "Your account request was rejected by your company's administrator."
+    : 'Your admin registration request was rejected by the system administrator.';
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 font-sans">

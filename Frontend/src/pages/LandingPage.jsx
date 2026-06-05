@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../store/authStore';
 import TeamSection from '../components/landing/TeamSection';
+import ThemeToggle from '../components/shared/ThemeToggle';
 
 // ---- Count-up animation component ----
 function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false }) {
@@ -251,6 +252,10 @@ export default function LandingPage() {
             popular: false,
         },
     ];
+    const footerLinkClass =
+        'relative inline-block text-sm text-white/65 transition-all duration-200 ease-out after:absolute after:left-0 after:-bottom-0.5 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-emerald-300 after:transition-transform after:duration-200 hover:-translate-y-0.5 hover:text-white hover:after:scale-x-100 focus-visible:-translate-y-0.5 focus-visible:text-white focus-visible:outline-none focus-visible:after:scale-x-100';
+    const footerBottomLinkClass =
+        'relative inline-block text-xs text-white/40 transition-all duration-200 ease-out after:absolute after:left-0 after:-bottom-0.5 after:h-px after:w-full after:origin-left after:scale-x-0 after:bg-emerald-300 after:transition-transform after:duration-200 hover:-translate-y-0.5 hover:text-white hover:after:scale-x-100 focus-visible:-translate-y-0.5 focus-visible:text-white focus-visible:outline-none focus-visible:after:scale-x-100';
 
     const handlePricingClick = (planName) => {
         if (planName === 'Growth') {
@@ -274,43 +279,44 @@ export default function LandingPage() {
     };
 
     return (
-        <div className="min-h-screen bg-white font-sans text-slate-800">
+        <div className="min-h-screen bg-white dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-200 transition-colors duration-200">
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
 
             {/* ==================== NAV ==================== */}
-            <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
+            <nav className="sticky top-0 z-50 bg-white/90 dark:bg-slate-950/90 backdrop-blur-md border-b border-gray-100 dark:border-slate-900 shadow-sm transition-colors duration-200">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
                             <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
-                            <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
+                            <span className="font-black text-2xl tracking-tighter text-emerald-900 dark:text-emerald-400 italic uppercase">HelpDesk.ai</span>
                         </div>
 
                         {/* Desktop Links */}
                         <div className="hidden md:flex items-center gap-8">
-                            <a href="#features" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">Features</a>
-                            <a href="#how-it-works" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">How It Works</a>
-                            <a href="#pricing" className="text-sm font-semibold text-gray-600 hover:text-emerald-800 transition-colors">Pricing</a>
+                            <a href="#features" className="text-sm font-semibold text-gray-600 dark:text-slate-400 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">Features</a>
+                            <a href="#how-it-works" className="text-sm font-semibold text-gray-600 dark:text-slate-400 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">How It Works</a>
+                            <a href="#pricing" className="text-sm font-semibold text-gray-600 dark:text-slate-400 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">Pricing</a>
                         </div>
 
                         {/* CTA Buttons */}
                         <div className="hidden md:flex items-center gap-3">
+                            <ThemeToggle />
                             <button
                                 onClick={() => navigate('/login')}
-                                className="text-sm font-semibold text-gray-700 hover:text-emerald-800 transition-colors px-4 py-2 rounded-lg hover:bg-gray-50"
+                                className="text-sm font-semibold text-gray-700 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors px-4 py-2 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800"
                             >
                                 Sign In
                             </button>
                             <button
                                 onClick={() => setShowDemo(true)}
-                                className="text-sm font-semibold text-emerald-800 border border-emerald-200 px-4 py-2 rounded-lg hover:bg-emerald-50 transition-all flex items-center gap-1.5"
+                                className="text-sm font-semibold text-emerald-800 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900 px-4 py-2 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-all flex items-center gap-1.5"
                             >
-                                <Play className="w-3.5 h-3.5 fill-emerald-700" /> Watch Demo
+                                <Play className="w-3.5 h-3.5 fill-emerald-700 dark:fill-emerald-400" /> Watch Demo
                             </button>
                             <button
                                 onClick={() => navigate('/admin-signup')}
-                                className="bg-emerald-900 hover:bg-emerald-800 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-emerald-900/20"
+                                className="bg-emerald-900 hover:bg-emerald-800 dark:bg-emerald-800 dark:hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg text-sm font-semibold transition-all shadow-lg shadow-emerald-900/20"
                             >
                                 Get Started Free
                             </button>
@@ -318,7 +324,7 @@ export default function LandingPage() {
 
                         {/* Mobile Menu Button */}
                         <div className="md:hidden">
-                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 hover:text-emerald-800 p-2">
+                            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-600 dark:text-slate-400 hover:text-emerald-800 p-2">
                                 {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
                             </button>
                         </div>
@@ -327,16 +333,20 @@ export default function LandingPage() {
 
                 {/* Mobile Menu */}
                 {isMenuOpen && (
-                    <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-xl z-50">
+                    <div className="md:hidden bg-white dark:bg-slate-900 border-t border-gray-100 dark:border-slate-800 absolute w-full shadow-xl z-50 transition-colors duration-200">
                         <div className="px-5 pt-3 pb-6 space-y-4">
-                            <a href="#features" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Features</a>
-                            <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">How It Works</a>
-                            <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 hover:text-emerald-800 py-2">Pricing</a>
-                            <div className="pt-4 flex flex-col gap-3 border-t border-gray-100">
-                                <button onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} className="w-full text-center py-2.5 text-emerald-800 font-semibold border border-emerald-200 rounded-lg flex items-center justify-center gap-2">
-                                    <Play className="w-4 h-4 fill-emerald-700" /> Watch Demo
+                            <a href="#features" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 py-2">Features</a>
+                            <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 py-2">How It Works</a>
+                            <a href="#pricing" onClick={() => setIsMenuOpen(false)} className="block text-base font-semibold text-gray-700 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 py-2">Pricing</a>
+                            <div className="pt-4 flex flex-col gap-3 border-t border-gray-100 dark:border-slate-800">
+                                <div className="flex justify-between items-center py-1">
+                                    <span className="text-sm font-semibold text-gray-500 dark:text-slate-400">Theme</span>
+                                    <ThemeToggle />
+                                </div>
+                                <button onClick={() => { setIsMenuOpen(false); setShowDemo(true); }} className="w-full text-center py-2.5 text-emerald-800 dark:text-emerald-400 font-semibold border border-emerald-200 dark:border-emerald-900 rounded-lg flex items-center justify-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-950/20">
+                                    <Play className="w-4 h-4 fill-emerald-700 dark:fill-emerald-400" /> Watch Demo
                                 </button>
-                                <button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 font-semibold border border-gray-100 rounded-lg">
+                                <button onClick={() => navigate('/login')} className="w-full text-center py-2.5 text-gray-700 dark:text-slate-300 font-semibold border border-gray-100 dark:border-slate-800 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-800">
                                     Sign In
                                 </button>
                                 <button onClick={() => navigate('/admin-signup')} className="w-full bg-emerald-900 text-white py-3 rounded-lg font-semibold shadow">
@@ -360,7 +370,7 @@ export default function LandingPage() {
 
                     <h1 className="text-4xl sm:text-5xl md:text-7xl font-extrabold text-gray-900 tracking-tight mb-6 leading-[1.1]">
                         Your IT Helpdesk,<br />
-                        <span className="text-emerald-700">Fully Automated.</span>
+                        <span className="text-emerald-700 dark:text-emerald-400">Fully Automated.</span>
                     </h1>
 
                     <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 mb-10 leading-relaxed">
@@ -385,32 +395,32 @@ export default function LandingPage() {
             
                     {/* BENTO VISUAL */}
                     <div className="relative max-w-6xl mx-auto">
-                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl opacity-60 -z-10 rounded-full" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-emerald-100 via-teal-50 to-emerald-50 blur-3xl opacity-60 -z-10 rounded-full dark:from-emerald-900/30 dark:via-emerald-800/20 dark:to-emerald-900/30" />
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
                             {/* LEFT: Email */}
                             <div className="relative group perspective-1000">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-gray-200 to-gray-100 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000" />
-                                <div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/60 overflow-hidden transform transition-transform group-hover:scale-[1.01]">
-                                    <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-gray-200 to-gray-100 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-1000 dark:from-gray-700 dark:to-gray-800 dark:opacity-40" />
+                                <div className="relative bg-white rounded-2xl shadow-xl border border-gray-200/60 overflow-hidden transform transition-transform group-hover:scale-[1.01] dark:bg-gray-800 dark:border-gray-700/60">
+                                    <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between dark:bg-gray-900 dark:border-gray-700">
                                         <div className="flex gap-1.5">
                                             <div className="w-3 h-3 rounded-full bg-red-400" />
                                             <div className="w-3 h-3 rounded-full bg-yellow-400" />
                                             <div className="w-3 h-3 rounded-full bg-green-400" />
                                         </div>
-                                        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                                        <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1 dark:text-gray-500">
                                             <Mail className="w-3 h-3" /> Incoming Request
                                         </div>
                                     </div>
                                     <div className="p-6">
                                         <div className="flex items-center justify-between mb-6">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm">SC</div>
+                                                <div className="w-10 h-10 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-sm dark:bg-purple-900/30 dark:text-purple-400">SC</div>
                                                 <div>
-                                                    <div className="font-semibold text-gray-900 text-sm">Sarah Connors</div>
-                                                    <div className="text-xs text-gray-500">sarah@university.edu</div>
+                                                    <div className="font-semibold text-gray-900 text-sm dark:text-white">Sarah Connors</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400">sarah@university.edu</div>
                                                 </div>
                                             </div>
-                                            <div className="text-xs text-gray-400">2 mins ago</div>
+                                            <div className="text-xs text-gray-400 dark:text-gray-500">2 mins ago</div>
                                         </div>
                                         <div className="mb-4">
                                             <h3 className="text-sm font-bold text-gray-800 mb-1">Subject: Wifi down again in Lab 3??</h3>
@@ -422,71 +432,71 @@ export default function LandingPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <div className="hidden md:flex absolute -right-8 top-1/2 -translate-y-1/2 z-20 text-emerald-300">
+                                <div className="hidden md:flex absolute -right-8 top-1/2 -translate-y-1/2 z-20 text-emerald-300 dark:text-emerald-500">
                                     <ArrowRight className="w-8 h-8 animate-pulse" />
                                 </div>
                             </div>
 
                             {/* RIGHT: Processed Ticket */}
                             <div className="relative group">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000" />
-                                <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all group-hover:-translate-y-1">
-                                    <div className="bg-white border-b border-gray-100 px-5 py-3 flex items-center justify-between">
+                                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition duration-1000 dark:opacity-30 dark:group-hover:opacity-50" />
+                                <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden transform transition-all group-hover:-translate-y-1 dark:bg-gray-800 dark:border-gray-700">
+                                    <div className="bg-white border-b border-gray-100 px-5 py-3 flex items-center justify-between dark:bg-gray-900 dark:border-gray-700">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs font-bold text-gray-500">#T-4029</span>
-                                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 uppercase tracking-wide">AI Processed</span>
+                                            <span className="font-mono text-xs font-bold text-gray-500 dark:text-gray-400">#T-4029</span>
+                                            <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-green-200 uppercase tracking-wide dark:bg-green-900/30 dark:text-green-400 dark:border-green-800">AI Processed</span>
                                         </div>
-                                        <div className="flex gap-2 text-gray-400">
+                                        <div className="flex gap-2 text-gray-400 dark:text-gray-500">
                                             <Search className="w-4 h-4" />
                                             <Bell className="w-4 h-4" />
-                                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-[10px]">AI</div>
+                                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-[10px] dark:bg-emerald-900/30 dark:text-emerald-400">AI</div>
                                         </div>
                                     </div>
                                     <div className="p-6 space-y-5">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <h3 className="font-bold text-gray-800 text-lg mb-1">WiFi Connectivity Issue</h3>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                <h3 className="font-bold text-gray-800 text-lg mb-1 dark:text-gray-200">WiFi Connectivity Issue</h3>
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                                                     <Clock className="w-3 h-3" /> Created 1m ago
                                                     <span>•</span> via Email
                                                 </div>
                                             </div>
-                                            <button className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200">
+                                            <button className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm shadow-emerald-200 dark:bg-emerald-700 dark:hover:bg-emerald-600 dark:shadow-emerald-900/30">
                                                 Resolve
                                             </button>
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 dark:bg-gray-900 dark:border-gray-700">
+                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1 dark:text-gray-500">
                                                     <AlertCircle className="w-3 h-3" /> Priority
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                                                    <span className="text-sm font-bold text-gray-800">High</span>
+                                                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">High</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
-                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 dark:bg-gray-900 dark:border-gray-700">
+                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1 dark:text-gray-500">
                                                     <Folder className="w-3 h-3" /> Category
                                                 </div>
                                                 <div className="flex items-center gap-1">
-                                                    <span className="text-sm font-bold text-gray-800">Network</span>
+                                                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Network</span>
                                                 </div>
                                             </div>
-                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 col-span-2">
-                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1">
+                                            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100 col-span-2 dark:bg-gray-900 dark:border-gray-700">
+                                                <div className="text-[10px] uppercase font-bold text-gray-400 mb-1 flex items-center gap-1 dark:text-gray-500">
                                                     <MapPin className="w-3 h-3" /> Location
                                                 </div>
-                                                <div className="text-sm font-bold text-gray-800">Lab 3 (Downstairs)</div>
+                                                <div className="text-sm font-bold text-gray-800 dark:text-gray-200">Lab 3 (Downstairs)</div>
                                             </div>
                                         </div>
-                                        <div className="border-t border-gray-100 pt-3 flex items-center justify-between">
-                                            <div className="text-xs text-gray-500 flex items-center gap-1">
-                                                Assigned to <span className="font-bold text-gray-700">NetOps Team</span>
+                                        <div className="border-t border-gray-100 pt-3 flex items-center justify-between dark:border-gray-700">
+                                            <div className="text-xs text-gray-500 flex items-center gap-1 dark:text-gray-400">
+                                                Assigned to <span className="font-bold text-gray-700 dark:text-gray-300">NetOps Team</span>
                                             </div>
                                             <div className="flex -space-x-1">
-                                                <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white" />
-                                                <div className="w-6 h-6 rounded-full bg-green-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-green-700">+3</div>
+                                                <div className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white dark:bg-blue-900/30 dark:border-gray-800" />
+                                                <div className="w-6 h-6 rounded-full bg-green-100 border-2 border-white flex items-center justify-center text-[8px] font-bold text-green-700 dark:bg-green-900/30 dark:text-green-400 dark:border-gray-800">+3</div>
                                             </div>
                                         </div>
                                     </div>
@@ -728,15 +738,15 @@ export default function LandingPage() {
                         <div className="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-2 py-2 shadow-sm">
                             <button
                                 onClick={() => setBillingAnnual(false)}
-                                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${!billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                             >
                                 Monthly
                             </button>
                             <button
                                 onClick={() => setBillingAnnual(true)}
-                                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700'}`}
+                                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${billingAnnual ? 'bg-emerald-900 text-white shadow' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                             >
-                                Annual <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">Save 20%</span>
+                                Annual <span className="bg-emerald-100 text-emerald-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full dark:bg-emerald-900/50 dark:text-emerald-400">Save 20%</span>
                             </button>
                         </div>
                     </div>
@@ -748,7 +758,7 @@ export default function LandingPage() {
                                 className={`p-8 rounded-2xl bg-white transition-all relative ${popular ? 'border-2 border-emerald-900 shadow-2xl shadow-emerald-900/10 scale-[1.02]' : 'border border-gray-200 hover:border-gray-300'}`}
                             >
                                 {popular && (
-                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg">
+                                    <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-900 text-white px-4 py-1.5 rounded-full text-xs font-bold tracking-wide whitespace-nowrap shadow-lg dark:bg-emerald-700">
                                         ⭐ MOST POPULAR
                                     </div>
                                 )}
