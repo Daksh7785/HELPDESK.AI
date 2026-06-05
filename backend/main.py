@@ -800,9 +800,14 @@ async def analyze_only(request_body: TicketRequest):
             }
     except Exception as e:
         traceback.print_exc()
+        
+        print(f"[TRANSLATION ENGINE ERROR] All translation and classification fallback paths failed: {e}")
+        
         classification = {
             "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+            "translation_attempted": True, 
+            "translation_failed": True
         }
 
     timeline["ai_analyzed"] = get_now_ist()
@@ -962,9 +967,14 @@ async def analyze_stream(request_body: TicketRequest):
                     "confidence": float(conf)
                 }
         except Exception as e:
+           
+            print(f"[TRANSLATION STREAM ERROR] Streaming classification pipeline failed: {e}")
+            
             classification = {
                 "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
                 "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
+                "translation_attempted": True, 
+                "translation_failed": True
             }
         timeline["ai_analyzed"] = get_now_ist()
         timeline["triaged"] = get_now_ist()
