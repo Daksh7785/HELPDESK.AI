@@ -17,6 +17,11 @@ import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
+    import fcntl
+except Exception:  # pragma: no cover - unavailable on Windows
+    fcntl = None  # type: ignore[assignment]
+
+try:
     import numpy as np
 
     _HAS_NUMPY = True
@@ -69,6 +74,7 @@ class DuplicateService:
         self._embedding_matrix_dirty: bool = True
         # Thread-safe access to _tickets and storage_file
         self._lock = threading.Lock()
+        self._file_lock = threading.Lock()
         self._indexing: bool = False
 
     # ------------------------------------------------------------------
@@ -233,24 +239,58 @@ class DuplicateService:
 
     def save_to_disk(self, ticket_id: str, text: str) -> None:
         """Append a new ticket entry to the JSON persistence file."""
-        data: list = []
-        try:
-            os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
-            if os.path.exists(self.storage_file):
-                with open(self.storage_file, "r") as f:
-                    try:
-                        data = json.load(f)
-                        if not isinstance(data, list):
-                            data = []
-                    except Exception:
-                        data = []
+        storage_dir = os.path.dirname(self.storage_file)
+        tmp_path = None
 
-            data.append({"ticket_id": ticket_id, "text": text})
-            data = data[-MAX_CACHE_ENTRIES:]
-            with open(self.storage_file, "w") as f:
-                json.dump(data, f, indent=2)
+        try:
+            os.makedirs(storage_dir, exist_ok=True)
+            lock_path = f"{self.storage_file}.lock"
+
+            with self._file_lock:
+                with open(lock_path, "w", encoding="utf-8") as lock_file:
+                    if fcntl is not None:
+                        fcntl.flock(lock_file, fcntl.LOCK_EX)
+
+                    try:
+                        data: list = []
+                        if os.path.exists(self.storage_file):
+                            with open(self.storage_file, "r", encoding="utf-8") as f:
+                                try:
+                                    data = json.load(f)
+                                    if not isinstance(data, list):
+                                        data = []
+                                except Exception:
+                                    data = []
+
+                        data.append({"ticket_id": ticket_id, "text": text})
+                        data = data[-MAX_CACHE_ENTRIES:]
+
+                        with tempfile.NamedTemporaryFile(
+                            "w",
+                            encoding="utf-8",
+                            dir=storage_dir,
+                            prefix=".case_history_cache.",
+                            suffix=".tmp",
+                            delete=False,
+                        ) as tmp_file:
+                            tmp_path = tmp_file.name
+                            json.dump(data, tmp_file, indent=2)
+                            tmp_file.flush()
+                            os.fsync(tmp_file.fileno())
+
+                        os.replace(tmp_path, self.storage_file)
+                        tmp_path = None
+                    finally:
+                        if fcntl is not None:
+                            fcntl.flock(lock_file, fcntl.LOCK_UN)
+
             print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
         except Exception as exc:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
             print(f"[DuplicateService] Failed to save to disk: {exc}")
 
     def add_ticket(self, ticket_id: str, text: str) -> None:
@@ -342,9 +382,9 @@ class DuplicateService:
                 "[DuplicateService] DEGRADED: Duplicate check skipped (model not available)"
             )
             return {
-                "duplicate_ticket_id": ticket_id,
-                "similarity_score": round(best_score, 4),
-                "original_text": original_text,
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "similarity": 0.0,
             }
 
         use_default_threshold = threshold is None
