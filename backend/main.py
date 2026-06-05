@@ -586,6 +586,56 @@ def _classify_ticket_text_uncached(text: str) -> dict:
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
         }
 
+
+def resolve_company_id(user_id: str | None, company_id: str | None) -> str | None:
+    """Look up company_id from user profile if not explicitly provided."""
+    if company_id:
+        return company_id
+    if not user_id or not supabase:
+        return None
+    try:
+        res = supabase.table("profiles").select("company_id").eq("id", user_id).single().execute()
+        if res.data:
+            return res.data.get("company_id")
+    except Exception as e:
+        print(f"[WARNING] Failed to resolve company_id for user_id={user_id}: {e}")
+    return None
+
+
+def apply_routing_rules(text: str, predicted_category: str, rules: list) -> str | None:
+    """
+    Evaluates active routing rules against the ticket text and predicted category.
+    Returns the target_department if a rule matches, otherwise None.
+    Rules are sorted by priority DESC so highest-priority rules win.
+    """
+    import re
+    sorted_rules = sorted(rules, key=lambda r: r.get("priority", 0), reverse=True)
+    for rule in sorted_rules:
+        rule_type = rule.get("rule_type")
+        pattern = rule.get("pattern", "")
+        target = rule.get("target_department")
+
+        if not pattern or not target:
+            continue
+
+        if rule_type == "keyword":
+            pattern_escaped = re.escape(pattern)
+            try:
+                if re.search(rf"\b{pattern_escaped}\b", text, re.IGNORECASE):
+                    print(f"[ROUTING RULE] Matched keyword rule '{pattern}' -> '{target}'")
+                    return target
+            except Exception:
+                if pattern.lower() in text.lower():
+                    print(f"[ROUTING RULE] Matched keyword fallback rule '{pattern}' -> '{target}'")
+                    return target
+        elif rule_type == "category":
+            if predicted_category.lower() == pattern.lower():
+                print(f"[ROUTING RULE] Matched category rule '{pattern}' -> '{target}'")
+                return target
+
+    return None
+
+
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
@@ -3086,6 +3136,21 @@ async def analyze_only(request_body: TicketRequest, request: Request, current_us
     if not enable_auto_resolve:
         classification["auto_resolve"] = False
 
+    # --- Custom Department Routing Rules ---
+    resolved_comp_id = resolve_company_id(request_body.user_id, request_body.company_id)
+    matched_routing_team = None
+    if supabase and resolved_comp_id and not spam_result["is_spam"]:
+        try:
+            res = supabase.table("routing_rules").select("*").eq("company_id", resolved_comp_id).eq("is_active", True).order("priority", desc=True).execute()
+            routing_rules = res.data or []
+            if routing_rules:
+                matched_routing_team = apply_routing_rules(text, classification["category"], routing_rules)
+                if matched_routing_team:
+                    classification["assigned_team"] = matched_routing_team
+                    classification["confidence"] = max(classification["confidence"], 1.0)
+        except Exception as e:
+            print(f"[WARNING] Could not fetch routing rules: {e}")
+
     timeline["ai_analyzed"] = get_now_ist()
     timeline["triaged"] = get_now_ist()
 
@@ -3132,6 +3197,8 @@ async def analyze_only(request_body: TicketRequest, request: Request, current_us
         print(f"[RAG ERROR] {e}")
 
     decision_factors = []
+    if matched_routing_team:
+        decision_factors.append(f"Routed to '{matched_routing_team}' via custom company routing rule")
     if classification["confidence"] > request_body.confidence_threshold:
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
     if entities:
@@ -3284,7 +3351,22 @@ async def analyze_stream(request: Request, request_body: TicketRequest):
         classification = classify_ticket_text(text)
         if not enable_auto_resolve:
             classification["auto_resolve"] = False
-            
+
+        # --- Custom Department Routing Rules ---
+        resolved_comp_id = resolve_company_id(request_body.user_id, request_body.company_id)
+        matched_routing_team = None
+        if supabase and resolved_comp_id and not spam_result["is_spam"]:
+            try:
+                res = supabase.table("routing_rules").select("*").eq("company_id", resolved_comp_id).eq("is_active", True).order("priority", desc=True).execute()
+                routing_rules = res.data or []
+                if routing_rules:
+                    matched_routing_team = apply_routing_rules(text, classification["category"], routing_rules)
+                    if matched_routing_team:
+                        classification["assigned_team"] = matched_routing_team
+                        classification["confidence"] = max(classification["confidence"], 1.0)
+            except Exception as e:
+                print(f"[WARNING] Could not fetch routing rules: {e}")
+
         timeline["ai_analyzed"] = get_now_ist()
         timeline["triaged"] = get_now_ist()
 
@@ -3331,6 +3413,8 @@ async def analyze_stream(request: Request, request_body: TicketRequest):
             pass
 
         decision_factors = []
+        if matched_routing_team:
+            decision_factors.append(f"Routed to '{matched_routing_team}' via custom company routing rule")
         if classification["confidence"] > request_body.confidence_threshold:
             decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
         if entities:
