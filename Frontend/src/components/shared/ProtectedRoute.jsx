@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
 
@@ -10,6 +10,7 @@ import useAuthStore from '../../store/authStore';
  */
 const ProtectedRoute = () => {
     const { user, profile, loading, getCurrentUser } = useAuthStore();
+    const location = useLocation();
     const [isChecking, setIsChecking] = useState(true);
 
     useEffect(() => {
@@ -47,7 +48,7 @@ const ProtectedRoute = () => {
 
     // Redirect specific roles to their dedicated portals if they hit a generic protected route,
     // BUT prevent infinite loops if they are already on those routes.
-    const currentPath = window.location.pathname;
+    const currentPath = location.pathname;
 
     if (profile) {
         if (profile.role === 'master_admin' && !currentPath.startsWith('/master-admin')) {

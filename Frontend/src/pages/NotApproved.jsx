@@ -35,7 +35,7 @@ const NotApproved = () => {
 
                 <div className="space-y-4">
                     <button
-                        onClick={() => window.location.href = 'mailto:support@helpdesk.ai'}
+                        onClick={() => window.location.assign('mailto:support@helpdesk.ai')}
                         className="w-full py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20"
                     >
                         <MailQuestion size={18} />

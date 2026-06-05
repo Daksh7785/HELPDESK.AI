@@ -26,7 +26,7 @@ function useDiagnostics() {
          
         setDiagnostics(prev => ({
             ...prev,
-            url: window.location.href,
+            url: location.pathname,
             browser: browserInfo,
             screen: screenInfo
         }));
@@ -58,7 +58,7 @@ function useDiagnostics() {
 
     // Refresh URL right before opening modal
     const refreshUrl = () => {
-        setDiagnostics(prev => ({ ...prev, url: window.location.href }));
+        setDiagnostics(prev => ({ ...prev, url: location.pathname }));
     };
 
     return { diagnostics, refreshUrl };

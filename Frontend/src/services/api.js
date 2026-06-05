@@ -58,9 +58,9 @@ export const api = {
             sender: 'user',
             message: ticketData.description || ticketData.summary || '',
             timestamp: new Date().toISOString()
-          }
+        }
         ]
-      };
+    };
       tickets.unshift(newTicket); // Add to beginning
       setStorage('tickets', tickets);
       return { data: newTicket };
@@ -74,7 +74,7 @@ export const api = {
         text: issueText,
         image_base64: imageBase64,
         image_text: ""
-      });
+    });
 
       const result = response.data;
 
@@ -96,8 +96,8 @@ export const api = {
           decision_factors: result.decision_factors,
           image_description: result.image_description,
           ocr_text: result.ocr_text
-        }
-      };
+      }
+    };
     } catch (error) {
       console.error("AI Backend Error, falling back to mock:", error);
       // Fallback to mock logic if backend fails
@@ -113,8 +113,8 @@ export const api = {
           duplicate_probability: 0.0,
           summary: issueText.substring(0, 50) + "...",
           entities: []
-        }
-      };
+      }
+    };
     }
   },
 
@@ -124,8 +124,6 @@ export const api = {
     } catch (error) {
       // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);
-    }
-  }
     }
   },
 
