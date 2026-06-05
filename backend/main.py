@@ -1201,12 +1201,12 @@ from security_middleware import SecurityHeadersMiddleware, get_allowed_origins
 app.add_middleware(SecurityHeadersMiddleware)
 
 # ── CORS — strictly from ALLOWED_ORIGINS env var, never wildcard ──────────────
-_allowed_origins = get_allowed_origins()
-print(f"[startup] CORS allowed origins: {_allowed_origins}")
+allowed_cors_origins = get_allowed_origins()
+print(f"[startup] CORS allowed origins: {allowed_cors_origins}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins,
+    allow_origins=allowed_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
