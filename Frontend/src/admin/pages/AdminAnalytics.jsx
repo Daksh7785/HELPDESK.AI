@@ -308,6 +308,42 @@ const AdminAnalytics = () => {
         return catData.categories.slice(0, 8).map((c, i) => ({ name: c.name, count: c.count, fill: PALETTE[i % PALETTE.length] }));
     }, [catData]);
 
+    // AI vs Manual resolution split
+    const aiResolved = tickets.filter((t) => t.status?.toLowerCase()?.includes('auto')).length;
+    const humanResolved = tickets.filter(
+      (t) =>
+        ['resolved', 'closed'].includes(t.status?.toLowerCase()) &&
+        !t.status?.toLowerCase()?.includes('auto')
+    ).length;
+    const resolutionSplit = [
+      { name: 'AI Auto-Resolved', value: aiResolved, fill: '#10b981' },
+      { name: 'Human Resolved', value: humanResolved, fill: '#6366f1' },
+      { name: 'Open/Pending', value: tickets.length - aiResolved - humanResolved, fill: '#f59e0b' },
+    ].filter((d) => d.value > 0);
+
+    // Top categories that were corrected by admins
+    const correctedTickets = tickets.filter((t) => t.metadata?.corrected_at);
+    const misclassMap = {};
+    correctedTickets.forEach((t) => {
+      const cat = t.category || 'Unknown';
+      misclassMap[cat] = (misclassMap[cat] || 0) + 1;
+    });
+    const misclassifiedCategories = Object.keys(misclassMap)
+      .map((key) => ({ name: key, corrections: misclassMap[key] }))
+      .sort((a, b) => b.corrections - a.corrections)
+      .slice(0, 6);
+
+    // Average CSAT
+    const ratedTickets = tickets.filter((t) => t.csat_rating);
+    const avgCsatScore = ratedTickets.length
+      ? (ratedTickets.reduce((sum, t) => sum + t.csat_rating, 0) / ratedTickets.length).toFixed(1)
+      : null;
+
+    return { accuracyRate, resolutionSplit, misclassifiedCategories, avgCsatScore };
+  }, [tickets]);
+
+  // Removed tab state - moving to single dashboard layout
+  if (loading)
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10 animate-in fade-in duration-700">
 
@@ -329,6 +365,7 @@ const AdminAnalytics = () => {
                     <RefreshCw size={14} /> Refresh All
                 </button>
             </div>
+          </div>
 
             {/* ── KPI Overview Cards ───────────────────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -650,10 +687,29 @@ const AdminAnalytics = () => {
                             </div>
                         )}
                     </div>
+                  );
+                })
+              ) : (
+                <div className='text-center py-20'>
+                  <p
+                    style={{
+                      fontSize: '11px',
+                      color: '#9ca3af',
+                      letterSpacing: '0.14em',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Waiting for signal...
+                  </p>
                 </div>
+              )}
             </div>
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 };
 
 export default AdminAnalytics;

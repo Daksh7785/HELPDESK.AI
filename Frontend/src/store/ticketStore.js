@@ -1,102 +1,102 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { createPersistedStore } from './persistenceMiddleware';
+import {
+    removeTicketFromQueue,
+    updateTicketInQueue,
+    upsertTicketInQueue,
+} from './ticketStoreUtils';
 
 const useTicketStore = create(
-    persist(
-        (set) => ({
+    createPersistedStore(
+        'tickets',
+        (set, get) => ({
             aiTicket: null,
             activeTicket: null,
             autoResolvedTickets: [], // For analytics
             tickets: [], // Global queue for admins
             notifications: [], // User notifications
+            wsConnected: false, // WebSocket connection status
+
             setAITicket: (data) => set({ aiTicket: data }),
             setActiveTicket: (ticket) => set({ activeTicket: ticket }),
-            addAutoResolvedTicket: (record) => set((state) => ({
-                autoResolvedTickets: [...state.autoResolvedTickets, record]
+
+            setWsConnected: (connected) => set({ wsConnected: connected }),
+
+            addNotification: (notif) => set((state) => ({
+                notifications: [notif, ...state.notifications].slice(0, 50)
             })),
-            addNotification: (notification) => set((state) => ({
-                notifications: [
-                    {
-                        id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
-                        timestamp: new Date().toISOString(),
-                        read: false,
-                        ...notification
-                    },
-                    ...(state.notifications || [])
-                ]
+
+            clearNotifications: () => set({ notifications: [] }),
+
+            addTicket: (ticket) => set((state) => ({
+                tickets: upsertTicketInQueue(state.tickets, ticket)
             })),
-            addTicket: (ticket) => set((state) => {
-                return {
-                    tickets: [...state.tickets, ticket]
-                };
-            }),
-            updateTicket: (ticketId, updates) => set((state) => {
-// eslint-disable-next-line no-unused-vars
-                const existingTicket = state.tickets.find(t => t.ticket_id === ticketId);
-                const updatedTickets = state.tickets.map(t => t.ticket_id === ticketId ? { ...t, ...updates } : t);
-                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
 
+            upsertTicket: (ticket) => set((state) => ({
+                tickets: upsertTicketInQueue(state.tickets, ticket)
+            })),
 
-
-
-                return {
-                    tickets: updatedTickets,
-                    activeTicket: shouldUpdateActive ? { ...state.activeTicket, ...updates } : state.activeTicket
-                };
-            }),
+            updateTicket: (ticketId, updates) => set((state) => ({
+                tickets: updateTicketInQueue(state.tickets, ticketId, updates)
+            })),
 
             removeTicket: (ticketId) => set((state) => ({
-    tickets: state.tickets.filter(t => t.ticket_id !== ticketId),
-    activeTicket: state.activeTicket?.ticket_id === ticketId
-        ? null
-        : state.activeTicket
-})),
-            appendMessage: (ticketId, message) => set((state) => {
-                const updatedTickets = state.tickets.map(t =>
-                    t.ticket_id === ticketId
-                        ? { ...t, messages: [...(t.messages || []), message] }
-                        : t
-                );
-                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
-
-                return {
-                    tickets: updatedTickets,
-                    activeTicket: shouldUpdateActive
-                        ? { ...state.activeTicket, messages: [...(state.activeTicket?.messages || []), message] }
-                        : state.activeTicket
-                };
-            }),
-            appendNote: (ticketId, note) => set((state) => {
-                const updatedTickets = state.tickets.map(t =>
-                    t.ticket_id === ticketId
-                        ? { ...t, internal_notes: [...(t.internal_notes || []), note] }
-                        : t
-                );
-                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
-
-                return {
-                    tickets: updatedTickets,
-                    activeTicket: shouldUpdateActive
-                        ? { ...state.activeTicket, internal_notes: [...(state.activeTicket?.internal_notes || []), note] }
-                        : state.activeTicket
-                };
-            }),
-            markNotificationsRead: () => set((state) => ({
-                notifications: (state.notifications || []).map(n => ({ ...n, read: true }))
+                tickets: removeTicketFromQueue(state.tickets, ticketId)
             })),
-            clearTicket: () => set({ aiTicket: null, activeTicket: null, autoResolvedTickets: [] }),
+
+            updateTicketLocally: (ticketId, updates) => set((state) => ({
+                tickets: updateTicketInQueue(state.tickets, ticketId, updates)
+            })),
+
+            appendMessage: (ticketId, message) => set((state) => ({
+                tickets: updateTicketInQueue(
+                    state.tickets,
+                    ticketId,
+                    {
+                        messages: [
+                            ...(
+                                state.tickets.find((ticket) => (
+                                    ticket.id === ticketId || ticket.ticket_id === ticketId
+                                ))?.messages || []
+                            ),
+                            message,
+                        ],
+                    },
+                )
+            })),
+
+            addTicket: (ticket) => set((state) => {
+                if (state.tickets.some(t => t.id === ticket.id)) return state;
+                return { tickets: [...state.tickets, ticket] };
+            }),
+
+            updateTicket: (ticketId, updates) => set((state) => ({
+                tickets: state.tickets.map(t => t.id === ticketId ? { ...t, ...updates } : t)
+            })),
+
+            removeTicket: (ticketId) => set((state) => ({
+                tickets: state.tickets.filter(t => t.id !== ticketId)
+            })),
+
+            reset: () => set({
+                aiTicket: null,
+                activeTicket: null,
+                notifications: [],
+                wsConnected: false
+            })
         }),
         {
-            name: 'ticket-storage', // unique name for localStorage key
+            partialize: (state) => ({
+                notifications: state.notifications
+            })
         }
     )
 );
 
 // Listen for storage changes from other tabs to keep the queue in sync
-// Listen for storage changes from other tabs to keep the queue in sync
 window.addEventListener('storage', () => {
-    // Force rehydration on any storage change to catch updates reliably
-    useTicketStore.persist.rehydrate();
+  // Force rehydration on any storage change to catch updates reliably
+  useTicketStore.persist.rehydrate();
 });
 
 export default useTicketStore;
