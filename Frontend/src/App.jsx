@@ -6,6 +6,7 @@ import {
   useLocation
 } from "react-router-dom";
 import React, { useEffect } from "react";
+import { ThemeProvider } from "./contexts/ThemeContext";
 import { AnimatePresence } from "framer-motion";
 import { NotFound } from "./components/ui/not-found-2";
 import useTicketStore from "./store/ticketStore";
@@ -227,6 +228,7 @@ function App() {
 
   if (isDocsSubdomain) {
     return (
+      <ThemeProvider>
       <BrowserRouter>
         <TitleUpdater />
         <ScrollToTop />
@@ -241,10 +243,12 @@ function App() {
           <Route path="*" element={<DocsPortal />} />
         </Routes>
       </BrowserRouter>
+      </ThemeProvider>
     );
   }
 
   return (
+    <ThemeProvider>
     <BrowserRouter>
       <TitleUpdater />
       <ScrollToTop />
@@ -299,6 +303,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </ThemeProvider>
   );
 }
 
