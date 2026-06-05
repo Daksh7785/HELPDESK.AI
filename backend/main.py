@@ -76,6 +76,8 @@ from backend.services.sla_service import (
     run_sla_escalation_loop,
 )
 from backend.services.spam_detector_service import analyze_spam_phishing
+from backend.services.active_learning_service import active_learning_service
+from backend.routes.active_learning import router as al_router
 
 
 # ---------------------------------------------------------------------------
@@ -365,6 +367,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Active Learning pipeline router (Issue #1933)
+app.include_router(al_router)
+
 
 # ---------------------------------------------------------------------------
 # Root & Health check
@@ -590,32 +595,21 @@ async def log_correction(raw_request: Request):
     if not changed_fields:
         return {"status": "no_change", "message": "Prediction matches correction, nothing logged."}
 
-    entry = {
-        "ticket_id": ticket_id,
-        "original_text": original_text,
-        "ocr_text": ocr_text,
-        "original_prediction": original_prediction,
-        "corrected_prediction": corrected_prediction,
-        "changed_fields": changed_fields,
-        "confidence": confidence,
-        "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
-    }
-
+    # Delegate to ActiveLearningService for telemetry-enriched logging
     try:
-        if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
-            with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-        else:
-            logs = []
-
-        logs.append(entry)
-
-        with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
-            json.dump(logs, f, indent=2)
-
+        active_learning_service.log_correction_with_telemetry(
+            ticket_id=ticket_id,
+            original_text=original_text,
+            ocr_text=ocr_text,
+            original_prediction=original_prediction,
+            corrected_prediction=corrected_prediction,
+            changed_fields=changed_fields,
+            confidence=confidence,
+            classifier_version=body.get("classifier_version", "v1"),
+            tenant_id=body.get("company_id") or body.get("tenant_id"),
+        )
         print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
         return {"status": "saved", "changed_fields": changed_fields}
-
     except Exception as e:
         print(f"[CORRECTION ERROR] Could not save: {e}")
         return {"status": "error", "message": str(e)}
