@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We as members, contributors, and leaders pledge to make participation in our
+We as members, contributors, and leaders of HELPDESK.AI pledge to make participation in our
 community a harassment-free experience for everyone, regardless of age, body
 size, visible or invisible disability, ethnicity, sex characteristics, gender
 identity and expression, level of experience, education, socio-economic status,
@@ -10,7 +10,10 @@ nationality, personal appearance, race, religion, or sexual identity
 and orientation.
 
 We pledge to act and interact in ways that contribute to an open, welcoming,
-diverse, inclusive, and healthy community.
+diverse, inclusive, and healthy community — for all contributors, whether participating
+through GSSoC, Hacktoberfest, or independently.
+
+---
 
 ## Our Standards
 
@@ -24,17 +27,45 @@ community include:
   and learning from the experience
 * Focusing on what is best not just for us as individuals, but for the
   overall community
+* Helping newcomers get started — we were all beginners once
+* Writing clear commit messages, PR descriptions, and issue reports
+* Reviewing others' code with care and respect, not dismissal
 
 Examples of unacceptable behavior include:
 
 * The use of sexualized language or imagery, and sexual attention or
   advances of any kind
 * Trolling, insulting or derogatory comments, and personal or political attacks
-* Public or private harassment
+* Public or private harassment of any kind
 * Publishing others' private information, such as a physical or email
   address, without their explicit permission
+* Claiming credit for others' work in commits, PRs, or changelogs
+* Deliberately submitting low-quality or AI-generated-without-review contributions
+  to inflate contribution metrics
+* Spamming issues or PRs with off-topic content
 * Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+  professional open-source setting
+
+---
+
+## GSSoC 2026 — Specific Expectations
+
+HELPDESK.AI participates in **GirlScript Summer of Code 2026**. Contributors participating
+under GSSoC agree to additional expectations:
+
+* **Work on assigned issues only.** Do not open PRs for issues assigned to another contributor
+  without coordination.
+* **Communicate early.** If you are stuck or will miss a deadline, post a comment on the issue
+  so the mentor can reassign or extend.
+* **No plagiarism.** PRs must represent your own original work. Copying another contributor's
+  PR — even with modifications — is grounds for immediate disqualification.
+* **Use AI tools responsibly.** You may use AI coding assistants, but you are responsible for
+  understanding, testing, and owning every line you submit. "The AI wrote it" is not an
+  acceptable explanation for a failing test or broken feature.
+* **Respect the review process.** Maintainers and mentors volunteer their time. Respond to
+  review feedback within 72 hours or the PR may be closed.
+
+---
 
 ## Enforcement Responsibilities
 
@@ -48,23 +79,36 @@ comments, commits, code, wiki edits, issues, and other contributions that are
 not aligned to this Code of Conduct, and will communicate reasons for moderation
 decisions when appropriate.
 
+---
+
 ## Scope
 
-This Code of Conduct applies within all community spaces, and also applies when
-an individual is officially representing the community in public spaces.
-Examples of representing our community include using an official e-mail address,
-posting via an official social media account, or acting as an appointed
-representative at an online or offline event.
+This Code of Conduct applies within all community spaces, including:
 
-## Enforcement
+* This GitHub repository (issues, PRs, discussions, code reviews, commit messages)
+* The project Discord/Slack server (if applicable)
+* Any official social media accounts or mailing lists
+* In-person or virtual events where contributors represent HELPDESK.AI
+
+This Code of Conduct also applies when an individual is officially representing
+the community in public spaces.
+
+---
+
+## Reporting
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-8464931322.
-All complaints will be reviewed and investigated promptly and fairly.
+reported to the community leaders responsible for enforcement:
 
+* **GitHub:** Open a private security advisory at https://github.com/ritesh-1918/HELPDESK.AI/security/advisories/new
+* **Email:** Contact the repository maintainer directly via GitHub profile
+
+All complaints will be reviewed and investigated promptly and fairly.
 All community leaders are obligated to respect the privacy and security of the
-reporter of any incident.
+reporter of any incident. Reports are kept confidential — the reporter's identity
+will not be disclosed to the person being reported.
+
+---
 
 ## Enforcement Guidelines
 
@@ -80,22 +124,31 @@ unprofessional or unwelcome in the community.
 clarity around the nature of the violation and an explanation of why the
 behavior was inappropriate. A public apology may be requested.
 
+**GSSoC impact**: No point deduction for a first offense with correction.
+
+---
+
 ### 2. Warning
 
 **Community Impact**: A violation through a single incident or series
-of actions.
+of actions, or a confirmed instance of plagiarism or metric-gaming.
 
-**Consequence**: A warning with consequences for continued behavior. No
+**Consequence**: A formal warning with consequences for continued behavior. No
 interaction with the people involved, including unsolicited interaction with
 those enforcing the Code of Conduct, for a specified period of time. This
 includes avoiding interactions in community spaces as well as external channels
 like social media. Violating these terms may lead to a temporary or
 permanent ban.
 
+**GSSoC impact**: GSSoC points for the violating PR will be revoked.
+
+---
+
 ### 3. Temporary Ban
 
 **Community Impact**: A serious violation of community standards, including
-sustained inappropriate behavior.
+sustained inappropriate behavior, repeated plagiarism, or deliberate sabotage
+of another contributor's work.
 
 **Consequence**: A temporary ban from any sort of interaction or public
 communication with the community for a specified period of time. No public or
@@ -103,14 +156,23 @@ private interaction with the people involved, including unsolicited interaction
 with those enforcing the Code of Conduct, is allowed during this period.
 Violating these terms may lead to a permanent ban.
 
+**GSSoC impact**: Removal from GSSoC participation for this project.
+
+---
+
 ### 4. Permanent Ban
 
 **Community Impact**: Demonstrating a pattern of violation of community
-standards, including sustained inappropriate behavior,  harassment of an
+standards, including sustained inappropriate behavior, harassment of an
 individual, or aggression toward or disparagement of classes of individuals.
 
 **Consequence**: A permanent ban from any sort of public interaction within
 the community.
+
+**GSSoC impact**: Disqualification from all GSSoC programs and escalation to
+GSSoC organizers.
+
+---
 
 ## Attribution
 
@@ -120,6 +182,8 @@ https://www.contributor-covenant.org/version/2/0/code_of_conduct.html.
 
 Community Impact Guidelines were inspired by [Mozilla's code of conduct
 enforcement ladder](https://github.com/mozilla/diversity).
+
+GSSoC-specific clauses are original additions for this project.
 
 [homepage]: https://www.contributor-covenant.org
 
