@@ -2,7 +2,9 @@ import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
 
-const USE_MOCK = true;
+// Read from Vite env var; defaults to false (production-safe).
+// Set VITE_USE_MOCK=true in .env.development to enable mock mode locally.
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
