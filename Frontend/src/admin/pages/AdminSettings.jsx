@@ -4,8 +4,8 @@ import {
     Cpu,
     Inbox,
     Bell,
-    Save,
-    ShieldCheck
+    ShieldCheck,
+    Accessibility
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
 import { Card, CardContent } from "../../components/ui/card";
@@ -169,8 +169,94 @@ const AdminSettings = () => {
                         </div>
                     </CardContent>
                 </Card>
+                {/* 5. Accessibility Insights */}
+<Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
+    <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-3">
+            <Accessibility size={18} className="text-violet-500" />
+            Accessibility Insights
+        </h3>
+    </div>
+
+    <CardContent className="p-8 space-y-6">
+
+        <div className="bg-violet-50 border border-violet-100 rounded-2xl p-5">
+            <h4 className="text-sm font-black text-violet-700 uppercase">
+                Accessibility Score
+            </h4>
+
+            <div className="mt-3 flex items-center gap-4">
+                <div className="text-4xl font-black text-violet-600">
+                    92%
+                </div>
+
+                <div className="text-xs text-slate-500 font-bold uppercase tracking-widest">
+                    Excellent Accessibility
+                </div>
             </div>
         </div>
+
+        <div className="grid md:grid-cols-2 gap-4">
+
+            <div className="border rounded-xl p-4">
+                <h4 className="font-black text-xs uppercase">
+                    Keyboard Navigation
+                </h4>
+
+                <p className="text-xs text-emerald-600 mt-2">
+                    Enabled
+                </p>
+            </div>
+
+            <div className="border rounded-xl p-4">
+                <h4 className="font-black text-xs uppercase">
+                    Responsive Design
+                </h4>
+
+                <p className="text-xs text-emerald-600 mt-2">
+                    Mobile Ready
+                </p>
+            </div>
+
+            <div className="border rounded-xl p-4">
+                <h4 className="font-black text-xs uppercase">
+                    Readability
+                </h4>
+
+                <p className="text-xs text-amber-600 mt-2">
+                    Consider larger text options
+                </p>
+            </div>
+
+            <div className="border rounded-xl p-4">
+                <h4 className="font-black text-xs uppercase">
+                    Screen Readers
+                </h4>
+
+                <p className="text-xs text-emerald-600 mt-2">
+                    Supported
+                </p>
+            </div>
+
+        </div>
+
+        <div className="bg-slate-50 rounded-xl p-4">
+            <h4 className="text-xs font-black uppercase mb-2">
+                Recommendations
+            </h4>
+
+            <ul className="text-xs text-slate-600 space-y-2">
+                <li>• Enable dark mode for reduced eye strain.</li>
+                <li>• Use larger fonts for improved readability.</li>
+                <li>• Ensure keyboard-only navigation remains accessible.</li>
+            </ul>
+        </div>
+
+    </CardContent>
+</Card>
+            </div>
+        </div>
+        
     );
 };
 
