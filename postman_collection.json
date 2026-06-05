@@ -1,0 +1,515 @@
+{
+  "info": {
+    "name": "HELPDESK.AI API Collection",
+    "description": "Comprehensive Postman collection for all 20 endpoints of the HELPDESK.AI system, including AI analysis, ticket operations, user authentication, and health checks.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Root Endpoint",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Returns the HTML landing page for the API Engine."
+          }
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Returns service status and classifier/NER model load states."
+          }
+        },
+        {
+          "name": "Readiness Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/ready",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ready"
+              ]
+            },
+            "description": "Checks database and model readiness."
+          }
+        }
+      ]
+    },
+    {
+      "name": "AI Endpoints",
+      "item": [
+        {
+          "name": "Troubleshoot",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"System keeps crashing on boot\",\n  \"category\": \"Hardware\",\n  \"history\": []\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/troubleshoot",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "troubleshoot"
+              ]
+            },
+            "description": "Get dynamic troubleshooting steps."
+          }
+        },
+        {
+          "name": "Analyze Bug",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bug_title\": \"NullPointerException in Login\",\n  \"description\": \"User gets blank screen on signin\",\n  \"steps_to_reproduce\": \"Go to login page, enter valid email and empty password.\",\n  \"console_errors\": [\n    \"TypeError: Cannot read property of null\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_bug",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_bug"
+              ]
+            },
+            "description": "Analyze bug report for probable cause."
+          }
+        },
+        {
+          "name": "Log Correction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"123\",\n  \"original_text\": \"Printer issues\",\n  \"original_prediction\": {\n    \"category\": \"Hardware\"\n  },\n  \"corrected_prediction\": {\n    \"category\": \"IT Support\"\n  },\n  \"confidence\": 0.85\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/log_correction",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "log_correction"
+              ]
+            },
+            "description": "Log admin corrections."
+          }
+        },
+        {
+          "name": "Analyze Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"User cannot access database\",\n  \"company\": \"DefaultCorp\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_ticket",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_ticket"
+              ]
+            },
+            "description": "Main ticket analysis cascading local models."
+          }
+        },
+        {
+          "name": "Analyze Only",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"VPN is dropping connection\",\n  \"company\": \"DefaultCorp\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze"
+              ]
+            },
+            "description": "Analyze ticket details without persisting."
+          }
+        },
+        {
+          "name": "Analyze Stream",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Keyboard keys stuck\",\n  \"company\": \"DefaultCorp\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_stream",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_stream"
+              ]
+            },
+            "description": "Streaming analysis response."
+          }
+        },
+        {
+          "name": "Analyze Legacy",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Legacy bug ticket text\",\n  \"company\": \"DefaultCorp\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze_ticket/legacy",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze_ticket",
+                "legacy"
+              ]
+            },
+            "description": "Legacy analysis compatibility endpoint."
+          }
+        },
+        {
+          "name": "Analyze V2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"New API client issue\",\n  \"company\": \"DefaultCorp\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/ai/analyze-v2",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "ai",
+                "analyze-v2"
+              ]
+            },
+            "description": "AI Analysis V2."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        {
+          "name": "Get All Tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets?company_id=123",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets"
+              ],
+              "query": [
+                {
+                  "key": "company_id",
+                  "value": "123"
+                }
+              ]
+            },
+            "description": "Fetch persistent tickets from Supabase."
+          }
+        },
+        {
+          "name": "Save Ticket (Official)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"101\",\n  \"title\": \"Reset password\",\n  \"description\": \"Resetting user password\",\n  \"category\": \"IT\",\n  \"assigned_team\": \"IT Support\",\n  \"priority\": \"medium\",\n  \"user_id\": \"user-123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/save",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "save"
+              ]
+            },
+            "description": "Save analysed ticket to Supabase."
+          }
+        },
+        {
+          "name": "Get Ticket By ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/tickets/101",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "101"
+              ]
+            },
+            "description": "Fetch single ticket details."
+          }
+        },
+        {
+          "name": "Create Ticket (Mock)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ticket_id\": \"102\",\n  \"title\": \"Mock Ticket\",\n  \"owner_id\": \"user-456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets"
+              ]
+            },
+            "description": "Create local mock ticket."
+          }
+        },
+        {
+          "name": "Update Ticket (Mock)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"closed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/tickets/102",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "tickets",
+                "102"
+              ]
+            },
+            "description": "Update local mock ticket status."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"securepassword\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticate user credentials."
+          }
+        },
+        {
+          "name": "Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"newuser@example.com\",\n  \"password\": \"securepassword\",\n  \"full_name\": \"New User\",\n  \"company\": \"DefaultCorp\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/signup",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "signup"
+              ]
+            },
+            "description": "Sign up a new account."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Clear authentication cookies."
+          }
+        },
+        {
+          "name": "Me (Profile Details)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Fetch the current user profile."
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ]
+}
