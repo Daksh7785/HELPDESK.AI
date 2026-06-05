@@ -91,16 +91,37 @@
   }
 }
 
-html{
+html {
   overflow-y: scroll;
-  scrollbar-width: none; /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 transparent;
 }
 
-html::-webkit-scrollbar{
-  width: 0;
-  height: 0;
+html::-webkit-scrollbar {
+  width: 6px;
 }
 
-body{
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 10px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark html::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark html::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+body {
   overflow-x: hidden;
 }
