@@ -150,9 +150,8 @@ class TicketResponse(BaseModel):
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
-    translation_attempted: bool = False
-    translation_failed: bool = False
-
+    classification_attempted: bool = False  
+    classification_failed: bool = False
 
 # --- Persistence Models ---
 class Message(BaseModel):
@@ -802,14 +801,14 @@ async def analyze_only(request_body: TicketRequest):
             }
     except Exception as e:
         traceback.print_exc()
-        
-        print(f"[TRANSLATION ENGINE ERROR] All translation and classification fallback paths failed: {e}")
+       
+        print(f"[CLASSIFICATION ENGINE ERROR] All classification fallback paths failed: {e}")
         
         classification = {
             "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
-            "translation_attempted": True, 
-            "translation_failed": True
+            "classification_attempted": True, 
+            "classification_failed": True
         }
 
     timeline["ai_analyzed"] = get_now_ist()
@@ -896,8 +895,8 @@ async def analyze_only(request_body: TicketRequest):
         timeline=timeline,
         env_metadata=env_metadata,
         sla_breach_at=sla_breach_dt.isoformat() + "Z",
-        translation_attempted=classification.get("translation_attempted", False),
-        translation_failed=classification.get("translation_failed", False)
+        classification_attempted=classification.get("classification_attempted", False),
+        classification_failed=classification.get("classification_failed", False)
     )
 
 @app.post("/ai/analyze_stream")
@@ -971,15 +970,16 @@ async def analyze_stream(request_body: TicketRequest):
                     "confidence": float(conf)
                 }
         except Exception as e:
-           
-            print(f"[TRANSLATION STREAM ERROR] Streaming classification pipeline failed: {e}")
+            # Log statement corrected
+            print(f"[CLASSIFICATION STREAM ERROR] Streaming classification pipeline failed: {e}")
             
             classification = {
                 "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
                 "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
-                "translation_attempted": True, 
-                "translation_failed": True
+                "classification_attempted": True,
+                "classification_failed": True
             }
+            
         timeline["ai_analyzed"] = get_now_ist()
         timeline["triaged"] = get_now_ist()
 
@@ -1050,8 +1050,8 @@ async def analyze_stream(request_body: TicketRequest):
             "timeline": timeline,
             "env_metadata": env_metadata,
             "sla_breach_at": sla_breach_dt.isoformat() + "Z",
-            "translation_attempted": classification.get("translation_attempted", False),
-            "translation_failed": classification.get("translation_failed", False)
+            "classification_attempted": classification.get("classification_attempted", False),
+            "classification_failed": classification.get("classification_failed", False)
         }
 
         # 6. Final Result
