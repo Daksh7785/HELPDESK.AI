@@ -34,7 +34,7 @@ from pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
@@ -1233,8 +1233,6 @@ METRICS_ALLOWED_IPS = {
     if ip.strip()
 }
 
-import ipaddress
-from fastapi import Response
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 instrumentator = Instrumentator(
