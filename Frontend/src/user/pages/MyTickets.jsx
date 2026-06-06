@@ -124,6 +124,89 @@ const TicketRow = React.memo(({ ticket, onNavigate }) => (
 
 TicketRow.displayName = 'TicketRow';
 
+// ── Constants ────────────────────────────────────────────────────────────────
+const STATUS_OPTIONS = [
+    { value: 'open',        label: 'Open' },
+    { value: 'in progress', label: 'In Progress' },
+    { value: 'resolved',    label: 'Resolved' },
+    { value: 'closed',      label: 'Closed' },
+];
+
+const PRIORITY_OPTIONS = [
+    { value: 'critical', label: 'Critical' },
+    { value: 'high',     label: 'High' },
+    { value: 'medium',   label: 'Medium' },
+    { value: 'low',      label: 'Low' },
+];
+
+const CATEGORY_OPTIONS = [
+    { value: 'Network',  label: 'Network' },
+    { value: 'Hardware', label: 'Hardware' },
+    { value: 'Software', label: 'Software' },
+    { value: 'Access',   label: 'Access' },
+];
+
+const SORT_OPTIONS = [
+    { value: 'created_at:desc', label: 'Newest first' },
+    { value: 'created_at:asc',  label: 'Oldest first' },
+    { value: 'updated_at:desc', label: 'Recently updated' },
+    { value: 'priority:desc',   label: 'Priority ↓' },
+];
+
+const PAGE_SIZE = 25;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
+const filtersToParams = (f) => {
+    const p = new URLSearchParams();
+    if (f.q)        p.set('q',        f.q);
+    if (f.status)   p.set('status',   f.status);
+    if (f.priority) p.set('priority', f.priority);
+    if (f.category) p.set('category', f.category);
+    if (f.dateFrom) p.set('dateFrom', f.dateFrom);
+    if (f.dateTo)   p.set('dateTo',   f.dateTo);
+    if (f.sort && f.sort !== 'created_at:desc') p.set('sort', f.sort);
+    return p;
+};
+
+const paramsToFilters = (params) => ({
+    q:        params.get('q')        || undefined,
+    status:   params.get('status')   || undefined,
+    priority: params.get('priority') || undefined,
+    category: params.get('category') || undefined,
+    dateFrom: params.get('dateFrom') || undefined,
+    dateTo:   params.get('dateTo')   || undefined,
+    sort:     params.get('sort')     || 'created_at:desc',
+});
+
+const exportCSV = (tickets) => {
+    const header = ['ID', 'Subject', 'Category', 'Priority', 'Status', 'Created At'];
+    const rows = tickets.map(t => [
+        formatTicketId(t.id),
+        `"${(t.subject || t.summary || '').replace(/"/g, '""')}"`,
+        t.category || '',
+        t.priority || '',
+        t.status   || '',
+        t.created_at ? new Date(t.created_at).toISOString() : '',
+    ]);
+    const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href     = url;
+    link.download = `my-tickets-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+};
+
+const getPriorityColor = (priority) => {
+    const p = (priority || '').toLowerCase();
+    if (p === 'high' || p === 'critical') return 'text-red-600 font-bold';
+    if (p === 'medium') return 'text-amber-600 font-bold';
+    if (p === 'low')    return 'text-blue-600 font-bold';
+    return 'text-gray-600';
+};
+
+// ── Component ─────────────────────────────────────────────────────────────────
 function MyTickets() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
@@ -191,6 +274,9 @@ function MyTickets() {
       )
       .subscribe();
 
+    // ── Data Fetch ───────────────────────────────────────────────────────────
+    const fetchTickets = useCallback(async (currentPage = 1) => {
+        if (!user?.id) { setLoading(false); return; }
         setLoading(true);
         setError(null);
         try {
@@ -214,21 +300,18 @@ function MyTickets() {
     useEffect(() => {
         fetchTickets();
 
+    // ── Real-time subscription ───────────────────────────────────────────────
+    useEffect(() => {
         if (!user?.id) return;
 
         const channel = supabase
             .channel(`user_tickets_${user.id}`)
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'tickets',
-                    filter: `user_id=eq.${user.id}`
-                },
+                { event: '*', schema: 'public', table: 'tickets', filter: `user_id=eq.${user.id}` },
                 (payload) => {
                     if (payload.eventType === 'INSERT') {
-                        setTickets(prev => [payload.new, ...prev]);
+                        setTickets(prev => [payload.new, ...prev].slice(0, PAGE_SIZE));
                     } else if (payload.eventType === 'UPDATE') {
                         setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
                     } else if (payload.eventType === 'DELETE') {
@@ -237,6 +320,8 @@ function MyTickets() {
                 }
             )
             .subscribe();
+        return () => supabase.removeChannel(channel);
+    }, [user]);
 
         return () => {
             supabase.removeChannel(channel);
@@ -501,7 +586,7 @@ function MyTickets() {
                     <h3 className="text-lg font-bold text-red-900 mb-1">Database Sync Error</h3>
                     <p className="text-red-700/70 text-sm max-w-sm mb-6">{error}</p>
                     <button
-                        onClick={fetchTickets}
+                        onClick={() => fetchTickets(page)}
                         className="px-6 py-2 bg-white border border-red-200 text-red-700 font-bold rounded-xl hover:bg-red-50 transition-colors shadow-sm"
                     >
                         Retry Connection
@@ -532,11 +617,7 @@ function MyTickets() {
                     <h3 className="text-lg font-bold text-gray-900 mb-1">No matching tickets found</h3>
                     <p className="text-gray-500 text-sm mb-4">Try adjusting your search or filters.</p>
                     <button
-                        onClick={() => {
-                            setSearchQuery('');
-                            setStatusFilter('All');
-                            setPriorityFilter('All');
-                        }}
+                        onClick={handleClearFilters}
                         className="text-emerald-600 font-semibold hover:text-emerald-700 text-sm"
                     >
                         Clear all filters

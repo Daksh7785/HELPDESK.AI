@@ -8,19 +8,11 @@ import TagFilter from "../../components/TagFilter";
 import TagChip from "../../components/TagChip";
 import LanguageBadge from "../../components/shared/LanguageBadge";
 import {
-    Search,
-    Filter,
     Inbox,
     Activity,
     ShieldAlert,
-    Clock,
-    ChevronRight,
-    BarChart3,
-    User,
     ArrowUpRight,
-    ExternalLink,
     AlertCircle,
-    CheckCircle2,
     Loader2,
     Save,
     RotateCcw,
@@ -290,6 +282,7 @@ const AdminTickets = () => {
     const [error, setError] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null);
     const [newlyBreachedTicketIds, setNewlyBreachedTicketIds] = useState([]);
+    const [agents, setAgents] = useState([]);
 
     // ── Filter State ────────────────────────────────
     const [searchQuery, setSearchQuery] = useState('');
@@ -395,7 +388,11 @@ const AdminTickets = () => {
                 query = query.or(`subject.ilike.%${escaped}%,description.ilike.%${escaped}%,summary.ilike.%${escaped}%`);
             }
 
-            let { data, error: sbError } = await query.order('created_at', { ascending: false });
+            // Sort
+            const [sortCol, sortDir] = (filters.sort || 'created_at:desc').split(':');
+            query = query.order(sortCol || 'created_at', { ascending: sortDir === 'asc' });
+
+            let { data, error: sbError } = await query;
 
             if (sbError) {
                 console.warn("Retrying fetch without relationship aliases...");
@@ -409,10 +406,25 @@ const AdminTickets = () => {
                 setTickets(data || []);
             }
         } catch (err) {
-            console.error("Admin fetch error:", err);
+            console.error('Admin fetch error:', err);
             setError(err.message);
+        } finally {
+            setLoading(false);
         }
-    };
+    }, [filters]);
+
+    const fetchInitialData = useCallback(async () => {
+        const { profile } = useAuthStore.getState();
+        if (profile?.company) {
+            const { data: agentData } = await supabase
+                .from('profiles')
+                .select('id, full_name, role')
+                .eq('company', profile.company)
+                .in('role', ['admin', 'super_admin', 'agent']);
+            setAgents(agentData || []);
+        }
+        fetchTickets();
+    }, [fetchTickets]);
 
     useEffect(() => {
         fetchInitialData();
