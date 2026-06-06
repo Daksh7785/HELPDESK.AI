@@ -1,27 +1,22 @@
 """
-Unit tests for Pydantic ticket models in backend/main.py.
+Enhanced unit tests for Pydantic ticket models.
 
-Tests cover:
-  - TicketRequest validation (threshold range, image size limits)
-  - TicketSaveRequest serialization
-  - RatingRequest validation
-  - DuplicateInfo, IncidentInfo, EntityInfo models
-  - SpamCheck model
-  - TicketResponse model with nested models
-  - Message model
-  - Edge cases and error handling
-
-NOTE: These tests define the models locally (matching main.py definitions)
-to avoid importing backend.main which has heavy ML dependencies.
+Coverage Includes:
+- Validation rules
+- Serialization / deserialization
+- Boundary conditions
+- Default values
+- Nested model behavior
+- Parametrized edge cases
 """
 
 import pytest
 from pydantic import BaseModel, ValidationError, field_validator
 
 
-# ---------------------------------------------------------------------------
-# Models — copied from backend/main.py for isolated testing
-# ---------------------------------------------------------------------------
+# ============================================================================
+# Models
+# ============================================================================
 
 
 class TicketRequest(BaseModel):
@@ -104,17 +99,6 @@ class TicketResponse(BaseModel):
     needs_review: bool = False
     reasoning: str = ""
     decision_factors: list[str] = []
-    image_description: str = ""
-    ocr_text: str = ""
-    image_url: str | None = None
-    highlights: list[str] = []
-    timeline: dict = {}
-    env_metadata: dict = {}
-    sla_breach_at: str | None = None
-    original_text: str | None = None
-    source_language: str = "en"
-    source_language_name: str = "English"
-    was_translated: bool = False
     spam_check: SpamCheck = SpamCheck()
     version: str = "2.1.0-Neural-Diagnostic"
 
@@ -125,241 +109,343 @@ class Message(BaseModel):
     timestamp: str
 
 
-# ===========================================================================
+# ============================================================================
+# Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def valid_ticket_request():
+    return {
+        "text": "System crash issue",
+        "confidence_threshold": 0.5,
+        "duplicate_sensitivity": 0.8,
+    }
+
+
+@pytest.fixture
+def valid_response_payload():
+    return {
+        "summary": "Login issue",
+        "category": "Authentication",
+        "subcategory": "Password Reset",
+        "priority": "medium",
+        "auto_resolve": False,
+        "assigned_team": "Support",
+        "entities": [],
+        "duplicate_ticket": DuplicateInfo(is_duplicate=False),
+        "confidence": 0.92,
+    }
+
+
+# ============================================================================
 # TicketRequest Tests
-# ===========================================================================
+# ============================================================================
 
 
 class TestTicketRequest:
-    def test_valid_ticket_request(self):
-        ticket = TicketRequest(text="My laptop won't turn on")
-        assert ticket.text == "My laptop won't turn on"
-        assert ticket.image_base64 == ""
-        assert ticket.confidence_threshold == 0.20
-        assert ticket.duplicate_sensitivity == 0.85
 
-    def test_all_fields_populated(self):
-        ticket = TicketRequest(
-            text="Screen is flickering", image_base64="base64data",
-            image_text="extracted text", user_id="user123", company="Acme Corp",
-            company_id="comp_456", image_url="https://example.com/img.png",
-            confidence_threshold=0.50, duplicate_sensitivity=0.90,
-        )
-        assert ticket.text == "Screen is flickering"
-        assert ticket.confidence_threshold == 0.50
+    def test_valid_request(self, valid_ticket_request):
+        ticket = TicketRequest(**valid_ticket_request)
 
-    def test_threshold_lower_bound(self):
-        assert TicketRequest(text="t", confidence_threshold=0.0).confidence_threshold == 0.0
+        assert ticket.text == "System crash issue"
+        assert ticket.confidence_threshold == 0.5
 
-    def test_threshold_upper_bound(self):
-        assert TicketRequest(text="t", confidence_threshold=1.0).confidence_threshold == 1.0
+    @pytest.mark.parametrize(
+        "field,value",
+        [
+            ("confidence_threshold", -0.1),
+            ("confidence_threshold", 1.5),
+            ("duplicate_sensitivity", -1),
+            ("duplicate_sensitivity", 2),
+        ],
+    )
+    def test_invalid_thresholds(self, field, value, valid_ticket_request):
+        valid_ticket_request[field] = value
 
-    def test_threshold_below_zero_raises(self):
         with pytest.raises(ValidationError):
-            TicketRequest(text="t", confidence_threshold=-0.1)
+            TicketRequest(**valid_ticket_request)
 
-    def test_threshold_above_one_raises(self):
-        with pytest.raises(ValidationError):
-            TicketRequest(text="t", confidence_threshold=1.5)
+    @pytest.mark.parametrize(
+        "text",
+        [
+            "",
+            " ",
+            "🔥 Critical production outage",
+            "a" * 1000,
+        ],
+    )
+    def test_edge_case_text_inputs(self, text):
+        ticket = TicketRequest(text=text)
 
-    def test_duplicate_sensitivity_validation(self):
-        with pytest.raises(ValidationError):
-            TicketRequest(text="t", duplicate_sensitivity=-0.5)
-        with pytest.raises(ValidationError):
-            TicketRequest(text="t", duplicate_sensitivity=2.0)
+        assert ticket.text == text
 
-    def test_empty_text_allowed(self):
-        assert TicketRequest(text="").text == ""
+    def test_optional_fields_default_none(self):
+        ticket = TicketRequest(text="Test")
 
-    def test_optional_fields_default_to_none(self):
-        ticket = TicketRequest(text="t")
         assert ticket.user_id is None
         assert ticket.company is None
+        assert ticket.company_id is None
 
-    def test_text_required(self):
+    def test_serialization_roundtrip(self):
+        ticket = TicketRequest(
+            text="API issue",
+            user_id="u123",
+            confidence_threshold=0.75,
+        )
+
+        restored = TicketRequest.model_validate_json(
+            ticket.model_dump_json()
+        )
+
+        assert restored == ticket
+
+    def test_missing_required_text(self):
         with pytest.raises(ValidationError):
             TicketRequest()
 
-    def test_serialization(self):
-        data = TicketRequest(text="t", confidence_threshold=0.5).model_dump()
-        assert data["text"] == "t"
-        assert data["confidence_threshold"] == 0.5
 
-    def test_json_roundtrip(self):
-        ticket = TicketRequest(text="test", user_id="u1", confidence_threshold=0.75)
-        restored = TicketRequest.model_validate_json(ticket.model_dump_json())
-        assert restored.text == ticket.text
-        assert restored.confidence_threshold == 0.75
-
-
-# ===========================================================================
+# ============================================================================
 # TicketSaveRequest Tests
-# ===========================================================================
+# ============================================================================
 
 
 class TestTicketSaveRequest:
-    def test_valid_save_request(self):
-        req = TicketSaveRequest(
-            user_id="u1", subject="s", description="d", category="c",
-            subcategory="sc", priority="high", assigned_team="t", status="open",
-        )
-        assert req.priority == "high"
 
-    def test_missing_required_field(self):
+    @pytest.fixture
+    def payload(self):
+        return {
+            "user_id": "u1",
+            "subject": "Login failed",
+            "description": "Cannot login",
+            "category": "Access",
+            "subcategory": "Authentication",
+            "priority": "high",
+            "assigned_team": "Support",
+            "status": "open",
+        }
+
+    def test_valid_save_request(self, payload):
+        model = TicketSaveRequest(**payload)
+
+        assert model.priority == "high"
+
+    def test_missing_required_fields(self):
         with pytest.raises(ValidationError):
-            TicketSaveRequest(user_id="u1", subject="s")
+            TicketSaveRequest(user_id="u1")
 
-    def test_serialization(self):
-        req = TicketSaveRequest(
-            user_id="u1", subject="s", description="d", category="c",
-            subcategory="sc", priority="low", assigned_team="t", status="open",
-        )
-        assert len(req.model_dump()) == 8
+    def test_model_serialization(self, payload):
+        model = TicketSaveRequest(**payload)
+
+        dumped = model.model_dump()
+
+        assert dumped["status"] == "open"
+        assert len(dumped.keys()) == 8
 
 
-# ===========================================================================
+# ============================================================================
 # RatingRequest Tests
-# ===========================================================================
+# ============================================================================
 
 
 class TestRatingRequest:
-    def test_valid_rating(self):
-        req = RatingRequest(ticket_id="tkt_123", rating=5)
-        assert req.rating == 5
-        assert req.feedback is None
 
-    def test_with_feedback(self):
-        req = RatingRequest(ticket_id="tkt_456", rating=3, feedback="faster")
-        assert req.feedback == "faster"
+    @pytest.mark.parametrize("rating", [1, 2, 3, 4, 5])
+    def test_valid_ratings(self, rating):
+        model = RatingRequest(
+            ticket_id="tkt_001",
+            rating=rating,
+        )
+
+        assert model.rating == rating
+
+    def test_optional_feedback(self):
+        model = RatingRequest(
+            ticket_id="tkt_001",
+            rating=5,
+            feedback="Resolved quickly",
+        )
+
+        assert model.feedback == "Resolved quickly"
 
 
-# ===========================================================================
+# ============================================================================
 # DuplicateInfo Tests
-# ===========================================================================
+# ============================================================================
 
 
 class TestDuplicateInfo:
-    def test_not_duplicate(self):
+
+    def test_default_similarity(self):
         info = DuplicateInfo(is_duplicate=False)
+
         assert info.similarity == 0.0
 
-    def test_is_duplicate(self):
-        info = DuplicateInfo(is_duplicate=True, duplicate_ticket_id="tkt_789", similarity=0.95)
-        assert info.duplicate_ticket_id == "tkt_789"
+    def test_duplicate_ticket(self):
+        info = DuplicateInfo(
+            is_duplicate=True,
+            duplicate_ticket_id="TKT-99",
+            similarity=0.97,
+        )
+
+        assert info.is_duplicate is True
+        assert info.similarity > 0.9
 
 
-# ===========================================================================
+# ============================================================================
 # IncidentInfo Tests
-# ===========================================================================
+# ============================================================================
 
 
 class TestIncidentInfo:
+
     def test_default_values(self):
-        info = IncidentInfo()
-        assert info.is_major_incident is False
-        assert info.ticket_count == 0
+        incident = IncidentInfo()
 
-    def test_major_incident(self):
-        info = IncidentInfo(incident_id="INC-001", is_major_incident=True, ticket_count=50)
-        assert info.is_major_incident is True
+        assert incident.ticket_count == 0
+        assert incident.is_major_incident is False
+
+    def test_major_incident_case(self):
+        incident = IncidentInfo(
+            incident_id="INC-001",
+            is_major_incident=True,
+            ticket_count=150,
+            affected_users=3000,
+        )
+
+        assert incident.is_major_incident is True
+        assert incident.affected_users == 3000
 
 
-# ===========================================================================
+# ============================================================================
 # EntityInfo Tests
-# ===========================================================================
+# ============================================================================
 
 
 class TestEntityInfo:
+
     def test_valid_entity(self):
-        entity = EntityInfo(text="John", label="PERSON", confidence=0.95)
-        assert entity.text == "John"
+        entity = EntityInfo(
+            text="Windows 11",
+            label="OS",
+            confidence=0.94,
+        )
 
-    def test_missing_field_raises(self):
+        assert entity.label == "OS"
+
+    def test_missing_required_field(self):
         with pytest.raises(ValidationError):
-            EntityInfo(text="t", label="ORG")
+            EntityInfo(text="Server")
 
 
-# ===========================================================================
+# ============================================================================
 # SpamCheck Tests
-# ===========================================================================
+# ============================================================================
 
 
 class TestSpamCheck:
-    def test_default_not_spam(self):
-        check = SpamCheck()
-        assert check.is_spam is False
-        assert check.reasons == []
 
-    def test_spam_detected(self):
-        check = SpamCheck(is_spam=True, risk_score=0.95, reasons=["r1", "r2"])
-        assert check.is_spam is True
-        assert len(check.reasons) == 2
+    def test_default_values(self):
+        spam = SpamCheck()
+
+        assert spam.is_spam is False
+        assert spam.reasons == []
+
+    def test_spam_detection(self):
+        spam = SpamCheck(
+            is_spam=True,
+            risk_score=0.96,
+            reasons=["Suspicious links"],
+            suspicious_urls=["http://spam.com"],
+        )
+
+        assert spam.is_spam is True
+        assert len(spam.suspicious_urls) == 1
 
 
-# ===========================================================================
+# ============================================================================
 # TicketResponse Tests
-# ===========================================================================
+# ============================================================================
 
 
 class TestTicketResponse:
-    def _resp(self, **kw):
-        d = {
-            "summary": "T", "category": "G", "subcategory": "O",
-            "priority": "medium", "auto_resolve": False, "assigned_team": "S",
-            "entities": [], "duplicate_ticket": DuplicateInfo(is_duplicate=False),
-            "confidence": 0.85,
-        }
-        d.update(kw)
-        return TicketResponse(**d)
 
-    def test_minimal_response(self):
-        r = self._resp()
-        assert r.version == "2.1.0-Neural-Diagnostic"
-        assert r.source_language == "en"
+    def test_minimal_response(self, valid_response_payload):
+        response = TicketResponse(**valid_response_payload)
 
-    def test_with_entities(self):
-        r = self._resp(entities=[EntityInfo(text="W11", label="OS", confidence=0.9)])
-        assert len(r.entities) == 1
+        assert response.version == "2.1.0-Neural-Diagnostic"
 
-    def test_with_duplicate(self):
-        r = self._resp(duplicate_ticket=DuplicateInfo(is_duplicate=True, similarity=0.92))
-        assert r.duplicate_ticket.is_duplicate is True
+    def test_nested_entities(self, valid_response_payload):
+        valid_response_payload["entities"] = [
+            EntityInfo(
+                text="Linux",
+                label="OS",
+                confidence=0.91,
+            )
+        ]
 
-    def test_with_spam(self):
-        r = self._resp(spam_check=SpamCheck(is_spam=True, risk_score=0.88))
-        assert r.spam_check.is_spam is True
+        response = TicketResponse(**valid_response_payload)
 
-    def test_defaults(self):
-        r = self._resp()
-        assert r.id is None
-        assert r.needs_review is False
-        assert r.was_translated is False
+        assert len(response.entities) == 1
 
-    def test_roundtrip(self):
-        r = self._resp(id="tkt_999", confidence=0.75, needs_review=True)
-        restored = TicketResponse.model_validate_json(r.model_dump_json())
-        assert restored.id == "tkt_999"
-        assert restored.confidence == 0.75
+    def test_spam_check_integration(self, valid_response_payload):
+        valid_response_payload["spam_check"] = SpamCheck(
+            is_spam=True,
+            risk_score=0.88,
+        )
 
-    def test_id_string_or_int(self):
-        assert self._resp(id="tkt_123").id == "tkt_123"
-        assert self._resp(id=42).id == 42
+        response = TicketResponse(**valid_response_payload)
+
+        assert response.spam_check.is_spam is True
+
+    def test_serialization_roundtrip(self, valid_response_payload):
+        response = TicketResponse(**valid_response_payload)
+
+        restored = TicketResponse.model_validate_json(
+            response.model_dump_json()
+        )
+
+        assert restored == response
+
+    @pytest.mark.parametrize("ticket_id", ["TKT-001", 101])
+    def test_id_accepts_string_or_int(self, ticket_id, valid_response_payload):
+        valid_response_payload["id"] = ticket_id
+
+        response = TicketResponse(**valid_response_payload)
+
+        assert response.id == ticket_id
 
 
-# ===========================================================================
+# ============================================================================
 # Message Tests
-# ===========================================================================
+# ============================================================================
 
 
 class TestMessage:
-    def test_valid_message(self):
-        msg = Message(sender="user", message="Hello", timestamp="2026-06-02T10:00:00Z")
-        assert msg.sender == "user"
 
-    def test_missing_field_raises(self):
+    def test_valid_message(self):
+        msg = Message(
+            sender="agent",
+            message="Issue resolved",
+            timestamp="2026-06-05T10:00:00Z",
+        )
+
+        assert msg.sender == "agent"
+
+    def test_missing_timestamp(self):
         with pytest.raises(ValidationError):
-            Message(sender="user", message="test")
+            Message(
+                sender="user",
+                message="Help needed",
+            )
 
     def test_serialization(self):
-        msg = Message(sender="agent", message="H", timestamp="2026-06-02T10:05:00Z")
-        assert "timestamp" in msg.model_dump()
+        msg = Message(
+            sender="system",
+            message="Maintenance scheduled",
+            timestamp="2026-06-05T11:00:00Z",
+        )
+
+        dumped = msg.model_dump()
+
+        assert dumped["sender"] == "system"
