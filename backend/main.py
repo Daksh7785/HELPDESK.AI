@@ -554,8 +554,6 @@ class TicketRequest(BaseModel):
     company: str | None = None
     company_id: str | None = None
     image_url: str | None = None
-    confidence_threshold: float = 0.20
-    duplicate_sensitivity: float = 0.85
 
     # Guard limits — tune via environment variables in production
     _MAX_TEXT_LEN: int = int(os.getenv("MAX_TICKET_TEXT_LEN", "50000"))
