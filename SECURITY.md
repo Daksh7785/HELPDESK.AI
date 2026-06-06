@@ -1,4 +1,15 @@
-# Security Policy
+# Security Policy — HELPDESK.AI
+
+## Overview
+
+HELPDESK.AI takes the security of our software seriously. This document describes
+our supported versions, how to report a vulnerability privately, what to expect
+after reporting, and the scope of our security program.
+
+If you believe you have found a security vulnerability, **please do not open a
+public GitHub issue**. Use the private reporting process described below.
+
+---
 
 ## Supported Versions
 
