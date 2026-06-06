@@ -71,12 +71,10 @@ const TicketTracking = () => {
 
                 const { data: { session } } = await supabase.auth.getSession();
                 const accessToken = session?.access_token;
-                if (!accessToken) {
-                    throw new Error("Please sign in again before creating a ticket.");
-                }
+                const headers = accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
 
                 const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload, {
-                    headers: { Authorization: `Bearer ${accessToken}` }
+                    headers
                 });
 
                 if (res.data?.ticket_id) {

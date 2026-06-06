@@ -609,18 +609,17 @@ async def save_ticket(request_body: TicketSaveRequest, request: Request):
 
         # Validate tenant consistency and authorization.
         profile_company_id = profile.get("company_id")
+        if not profile_company_id:
+            raise HTTPException(status_code=400, detail="User has no tenant assignment")
         if final_data.get("company_id"):
             # User provided company_id: verify it matches their profile.
-            if profile_company_id and final_data["company_id"] != profile_company_id:
+            if final_data["company_id"] != profile_company_id:
                 user_hash = hashlib.sha256(authenticated_user_id.encode()).hexdigest()[:8]
                 logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
                 raise HTTPException(status_code=403, detail="User not authorized for this tenant")
-        elif profile_company_id:
+        else:
             # Backfill company_id from profile.
             final_data["company_id"] = profile_company_id
-        elif authenticated_user_id:
-            # User has no tenant assignment.
-            raise HTTPException(status_code=400, detail="User has no tenant assignment")
 
         # Backfill company name if missing.
         if not final_data.get("company") and profile.get("company"):
