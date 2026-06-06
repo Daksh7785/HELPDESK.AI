@@ -35,13 +35,13 @@ from dotenv import load_dotenv
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
 
-# Initialize Supabase Client (Service Role for backend bypass)
+# Initialize Supabase Client (Anon Key to respect RLS)
 try:
     from supabase import create_client, Client
     url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    key = os.environ.get("SUPABASE_ANON_KEY")
     if not url or not key:
-        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+        print("[ERROR] SUPABASE_URL or SUPABASE_ANON_KEY not set in backend/.env")
         supabase = None
     else:
         supabase = create_client(url, key)
