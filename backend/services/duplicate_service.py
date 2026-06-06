@@ -136,15 +136,16 @@ class DuplicateService:
         stored embeddings into a single 2D array, eliminating the per-ticket
         loop in ``check_duplicate``.
         """
-        if not self._tickets:
-            self._embedding_matrix = None
-            self._ticket_ids = []
-            self._embedding_matrix_dirty = False
-            return
+        with self._lock:
+            if not self._tickets:
+                self._embedding_matrix = None
+                self._ticket_ids = []
+                self._embedding_matrix_dirty = False
+                return
 
-        tickets = list(self._tickets)  # consistent snapshot
-        self._ticket_ids = [tid for tid, _, _ in tickets]
-        embeddings = [emb for _, emb, _ in tickets]
+            tickets = list(self._tickets)  # consistent snapshot
+            self._ticket_ids = [tid for tid, _, _ in tickets]
+            embeddings = [emb for _, emb, _ in tickets]
 
         if _HAS_NUMPY:
             self._embedding_matrix = np.vstack(embeddings).astype(np.float32)
@@ -203,11 +204,12 @@ class DuplicateService:
                     if not isinstance(data, list):
                         data = []
                     data = data[-MAX_CACHE_ENTRIES:]
-                    for item in data:
-                        text = item["text"]
-                        embedding = self._encode(text)
-                        self._tickets.append((item["ticket_id"], embedding, text))
-                    self._embedding_matrix_dirty = True
+                    with self._lock:
+                        for item in data:
+                            text = item["text"]
+                            embedding = self._encode(text)
+                            self._tickets.append((item["ticket_id"], embedding, text))
+                        self._embedding_matrix_dirty = True
                     logger.info(
                         "[DuplicateService] Loaded %d tickets from storage.",
                         len(self._tickets),
@@ -232,26 +234,45 @@ class DuplicateService:
     # ------------------------------------------------------------------
 
     def save_to_disk(self, ticket_id: str, text: str) -> None:
-        """Append a new ticket entry to the JSON persistence file."""
-        data: list = []
-        try:
-            os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
-            if os.path.exists(self.storage_file):
-                with open(self.storage_file, "r") as f:
-                    try:
-                        data = json.load(f)
-                        if not isinstance(data, list):
-                            data = []
-                    except Exception:
-                        data = []
+        """Append a new ticket entry to the JSON persistence file.
 
-            data.append({"ticket_id": ticket_id, "text": text})
-            data = data[-MAX_CACHE_ENTRIES:]
-            with open(self.storage_file, "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
-        except Exception as exc:
-            print(f"[DuplicateService] Failed to save to disk: {exc}")
+        Uses a threading lock and atomic write (tempfile + os.replace)
+        to prevent concurrent JSON corruption under FastAPI async workers.
+        """
+        with self._lock:
+            data: list = []
+            try:
+                os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
+                if os.path.exists(self.storage_file):
+                    with open(self.storage_file, "r") as f:
+                        try:
+                            data = json.load(f)
+                            if not isinstance(data, list):
+                                data = []
+                        except Exception:
+                            data = []
+
+                data.append({"ticket_id": ticket_id, "text": text})
+                data = data[-MAX_CACHE_ENTRIES:]
+
+                # Atomic write via temp file + os.replace to prevent torn writes
+                fd, tmp_path = tempfile.mkstemp(
+                    dir=os.path.dirname(self.storage_file), suffix=".tmp"
+                )
+                try:
+                    with os.fdopen(fd, "w") as tf:
+                        json.dump(data, tf, indent=2)
+                    os.replace(tmp_path, self.storage_file)
+                except Exception:
+                    try:
+                        os.unlink(tmp_path)
+                    except Exception:
+                        pass
+                    raise
+
+                print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
+            except Exception as exc:
+                print(f"[DuplicateService] Failed to save to disk: {exc}")
 
     def add_ticket(self, ticket_id: str, text: str) -> None:
         """Add a ticket to the in-memory store and persist to disk.
@@ -342,9 +363,9 @@ class DuplicateService:
                 "[DuplicateService] DEGRADED: Duplicate check skipped (model not available)"
             )
             return {
-                "duplicate_ticket_id": ticket_id,
-                "similarity_score": round(best_score, 4),
-                "original_text": original_text,
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "similarity": 0.0,
             }
 
         use_default_threshold = threshold is None
