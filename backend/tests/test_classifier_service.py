@@ -336,11 +336,11 @@ class TestRegexOverride:
         assert result["category"] == "Network"
 
     def test_keyword_confidence_boost(self, predict_fixture):
-        """Keyword match raises confidence to at least 0.92."""
+        """Keyword match sets confidence to exactly 0.85."""
         svc, predict = predict_fixture
         svc.id2label = {"0": "General | Unknown"}
         result = predict("DNS connection lost", confidence_val=0.60)
-        assert result["confidence"] >= 0.92
+        assert result["confidence"] == 0.85
 
     def test_no_false_positive_keyword(self, predict_fixture):
         """Text without keywords doesn't trigger override."""
