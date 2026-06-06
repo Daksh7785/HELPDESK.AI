@@ -1,1 +1,315 @@
-IiIiClVuaXQgdGVzdHMgZm9yIE5vdGlmaWNhdGlvblJvdXRpbmdNaWRkbGV3YXJlIChiYWNrZW5kL3NlcnZpY2VzL25vdGlmaWNhdGlvbl9yb3V0aW5nLnB5KS4KCkNvdmVyczoKLSBzaG91bGRfc2VuZF9lbWFpbF9ub3RpZmljYXRpb24gd2l0aCBhbGwgTm90aWZpY2F0aW9uVHlwZSB2YXJpYW50cwotIHNob3VsZF9zZW5kX2FkbWluX2FsZXJ0IGVuYWJsZWQgLyBkaXNhYmxlZCAvIE5vbmUKLSBzaG91bGRfc2VuZF9wdXNoX25vdGlmaWNhdGlvbiBlbmFibGVkIC8gZGlzYWJsZWQKLSBDb21wYW55IHNldHRpbmdzIGNhY2hpbmcgYW5kIGNhY2hlIGludmFsaWRhdGlvbgotIEZhaWwtb3BlbiBiZWhhdmlvdXIgd2hlbiBTdXBhYmFzZSBpcyB1bnJlYWNoYWJsZQotIERpZ2VzdCBmcmVxdWVuY3kgZ2F0aW5nIChkYWlseSB2cyB3ZWVrbHkgdnMgZGlzYWJsZWQpCiIiIgoKaW1wb3J0IHB5dGVzdApmcm9tIHVuaXR0ZXN0Lm1vY2sgaW1wb3J0IE1hZ2ljTW9jaywgcGF0Y2gsIFByb3BlcnR5TW9jawpmcm9tIGRhdGV0aW1lIGltcG9ydCBkYXRldGltZSwgdGltZXpvbmUKCiMgSW1wb3J0IHRoZSBtb2R1bGUgdW5kZXIgdGVzdAppbXBvcnQgc3lzCmltcG9ydCBvcwoKIyBFbnN1cmUgdGhlIGJhY2tlbmQgZGlyZWN0b3J5IGlzIG9uIHRoZSBwYXRoCnN5cy5wYXRoLmluc2VydCgwLCBvcy5wYXRoLmpvaW4ob3MucGF0aC5kaXJuYW1lKF9fZmlsZV9fKSwgIi4uIikpCgpmcm9tIHNlcnZpY2VzLm5vdGlmaWNhdGlvbl9yb3V0aW5nIGltcG9ydCAoCiAgICBOb3RpZmljYXRpb25Sb3V0aW5nTWlkZGxld2FyZSwKICAgIE5vdGlmaWNhdGlvblR5cGUsCikKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQojIEZpeHR1cmVzCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgpAcHl0ZXN0LmZpeHR1cmUKZGVmIG1vY2tfc3VwYWJhc2UoKToKICAgICIiIkNyZWF0ZSBhIG1vY2tlZCBTdXBhYmFzZSBjbGllbnQuIiIiCiAgICBjbGllbnQgPSBNYWdpY01vY2soKQogICAgcmV0dXJuIGNsaWVudAoKCkBweXRlc3QuZml4dHVyZQpkZWYgbWlkZGxld2FyZShtb2NrX3N1cGFiYXNlKToKICAgICIiIkNyZWF0ZSBhIE5vdGlmaWNhdGlvblJvdXRpbmdNaWRkbGV3YXJlIHdpdGggYSBtb2NrZWQgU3VwYWJhc2UgY2xpZW50LiIiIgogICAgd2l0aCBwYXRjaCgic2VydmljZXMubm90aWZpY2F0aW9uX3JvdXRpbmcuY3JlYXRlX2NsaWVudCIsIHJldHVybl92YWx1ZT1tb2NrX3N1cGFiYXNlKToKICAgICAgICBtID0gTm90aWZpY2F0aW9uUm91dGluZ01pZGRsZXdhcmUoKQogICAgICAgIG0uc3VwYWJhc2UgPSBtb2NrX3N1cGFiYXNlCiAgICAgICAgcmV0dXJuIG0KCgpkZWYgX21ha2Vfc2V0dGluZ3MoZW1haWw9VHJ1ZSwgYWRtaW49VHJ1ZSwgZGlnZXN0PSJkYWlseSIpOgogICAgIiIiSGVscGVyIHRvIGJ1aWxkIGEgc2V0dGluZ3MgZGljdC4iIiIKICAgIHJldHVybiB7CiAgICAgICAgImVtYWlsX25vdGlmaWNhdGlvbnMiOiBlbWFpbCwKICAgICAgICAiYWRtaW5fYWxlcnRzIjogYWRtaW4sCiAgICAgICAgImRpZ2VzdF9mcmVxdWVuY3kiOiBkaWdlc3QsCiAgICB9CgoKZGVmIF9tb2NrX3NldHRpbmdzX3Jlc3BvbnNlKHNldHRpbmdzKToKICAgICIiIldyYXAgc2V0dGluZ3MgaW4gYSBtb2NrIFN1cGFiYXNlIHJlc3BvbnNlLiIiIgogICAgcmVzcCA9IE1hZ2ljTW9jaygpCiAgICByZXNwLmRhdGEgPSBzZXR0aW5ncwogICAgcmV0dXJuIHJlc3AKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQojIHNob3VsZF9zZW5kX2VtYWlsX25vdGlmaWNhdGlvbgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQoKY2xhc3MgVGVzdFNob3VsZFNlbmRFbWFpbE5vdGlmaWNhdGlvbjoKICAgICIiIlRlc3RzIGZvciBzaG91bGRfc2VuZF9lbWFpbF9ub3RpZmljYXRpb24uIiIiCgogICAgZGVmIHRlc3RfYWxsb3dzX3RpY2tldF9hbGVydF93aGVuX2VtYWlsX2VuYWJsZWQoc2VsZiwgbWlkZGxld2FyZSwgbW9ja19zdXBhYmFzZSk6CiAgICAgICAgbW9ja19zdXBhYmFzZS50YWJsZS5yZXR1cm5fdmFsdWUuc2VsZWN0LnJldHVybl92YWx1ZS5lcS5yZXR1cm5fdmFsdWUuc2luZ2xlLnJldHVybl92YWx1ZSBcCiAgICAgICAgICAgIC5leGVjdXRlLnJldHVybl92YWx1ZSA9IF9tb2NrX3NldHRpbmdzX3Jlc3BvbnNlKF9tYWtlX3NldHRpbmdzKCkpCgogICAgICAgIHJlc3VsdCA9IG1pZGRsZXdhcmUuc2hvdWxkX3NlbmRfZW1haWxfbm90aWZpY2F0aW9uKCJjby0xIiwgTm90aWZpY2F0aW9uVHlwZS5USUNLRVRfQUxFUlQpCiAgICAgICAgYXNzZXJ0IHJlc3VsdCBpcyBUcnVlCgogICAgZGVmIHRlc3RfYmxvY2tzX3RpY2tldF9hbGVydF93aGVuX2VtYWlsX2Rpc2FibGVkKHNlbGYsIG1pZGRsZXdhcmUsIG1vY2tfc3VwYWJhc2UpOgogICAgICAgIG1vY2tfc3VwYWJhc2UudGFibGUucmV0dXJuX3ZhbHVlLnNlbGVjdC5yZXR1cm5fdmFsdWUuZXEucmV0dXJuX3ZhbHVlLnNpbmdsZS5yZXR1cm5fdmFsdWUgXAogICAgICAgICAgICAuZXhlY3V0ZS5yZXR1cm5fdmFsdWUgPSBfbW9ja19zZXR0aW5nc19yZXNwb25zZShfbWFrZV9zZXR0aW5ncyhlbWFpbD1GYWxzZSkpCgogICAgICAgIHJlc3VsdCA9IG1pZGRsZXdhcmUuc2hvdWxkX3NlbmRfZW1haWxfbm90aWZpY2F0aW9uKCJjby0xIiwgTm90aWZpY2F0aW9uVHlwZS5USUNLRVRfQUxFUlQpCiAgICAgICAgYXNzZXJ0IHJlc3VsdCBpcyBGYWxzZQoKICAgIGRlZiB0ZXN0X2FsbG93c19kYWlseV9kaWdlc3Rfd2hlbl9mcmVxdWVuY3lfaXNfZGFpbHkoc2VsZiwgbWlkZGxld2FyZSwgbW9ja19zdXBhYmFzZSk6CiAgICAgICAgbW9ja19zdXBhYmFzZS50YWJsZS5yZXR1cm5fdmFsdWUuc2VsZWN0LnJldHVybl92YWx1ZS5lcS5yZXR1cm5fdmFsdWUuc2luZ2xlLnJldHVybl92YWx1ZSBcCiAgICAgICAgICAgIC5leGVjdXRlLnJldHVybl92YWx1ZSA9IF9tb2NrX3NldHRpbmdzX3Jlc3BvbnNlKF9tYWtlX3NldHRpbmdzKGRpZ2VzdD0iZGFpbHkiKSkKCiAgICAgICAgcmVzdWx0ID0gbWlkZGxld2FyZS5zaG91bGRfc2VuZF9lbWFpbF9ub3RpZmljYXRpb24oImNvLTEiLCBOb3RpZmljYXRpb25UeXBlLkRBSUxZX0RJR0VTVCkKICAgICAgICBhc3NlcnQgcmVzdWx0IGlzIFRydWUKCiAgICBkZWYgdGVzdF9ibG9ja3Nfd2Vla2x5X2RpZ2VzdF93aGVuX2ZyZXF1ZW5jeV9pc19kYWlseShzZWxmLCBtaWRkbGV3YXJlLCBtb2NrX3N1cGFiYXNlKToKICAgICAgICBtb2NrX3N1cGFiYXNlLnRhYmxlLnJldHVybl92YWx1ZS5zZWxlY3QucmV0dXJuX3ZhbHVlLmVxLnJldHVybl92YWx1ZS5zaW5nbGUucmV0dXJuX3ZhbHVlIFwKICAgICAgICAgICAgLmV4ZWN1dGUucmV0dXJuX3ZhbHVlID0gX21vY2tfc2V0dGluZ3NfcmVzcG9uc2UoX21ha2Vfc2V0dGluZ3MoZGlnZXN0PSJkYWlseSIpKQoKICAgICAgICByZXN1bHQgPSBtaWRkbGV3YXJlLnNob3VsZF9zZW5kX2VtYWlsX25vdGlmaWNhdGlvbigiY28tMSIsIE5vdGlmaWNhdGlvblR5cGUuV0VFS0xZX0RJR0VTVCkKICAgICAgICBhc3NlcnQgcmVzdWx0IGlzIEZhbHNlCgogICAgZGVmIHRlc3RfYWxsb3dzX3dlZWtseV9kaWdlc3Rfd2hlbl9mcmVxdWVuY3lfaXNfd2Vla2x5KHNlbGYsIG1pZGRsZXdhcmUsIG1vY2tfc3VwYWJhc2UpOgogICAgICAgIG1vY2tfc3VwYWJhc2UudGFibGUucmV0dXJuX3ZhbHVlLnNlbGVjdC5yZXR1cm5fdmFsdWUuZXEucmV0dXJuX3ZhbHVlLnNpbmdsZS5yZXR1cm5fdmFsdWUgXAogICAgICAgICAgICAuZXhlY3V0ZS5yZXR1cm5fdmFsdWUgPSBfbW9ja19zZXR0aW5nc19yZXNwb25zZShfbWFrZV9zZXR0aW5ncyhkaWdlc3Q9IndlZWtseSIpKQoKICAgICAgICByZXN1bHQgPSBtaWRkbGV3YXJlLnNob3VsZF9zZW5kX2VtYWlsX25vdGlmaWNhdGlvbigiY28tMSIsIE5vdGlmaWNhdGlvblR5cGUuV0VFS0xZX0RJR0VTVCkKICAgICAgICBhc3NlcnQgcmVzdWx0IGlzIFRydWUKCiAgICBkZWYgdGVzdF9ibG9ja3NfZGFpbHlfZGlnZXN0X3doZW5fZnJlcXVlbmN5X2lzX2Rpc2FibGVkKHNlbGYsIG1pZGRsZXdhcmUsIG1vY2tfc3VwYWJhc2UpOgogICAgICAgIG1vY2tfc3VwYWJhc2UudGFibGUucmV0dXJuX3ZhbHVlLnNlbGVjdC5yZXR1cm5fdmFsdWUuZXEucmV0dXJuX3ZhbHVlLnNpbmdsZS5yZXR1cm5fdmFsdWUgXAogICAgICAgICAgICAuZXhlY3V0ZS5yZXR1cm5fdmFsdWUgPSBfbW9ja19zZXR0aW5nc19yZXNwb25zZShfbWFrZV9zZXR0aW5ncyhkaWdlc3Q9ImRpc2FibGVkIikpCgogICAgICAgIHJlc3VsdCA9IG1pZGRsZXdhcmUuc2hvdWxkX3NlbmRfZW1haWxfbm90aWZpY2F0aW9uKCJjby0xIiwgTm90aWZpY2F0aW9uVHlwZS5EQUlMWV9ESUdFU1QpCiAgICAgICAgYXNzZXJ0IHJlc3VsdCBpcyBGYWxzZQoKICAgIGRlZiB0ZXN0X2Jsb2Nrc193ZWVrbHlfZGlnZXN0X3doZW5fZnJlcXVlbmN5X2lzX2Rpc2FibGVkKHNlbGYsIG1pZGRsZXdhcmUsIG1vY2tfc3VwYWJhc2UpOgogICAgICAgIG1vY2tfc3VwYWJhc2UudGFibGUucmV0dXJuX3ZhbHVlLnNlbGVjdC5yZXR1cm5fdmFsdWUuZXEucmV0dXJuX3ZhbHVlLnNpbmdsZS5yZXR1cm5fdmFsdWUgXAogICAgICAgICAgICAuZXhlY3V0ZS5yZXR1cm5fdmFsdWUgPSBfbW9ja19zZXR0aW5nc19yZXNwb25zZShfbWFrZV9zZXR0aW5ncyhkaWdlc3Q9ImRpc2FibGVkIikpCgogICAgICAgIHJlc3VsdCA9IG1pZGRsZXdhcmUuc2hvdWxkX3NlbmRfZW1haWxfbm90aWZpY2F0aW9uKCJjby0xIiwgTm90aWZpY2F0aW9uVHlwZS5XRUVLTFlfRElHRVNUKQogICAgICAgIGFzc2VydCByZXN1bHQgaXMgRmFsc2UKCiAgICBkZWYgdGVzdF9hbGxvd3NfYWRtaW5fYWxlcnRfdHlwZV93aGVuX2VtYWlsX2VuYWJsZWQoc2VsZiwgbWlkZGxld2FyZSwgbW9ja19zdXBhYmFzZSk6CiAgICAgICAgbW9ja19zdXBhYmFzZS50YWJsZS5yZXR1cm5fdmFsdWUuc2VsZWN0LnJldHVybl92YWx1ZS5lcS5yZXR1cm5fdmFsdWUuc2luZ2xlLnJldHVybl92YWx1ZSBcCiAgICAgICAgICAgIC5leGVjdXRlLnJldHVybl92YWx1ZSA9IF9tb2NrX3NldHRpbmdzX3Jlc3BvbnNlKF9tYWtlX3NldHRpbmdzKCkpCgogICAgICAgIHJlc3VsdCA9IG1pZGRsZXdhcmUuc2hvdWxkX3NlbmRfZW1haWxfbm90aWZpY2F0aW9uKCJjby0xIiwgTm90aWZpY2F0aW9uVHlwZS5BRE1JTl9BTEVSVCkKICAgICAgICBhc3NlcnQgcmVzdWx0IGlzIFRydWUKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQojIHNob3VsZF9zZW5kX2FkbWluX2FsZXJ0CiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgpjbGFzcyBUZXN0U2hvdWxkU2VuZEFkbWluQWxlcnQ6CiAgICAiIiJUZXN0cyBmb3Igc2hvdWxkX3NlbmRfYWRtaW5fYWxlcnQuIiIiCgogICAgZGVmIHRlc3RfYWxsb3dzX3doZW5fYWRtaW5fYWxlcnRzX2VuYWJsZWQoc2VsZiwgbWlkZGxld2FyZSwgbW9ja19zdXBhYmFzZSk6CiAgICAgICAgbW9ja19zdXBhYmFzZS50YWJsZS5yZXR1cm5fdmFsdWUuc2VsZWN0LnJldHVybl92YWx1ZS5lcS5yZXR1cm5fdmFsdWUuc2luZ2xlLnJldHVybl92YWx1ZSBcCiAgICAgICAgICAgIC5leGVjdXRlLnJldHVybl92YWx1ZSA9IF9tb2NrX3NldHRpbmdzX3Jlc3BvbnNlKF9tYWtlX3NldHRpbmdzKGFkbWluPVRydWUpKQoKICAgICAgICByZXN1bHQgPSBtaWRkbGV3YXJlLnNob3VsZF9zZW5kX2FkbWluX2FsZXJ0KCJjby0xIikKICAgICAgICBhc3NlcnQgcmVzdWx0IGlzIFRydWUKCiAgICBkZWYgdGVzdF9ibG9ja3Nfd2hlbl9hZG1pbl9hbGVydHNfZGlzYWJsZWQoc2VsZiwgbWlkZGxld2FyZSwgbW9ja19zdXBhYmFzZSk6CiAgICAgICAgbW9ja19zdXBhYmFzZS50YWJsZS5yZXR1cm5fdmFsdWUuc2VsZWN0LnJldHVybl92YWx1ZS5lcS5yZXR1cm5fdmFsdWUuc2luZ2xlLnJldHVybl92YWx1ZSBcCiAgICAgICAgICAgIC5leGVjdXRlLnJldHVybl92YWx1ZSA9IF9tb2NrX3NldHRpbmdzX3Jlc3BvbnNlKF9tYWtlX3NldHRpbmdzKGFkbWluPUZhbHNlKSkKCiAgICAgICAgcmVzdWx0ID0gbWlkZGxld2FyZS5zaG91bGRfc2VuZF9hZG1pbl9hbGVydCgiY28tMSIpCiAgICAgICAgYXNzZXJ0IHJlc3VsdCBpcyBGYWxzZQoKICAgIGRlZiB0ZXN0X2Jsb2Nrc193aGVuX2FkbWluX2FsZXJ0c19pc19ub25lKHNlbGYsIG1pZGRsZXdhcmUsIG1vY2tfc3VwYWJhc2UpOgogICAgICAgIHNldHRpbmdzID0gX21ha2Vfc2V0dGluZ3MoKQogICAgICAgIHNldHRpbmdzWyJhZG1pbl9hbGVydHMiXSA9IE5vbmUKICAgICAgICBtb2NrX3N1cGFiYXNlLnRhYmxlLnJldHVybl92YWx1ZS5zZWxlY3QucmV0dXJuX3ZhbHVlLmVxLnJldHVybl92YWx1ZS5zaW5nbGUucmV0dXJuX3ZhbHVlIFwKICAgICAgICAgICAgLmV4ZWN1dGUucmV0dXJuX3ZhbHVlID0gX21vY2tfc2V0dGluZ3NfcmVzcG9uc2Uoc2V0dGluZ3MpCgogICAgICAgIHJlc3VsdCA9IG1pZGRsZXdhcmUuc2hvdWxkX3NlbmRfYWRtaW5fYWxlcnQoImNvLTEiKQogICAgICAgIGFzc2VydCByZXN1bHQgaXMgRmFsc2UKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQojIHNob3VsZF9zZW5kX3B1c2hfbm90aWZpY2F0aW9uCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgpjbGFzcyBUZXN0U2hvdWxkU2VuZFB1c2hOb3RpZmljYXRpb246CiAgICAiIiJUZXN0cyBmb3Igc2hvdWxkX3NlbmRfcHVzaF9ub3RpZmljYXRpb24uIiIiCgogICAgZGVmIHRlc3RfYWxsb3dzX3B1c2hfd2hlbl9lbWFpbF9lbmFibGVkKHNlbGYsIG1pZGRsZXdhcmUsIG1vY2tfc3VwYWJhc2UpOgogICAgICAgIG1vY2tfc3VwYWJhc2UudGFibGUucmV0dXJuX3ZhbHVlLnNlbGVjdC5yZXR1cm5fdmFsdWUuZXEucmV0dXJuX3ZhbHVlLnNpbmdsZS5yZXR1cm5fdmFsdWUgXAogICAgICAgICAgICAuZXhlY3V0ZS5yZXR1cm5fdmFsdWUgPSBfbW9ja19zZXR0aW5nc19yZXNwb25zZShfbWFrZV9zZXR0aW5ncyhlbWFpbD1UcnVlKSkKCiAgICAgICAgcmVzdWx0ID0gbWlkZGxld2FyZS5zaG91bGRfc2VuZF9wdXNoX25vdGlmaWNhdGlvbigiY28tMSIpCiAgICAgICAgYXNzZXJ0IHJlc3VsdCBpcyBUcnVlCgogICAgZGVmIHRlc3RfYmxvY2tzX3B1c2hfd2hlbl9lbWFpbF9kaXNhYmxlZChzZWxmLCBtaWRkbGV3YXJlLCBtb2NrX3N1cGFiYXNlKToKICAgICAgICBtb2NrX3N1cGFiYXNlLnRhYmxlLnJldHVybl92YWx1ZS5zZWxlY3QucmV0dXJuX3ZhbHVlLmVxLnJldHVybl92YWx1ZS5zaW5nbGUucmV0dXJuX3ZhbHVlIFwKICAgICAgICAgICAgLmV4ZWN1dGUucmV0dXJuX3ZhbHVlID0gX21vY2tfc2V0dGluZ3NfcmVzcG9uc2UoX21ha2Vfc2V0dGluZ3MoZW1haWw9RmFsc2UpKQoKICAgICAgICByZXN1bHQgPSBtaWRkbGV3YXJlLnNob3VsZF9zZW5kX3B1c2hfbm90aWZpY2F0aW9uKCJjby0xIikKICAgICAgICBhc3NlcnQgcmVzdWx0IGlzIEZhbHNlCgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KIyBDYWNoaW5nCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgpjbGFzcyBUZXN0Q2FjaGluZzoKICAgICIiIlRlc3RzIGZvciBzZXR0aW5ncyBjYWNoaW5nIGJlaGF2aW91ci4iIiIKCiAgICBkZWYgdGVzdF9zZXR0aW5nc19hcmVfY2FjaGVkKHNlbGYsIG1pZGRsZXdhcmUsIG1vY2tfc3VwYWJhc2UpOgogICAgICAgIG1vY2tfc3VwYWJhc2UudGFibGUucmV0dXJuX3ZhbHVlLnNlbGVjdC5yZXR1cm5fdmFsdWUuZXEucmV0dXJuX3ZhbHVlLnNpbmdsZS5yZXR1cm5fdmFsdWUgXAogICAgICAgICAgICAuZXhlY3V0ZS5yZXR1cm5fdmFsdWUgPSBfbW9ja19zZXR0aW5nc19yZXNwb25zZShfbWFrZV9zZXR0aW5ncygpKQoKICAgICAgICAjIEZpcnN0IGNhbGwgZmV0Y2hlcyBmcm9tIERCCiAgICAgICAgczEgPSBtaWRkbGV3YXJlLmdldF9zeXN0ZW1fc2V0dGluZ3MoImNvLTEiKQogICAgICAgICMgU2Vjb25kIGNhbGwgc2hvdWxkIHVzZSBjYWNoZSAoREIgbm90IGNhbGxlZCBhZ2FpbikKICAgICAgICBzMiA9IG1pZGRsZXdhcmUuZ2V0X3N5c3RlbV9zZXR0aW5ncygiY28tMSIpCgogICAgICAgIGFzc2VydCBzMSA9PSBzMgogICAgICAgICMgU3VwYWJhc2UgdGFibGUgc2hvdWxkIG9ubHkgYmUgcXVlcmllZCBvbmNlCiAgICAgICAgYXNzZXJ0IG1vY2tfc3VwYWJhc2UudGFibGUuY2FsbF9jb3VudCA9PSAxCgogICAgZGVmIHRlc3RfY2FjaGVfaW52YWxpZGF0aW9uKHNlbGYsIG1pZGRsZXdhcmUsIG1vY2tfc3VwYWJhc2UpOgogICAgICAgIG1vY2tfc3VwYWJhc2UudGFibGUucmV0dXJuX3ZhbHVlLnNlbGVjdC5yZXR1cm5fdmFsdWUuZXEucmV0dXJuX3ZhbHVlLnNpbmdsZS5yZXR1cm5fdmFsdWUgXAogICAgICAgICAgICAuZXhlY3V0ZS5yZXR1cm5fdmFsdWUgPSBfbW9ja19zZXR0aW5nc19yZXNwb25zZShfbWFrZV9zZXR0aW5ncygpKQoKICAgICAgICBtaWRkbGV3YXJlLmdldF9zeXN0ZW1fc2V0dGluZ3MoImNvLTEiKQogICAgICAgIG1pZGRsZXdhcmUuaW52YWxpZGF0ZV9jYWNoZSgiY28tMSIpCgogICAgICAgICMgQWZ0ZXIgaW52YWxpZGF0aW9uLCBuZXh0IGNhbGwgc2hvdWxkIGhpdCBEQiBhZ2FpbgogICAgICAgIG1pZGRsZXdhcmUuZ2V0X3N5c3RlbV9zZXR0aW5ncygiY28tMSIpCiAgICAgICAgYXNzZXJ0IG1vY2tfc3VwYWJhc2UudGFibGUuY2FsbF9jb3VudCA9PSAyCgogICAgZGVmIHRlc3RfaW52YWxpZGF0ZV9ub25leGlzdGVudF9jb21wYW55X2RvZXNfbm90X2Vycm9yKHNlbGYsIG1pZGRsZXdhcmUpOgogICAgICAgICMgU2hvdWxkIG5vdCByYWlzZQogICAgICAgIG1pZGRsZXdhcmUuaW52YWxpZGF0ZV9jYWNoZSgibm9uZXhpc3RlbnQtY29tcGFueSIpCgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KIyBGYWlsLW9wZW4gYmVoYXZpb3VyCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgpjbGFzcyBUZXN0RmFpbE9wZW46CiAgICAiIiJUZXN0cyBmb3IgZmFpbC1vcGVuIHdoZW4gU3VwYWJhc2UgaXMgdW5yZWFjaGFibGUuIiIiCgogICAgZGVmIHRlc3RfZmFpbF9vcGVuX29uX2RiX2Vycm9yKHNlbGYsIG1pZGRsZXdhcmUsIG1vY2tfc3VwYWJhc2UpOgogICAgICAgIG1vY2tfc3VwYWJhc2UudGFibGUucmV0dXJuX3ZhbHVlLnNlbGVjdC5yZXR1cm5fdmFsdWUuZXEucmV0dXJuX3ZhbHVlLnNpbmdsZS5yZXR1cm5fdmFsdWUgXAogICAgICAgICAgICAuZXhlY3V0ZS5zaWRlX2VmZmVjdCA9IEV4Y2VwdGlvbigiQ29ubmVjdGlvbiByZWZ1c2VkIikKCiAgICAgICAgc2V0dGluZ3MgPSBtaWRkbGV3YXJlLmdldF9zeXN0ZW1fc2V0dGluZ3MoImNvLTEiKQogICAgICAgICMgU2hvdWxkIGdldCBkZWZhdWx0cyAoYWxsIGVuYWJsZWQpCiAgICAgICAgYXNzZXJ0IHNldHRpbmdzWyJlbWFpbF9ub3RpZmljYXRpb25zIl0gaXMgVHJ1ZQogICAgICAgIGFzc2VydCBzZXR0aW5nc1siYWRtaW5fYWxlcnRzIl0gaXMgVHJ1ZQogICAgICAgIGFzc2VydCBzZXR0aW5nc1siZGlnZXN0X2ZyZXF1ZW5jeSJdID09ICJkYWlseSIKCiAgICBkZWYgdGVzdF9mYWlsX29wZW5fYWxsb3dzX25vdGlmaWNhdGlvbihzZWxmLCBtaWRkbGV3YXJlLCBtb2NrX3N1cGFiYXNlKToKICAgICAgICBtb2NrX3N1cGFiYXNlLnRhYmxlLnJldHVybl92YWx1ZS5zZWxlY3QucmV0dXJuX3ZhbHVlLmVxLnJldHVybl92YWx1ZS5zaW5nbGUucmV0dXJuX3ZhbHVlIFwKICAgICAgICAgICAgLmV4ZWN1dGUuc2lkZV9lZmZlY3QgPSBFeGNlcHRpb24oIkRCIGRvd24iKQoKICAgICAgICByZXN1bHQgPSBtaWRkbGV3YXJlLnNob3VsZF9zZW5kX2VtYWlsX25vdGlmaWNhdGlvbigiY28tMSIsIE5vdGlmaWNhdGlvblR5cGUuVElDS0VUX0FMRVJUKQogICAgICAgIGFzc2VydCByZXN1bHQgaXMgVHJ1ZQoKICAgIGRlZiB0ZXN0X2ZhaWxfb3Blbl9hbGxvd3NfYWRtaW5fYWxlcnQoc2VsZiwgbWlkZGxld2FyZSwgbW9ja19zdXBhYmFzZSk6CiAgICAgICAgbW9ja19zdXBhYmFzZS50YWJsZS5yZXR1cm5fdmFsdWUuc2VsZWN0LnJldHVybl92YWx1ZS5lcS5yZXR1cm5fdmFsdWUuc2luZ2xlLnJldHVybl92YWx1ZSBcCiAgICAgICAgICAgIC5leGVjdXRlLnNpZGVfZWZmZWN0ID0gRXhjZXB0aW9uKCJEQiBkb3duIikKCiAgICAgICAgcmVzdWx0ID0gbWlkZGxld2FyZS5zaG91bGRfc2VuZF9hZG1pbl9hbGVydCgiY28tMSIpCiAgICAgICAgYXNzZXJ0IHJlc3VsdCBpcyBUcnVlCgoKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KIyBOb3RpZmljYXRpb25UeXBlIGVudW0KIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCmNsYXNzIFRlc3ROb3RpZmljYXRpb25UeXBlOgogICAgIiIiVGVzdHMgZm9yIHRoZSBOb3RpZmljYXRpb25UeXBlIGVudW0uIiIiCgogICAgZGVmIHRlc3RfYWxsX3ZhbHVlc19leGlzdChzZWxmKToKICAgICAgICBhc3NlcnQgTm90aWZpY2F0aW9uVHlwZS5EQUlMWV9ESUdFU1QudmFsdWUgPT0gImRhaWx5X2RpZ2VzdCIKICAgICAgICBhc3NlcnQgTm90aWZpY2F0aW9uVHlwZS5XRUVLTFlfRElHRVNULnZhbHVlID09ICJ3ZWVrbHlfZGlnZXN0IgogICAgICAgIGFzc2VydCBOb3RpZmljYXRpb25UeXBlLlRJQ0tFVF9BTEVSVC52YWx1ZSA9PSAidGlja2V0X2FsZXJ0IgogICAgICAgIGFzc2VydCBOb3RpZmljYXRpb25UeXBlLkFETUlOX0FMRVJULnZhbHVlID09ICJhZG1pbl9hbGVydCIKICAgICAgICBhc3NlcnQgTm90aWZpY2F0aW9uVHlwZS5QVVNIX05PVElGSUNBVElPTi52YWx1ZSA9PSAicHVzaF9ub3RpZmljYXRpb24iCgogICAgZGVmIHRlc3RfZW51bV9pc19zdHJpbmdfc3ViY2xhc3Moc2VsZik6CiAgICAgICAgYXNzZXJ0IGlzaW5zdGFuY2UoTm90aWZpY2F0aW9uVHlwZS5EQUlMWV9ESUdFU1QsIHN0cikK
+"""
+Unit tests for NotificationRoutingMiddleware (backend/services/notification_routing.py).
+
+Covers:
+- should_send_email_notification with all NotificationType variants
+- should_send_admin_alert enabled / disabled / None
+- should_send_push_notification enabled / disabled
+- Company settings caching and cache invalidation
+- Fail-open behaviour when Supabase is unreachable
+- Digest frequency gating (daily vs weekly vs disabled)
+- UUID validation for company_id
+- Cache TTL expiration
+- Cache max size eviction
+"""
+
+import pytest
+from unittest.mock import MagicMock, patch, PropertyMock
+from datetime import datetime, timezone, timedelta
+import sys
+import os
+import time
+
+# Ensure the backend directory is on the path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from services.notification_routing import (
+    NotificationRoutingMiddleware,
+    NotificationType,
+)
+
+VALID_CO_UUID = "12345678-1234-5678-1234-567812345678"
+VALID_CO_UUID_2 = "87654321-4321-8765-4321-876543210987"
+VALID_CO_UUID_3 = "11111111-2222-3333-4444-555555555555"
+
+@pytest.fixture
+def mock_supabase():
+    """Create a mocked Supabase client."""
+    client = MagicMock()
+    return client
+
+
+@pytest.fixture
+def middleware(mock_supabase):
+    """Create a NotificationRoutingMiddleware with a mocked Supabase client."""
+    with patch("services.notification_routing.create_client", return_value=mock_supabase):
+        m = NotificationRoutingMiddleware()
+        m.supabase = mock_supabase
+        return m
+
+
+def _make_settings(email=True, admin=True, digest="daily"):
+    """Helper to build a settings dict."""
+    return {
+        "email_notifications": email,
+        "admin_alerts": admin,
+        "digest_frequency": digest,
+    }
+
+
+def _mock_settings_response(settings):
+    """Wrap settings in a mock Supabase response."""
+    resp = MagicMock()
+    resp.data = settings
+    return resp
+
+
+# ---------------------------------------------------------------------------
+# should_send_email_notification
+# ---------------------------------------------------------------------------
+
+class TestShouldSendEmailNotification:
+    """Tests for should_send_email_notification."""
+
+    def test_allows_ticket_alert_when_email_enabled(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings())
+
+        result = middleware.should_send_email_notification(VALID_CO_UUID, NotificationType.TICKET_ALERT)
+        assert result is True
+
+    def test_blocks_ticket_alert_when_email_disabled(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(email=False))
+
+        result = middleware.should_send_email_notification(VALID_CO_UUID, NotificationType.TICKET_ALERT)
+        assert result is False
+
+    def test_allows_daily_digest_when_frequency_is_daily(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(digest="daily"))
+
+        result = middleware.should_send_email_notification(VALID_CO_UUID, NotificationType.DAILY_DIGEST)
+        assert result is True
+
+    def test_blocks_weekly_digest_when_frequency_is_daily(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(digest="daily"))
+
+        result = middleware.should_send_email_notification(VALID_CO_UUID, NotificationType.WEEKLY_DIGEST)
+        assert result is False
+
+    def test_allows_weekly_digest_when_frequency_is_weekly(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(digest="weekly"))
+
+        result = middleware.should_send_email_notification(VALID_CO_UUID, NotificationType.WEEKLY_DIGEST)
+        assert result is True
+
+    def test_blocks_daily_digest_when_frequency_is_disabled(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(digest="disabled"))
+
+        result = middleware.should_send_email_notification(VALID_CO_UUID, NotificationType.DAILY_DIGEST)
+        assert result is False
+
+    def test_blocks_weekly_digest_when_frequency_is_disabled(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(digest="disabled"))
+
+        result = middleware.should_send_email_notification(VALID_CO_UUID, NotificationType.WEEKLY_DIGEST)
+        assert result is False
+
+    def test_allows_admin_alert_type_when_email_enabled(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings())
+
+        result = middleware.should_send_email_notification(VALID_CO_UUID, NotificationType.ADMIN_ALERT)
+        assert result is True
+
+
+# ---------------------------------------------------------------------------
+# should_send_admin_alert
+# ---------------------------------------------------------------------------
+
+class TestShouldSendAdminAlert:
+    """Tests for should_send_admin_alert."""
+
+    def test_allows_when_admin_alerts_enabled(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(admin=True))
+
+        result = middleware.should_send_admin_alert(VALID_CO_UUID)
+        assert result is True
+
+    def test_blocks_when_admin_alerts_disabled(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(admin=False))
+
+        result = middleware.should_send_admin_alert(VALID_CO_UUID)
+        assert result is False
+
+    def test_blocks_when_admin_alerts_is_none(self, middleware, mock_supabase):
+        settings = _make_settings()
+        settings["admin_alerts"] = None
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(settings)
+
+        result = middleware.should_send_admin_alert(VALID_CO_UUID)
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+# should_send_push_notification
+# ---------------------------------------------------------------------------
+
+class TestShouldSendPushNotification:
+    """Tests for should_send_push_notification."""
+
+    def test_allows_push_when_email_enabled(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(email=True))
+
+        result = middleware.should_send_push_notification(VALID_CO_UUID)
+        assert result is True
+
+    def test_blocks_push_when_email_disabled(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings(email=False))
+
+        result = middleware.should_send_push_notification(VALID_CO_UUID)
+        assert result is False
+
+
+# ---------------------------------------------------------------------------
+# Caching & Cache Safety
+# ---------------------------------------------------------------------------
+
+class TestCaching:
+    """Tests for settings caching behaviour."""
+
+    def test_settings_are_cached(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings())
+
+        # First call fetches from DB
+        s1 = middleware.get_system_settings(VALID_CO_UUID)
+        # Second call should use cache (DB not called again)
+        s2 = middleware.get_system_settings(VALID_CO_UUID)
+
+        assert s1 == s2
+        # Supabase table should only be queried once
+        assert mock_supabase.table.call_count == 1
+
+    def test_cache_invalidation(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings())
+
+        middleware.get_system_settings(VALID_CO_UUID)
+        middleware.invalidate_cache(VALID_CO_UUID)
+
+        # After invalidation, next call should hit DB again
+        middleware.get_system_settings(VALID_CO_UUID)
+        assert mock_supabase.table.call_count == 2
+
+    def test_invalidate_nonexistent_company_does_not_error(self, middleware):
+        # Should not raise
+        middleware.invalidate_cache(VALID_CO_UUID)
+
+    def test_uuid_validation_raises_on_invalid_format(self, middleware):
+        with pytest.raises(ValueError) as exc:
+            middleware.get_system_settings("invalid-uuid-string")
+        assert "must be a valid UUID string" in str(exc.value)
+
+    def test_cache_ttl_expiration(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings())
+
+        # Load into cache
+        middleware.get_system_settings(VALID_CO_UUID)
+        assert mock_supabase.table.call_count == 1
+
+        # Modify cached_at to be older than TTL
+        from services import notification_routing
+        with notification_routing._cache_lock:
+            middleware._settings_cache[VALID_CO_UUID]["cached_at"] = (
+                datetime.now(timezone.utc) - timedelta(seconds=notification_routing.SETTINGS_CACHE_TTL_SECONDS + 1)
+            )
+
+        # Next call should be cache miss due to TTL expiration
+        middleware.get_system_settings(VALID_CO_UUID)
+        assert mock_supabase.table.call_count == 2
+
+    def test_cache_max_size_eviction(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.return_value = _mock_settings_response(_make_settings())
+
+        from services import notification_routing
+        # Force a small max size for testing
+        original_max = notification_routing.SETTINGS_CACHE_MAX_SIZE
+        notification_routing.SETTINGS_CACHE_MAX_SIZE = 2
+
+        try:
+            # Query for 3 different UUIDs
+            middleware.get_system_settings(VALID_CO_UUID)
+            middleware.get_system_settings(VALID_CO_UUID_2)
+            assert len(middleware._settings_cache) == 2
+
+            # This should trigger eviction of the oldest (VALID_CO_UUID)
+            middleware.get_system_settings(VALID_CO_UUID_3)
+            assert len(middleware._settings_cache) == 2
+            assert VALID_CO_UUID not in middleware._settings_cache
+            assert VALID_CO_UUID_2 in middleware._settings_cache
+            assert VALID_CO_UUID_3 in middleware._settings_cache
+        finally:
+            notification_routing.SETTINGS_CACHE_MAX_SIZE = original_max
+
+
+# ---------------------------------------------------------------------------
+# Fail-open behaviour
+# ---------------------------------------------------------------------------
+
+class TestFailOpen:
+    """Tests for fail-open when Supabase is unreachable."""
+
+    def test_fail_open_on_db_error(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.side_effect = Exception("Connection refused")
+
+        settings = middleware.get_system_settings(VALID_CO_UUID)
+        # Should get defaults (all enabled)
+        assert settings["email_notifications"] is True
+        assert settings["admin_alerts"] is True
+        assert settings["digest_frequency"] == "daily"
+
+    def test_fail_open_allows_notification(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.side_effect = Exception("DB down")
+
+        result = middleware.should_send_email_notification(VALID_CO_UUID, NotificationType.TICKET_ALERT)
+        assert result is True
+
+    def test_fail_open_allows_admin_alert(self, middleware, mock_supabase):
+        mock_supabase.table.return_value.select.return_value.eq.return_value.single.return_value \
+            .execute.side_effect = Exception("DB down")
+
+        result = middleware.should_send_admin_alert(VALID_CO_UUID)
+        assert result is True
+
+
+# ---------------------------------------------------------------------------
+# NotificationType enum
+# ---------------------------------------------------------------------------
+
+class TestNotificationType:
+    """Tests for the NotificationType enum."""
+
+    def test_all_values_exist(self):
+        assert NotificationType.DAILY_DIGEST.value == "daily_digest"
+        assert NotificationType.WEEKLY_DIGEST.value == "weekly_digest"
+        assert NotificationType.TICKET_ALERT.value == "ticket_alert"
+        assert NotificationType.ADMIN_ALERT.value == "admin_alert"
+        assert NotificationType.PUSH_NOTIFICATION.value == "push_notification"
+
+    def test_enum_is_string_subclass(self):
+        assert isinstance(NotificationType.DAILY_DIGEST, str)
