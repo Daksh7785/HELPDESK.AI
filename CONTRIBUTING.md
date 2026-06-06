@@ -75,20 +75,29 @@ We are proudly participating in **GSSoC 2026**! If you are a contributor from GS
 
 ## 🔐 GSSoC Integration Security Guide
 
-Integration work touches third-party services, user data, and deployment secrets. Treat every integration PR as security-sensitive, even when the change looks like a small provider, webhook, email, storage, or analytics update.
+Integration work touches third-party services, user data, and deployment secrets. Treat every integration PR as
+security-sensitive, even when the change looks like a small provider, webhook, email, storage, or analytics update.
 
 ### Required Security Checks
 
 Before opening an integration PR, verify the following:
 
-*   **No secrets in code:** Never commit API keys, webhook secrets, OAuth client secrets, private URLs, `.env` files, or real tokens. Use environment variables and update `.env.example` with placeholder names only.
-*   **Server-side trust boundary:** Keep privileged provider calls in the backend. Frontend code must not receive service-role keys, unrestricted provider tokens, or direct database write credentials.
-*   **Webhook validation:** Webhook endpoints must verify signatures or shared secrets, reject missing/invalid signatures, and avoid logging raw payload secrets.
-*   **OAuth and redirect safety:** OAuth callbacks must validate state/nonce values, use allowlisted redirect URLs, and avoid open redirects.
-*   **CORS and origin scope:** Do not widen CORS to `*` for authenticated routes. Document any new allowed origin and why it is needed.
-*   **Rate limits and retries:** Add rate limiting, timeout, and retry behavior for external APIs so a failing provider cannot exhaust backend resources.
-*   **PII minimization:** Log request IDs and provider status, not passwords, tokens, email bodies, chat transcripts, or full customer records.
-*   **Failure mode:** Integrations should fail closed for auth/security errors and return clear, non-sensitive error messages.
+*   **No secrets in code:** Never commit API keys, webhook secrets, OAuth client secrets, private URLs, `.env`
+    files, or real tokens. Use environment variables and update `.env.example` with placeholder names only.
+*   **Server-side trust boundary:** Keep privileged provider calls in the backend. Frontend code must not receive
+    service-role keys, unrestricted provider tokens, or direct database write credentials.
+*   **Webhook validation:** Webhook endpoints must verify signatures or shared secrets, reject missing/invalid
+    signatures, and avoid logging raw payload secrets.
+*   **OAuth and redirect safety:** OAuth callbacks must validate state/nonce values, use allowlisted redirect URLs,
+    and avoid open redirects.
+*   **CORS and origin scope:** Do not widen CORS to `*` for authenticated routes. Document any new allowed origin
+    and why it is needed.
+*   **Rate limits and retries:** Add rate limiting, timeout, and retry behavior for external APIs so a failing
+    provider cannot exhaust backend resources.
+*   **PII minimization:** Log request IDs and provider status, not passwords, tokens, email bodies, chat transcripts,
+    or full customer records.
+*   **Failure mode:** Integrations should fail closed for auth/security errors and return clear, non-sensitive error
+    messages.
 
 ### PR Evidence Checklist
 
@@ -102,7 +111,8 @@ Include this evidence in the PR description for integration-security changes:
 
 ### Escalation Template
 
-If you find a leaked credential, auth bypass, webhook spoofing issue, or unsafe direct database access, do not post exploit details publicly. Use this template in the issue or PR with sensitive values redacted:
+If you find a leaked credential, auth bypass, webhook spoofing issue, or unsafe direct database access, do not post
+exploit details publicly. Use this template in the issue or PR with sensitive values redacted:
 
 ```text
 Security integration concern
