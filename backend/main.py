@@ -145,7 +145,7 @@ from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sl
 from backend.services.redis_cache import redis_cache
 from backend.sla_predictor import get_sla_estimate, compute_risk_score, trigger_admin_notification
 from backend.sanitization import get_security_headers
-from backend.limiter import limiter, ML_HEAVY_LIMIT, ML_LIGHT_LIMIT
+from backend.limiter import limiter, ML_HEAVY_LIMIT, ML_LIGHT_LIMIT, TICKET_WRITE_LIMIT, TICKET_READ_LIMIT, ADMIN_LIMIT, API_TOKEN_LIMIT, SECURITY_LIMIT, AUTH_LIMIT  # noqa: F401
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
 from backend.sanitization import sanitize_text
 
@@ -2550,6 +2550,7 @@ def _ticket_company_scope(profile: dict, requested_company_id: str | None = None
 
 
 @app.get("/tickets")
+@limiter.limit(TICKET_READ_LIMIT)
 async def get_tickets(
     company_id: str | None = None,
     limit: int = 50,
@@ -2640,6 +2641,7 @@ def trigger_webhook_for_new_ticket(company_id: str, ticket: dict) -> None:
 
 
 @app.post("/tickets/save")
+@limiter.limit(TICKET_WRITE_LIMIT)
 async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_current_user)):
     """
     Persist an analyzed ticket to the Supabase database.
@@ -2984,6 +2986,7 @@ class TicketUpdate(BaseModel):
 
 
 @app.post("/tickets", response_model=dict)
+@limiter.limit(TICKET_WRITE_LIMIT)
 async def create_ticket(
     ticket: TicketSaveRequest,
     current_user: dict = Depends(get_current_user),
@@ -3207,6 +3210,7 @@ class BulkUpdateRequest(BaseModel):
     assigned_team: str | None = None
 
 @app.post("/tickets/bulk-update", response_model=BulkUpdateResponse, tags=["Tickets"])
+@limiter.limit(ADMIN_LIMIT)
 async def bulk_update_tickets(
     request: BulkUpdateRequest,
     current_user: dict = Depends(get_current_user),
@@ -3256,6 +3260,7 @@ async def bulk_update_tickets(
     return BulkUpdateResponse(updated_count=updated_count, failed_ids=failed_ids)
 
 @app.post("/tickets/bulk-delete", tags=["Tickets"])
+@limiter.limit(ADMIN_LIMIT)
 async def bulk_delete_tickets(
     ticket_ids: list[str],
     current_user: dict = Depends(get_current_user),
@@ -4229,6 +4234,8 @@ async def get_knowledge_gaps(current_user: dict = Depends(get_current_user)):
     return await kgs.get_dashboard_insights(company_id)
 
 @app.post("/admin/knowledge-gaps/detect", tags=["Admin"])
+@limiter.limit(ADMIN_LIMIT)
+async def detect_knowledge_gaps(
 async def detect_knowledge_gaps(background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     """
     Trigger background detection of knowledge gaps.
@@ -4318,6 +4325,7 @@ def _format_system_settings_payload(rows: list[dict]) -> dict:
 
 
 @app.patch("/system/settings")
+@limiter.limit(ADMIN_LIMIT)
 async def update_system_settings(body: dict, current_user: dict = Depends(get_current_user)):
     """Update system settings for the current tenant."""
     if not supabase:
@@ -4579,6 +4587,8 @@ async def download_security_report(current_user: dict = Depends(security_manager
 
 
 @app.post("/api/pii/scan", tags=["Security"])
+@limiter.limit(SECURITY_LIMIT)
+async def pii_scan(
 async def scan_text_for_pii(
     request: Request,
     current_user: dict = Depends(get_current_user),
@@ -4923,6 +4933,8 @@ def _get_token_manager() -> TokenManager:
 
 
 @app.post("/api-tokens", tags=["API Tokens"], summary="Create a new API token")
+@limiter.limit(API_TOKEN_LIMIT)
+async def create_api_token(
 async def create_api_token(
     body: APITokenCreateRequest,
     request: Request,
@@ -4975,6 +4987,8 @@ async def revoke_api_token(
 
 
 @app.post("/api-tokens/{token_id}/rotate", tags=["API Tokens"], summary="Rotate a token")
+@limiter.limit(API_TOKEN_LIMIT)
+async def rotate_api_token(
 async def rotate_api_token(
     token_id: str,
     user: dict = Depends(get_current_user),
