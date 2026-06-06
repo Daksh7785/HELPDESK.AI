@@ -124,15 +124,10 @@ class NotificationWorker:
         return stats
 
     def _fetch_pending(self) -> list[Dict[str, Any]]:
-        response = (
-            self.supabase.table("notifications")
-            .select("*")
-            .eq("channel", "email")
-            .eq("status", "pending")
-            .order("created_at")
-            .limit(self.batch_size)
-            .execute()
-        )
+        response = self.supabase.rpc(
+            "claim_pending_email_notifications",
+            {"batch_limit": self.batch_size},
+        ).execute()
         return response.data or []
 
     def _process_row(self, row: Dict[str, Any]) -> EmailDeliveryResult:
@@ -160,8 +155,11 @@ class NotificationWorker:
         result = self.email_service.send_ticket_email(context)
 
         if result.sent:
-            self._log_email(row, result)
             self._mark_sent(row, result)
+            try:
+                self._log_email(row, result)
+            except Exception:
+                logger.exception("Email audit log failed for notification row: %s", row.get("id"))
         elif result.skipped:
             self._mark_skipped(row, result.reason)
         else:
@@ -175,6 +173,7 @@ class NotificationWorker:
             "sent_at": datetime.now(timezone.utc).isoformat(),
             "attempts": int(row.get("attempts") or 0) + 1,
             "last_error": None,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", row["id"]).execute()
 
     def _mark_skipped(self, row: Dict[str, Any], reason: str) -> None:
@@ -182,6 +181,7 @@ class NotificationWorker:
             "status": "skipped",
             "attempts": int(row.get("attempts") or 0) + 1,
             "last_error": reason,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", row["id"]).execute()
 
     def _mark_failed(self, row: Dict[str, Any], reason: str) -> None:
@@ -189,6 +189,7 @@ class NotificationWorker:
             "status": "failed",
             "attempts": int(row.get("attempts") or 0) + 1,
             "last_error": reason[:1000],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
         }).eq("id", row["id"]).execute()
 
     def _log_email(self, row: Dict[str, Any], result: EmailDeliveryResult) -> None:
@@ -201,4 +202,3 @@ class NotificationWorker:
             "provider_message_id": result.message_id,
             "status": "sent",
         }).execute()
-

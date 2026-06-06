@@ -27,11 +27,18 @@ CREATE TABLE IF NOT EXISTS notifications (
     created_at timestamp with time zone NOT NULL DEFAULT now(),
     updated_at timestamp with time zone NOT NULL DEFAULT now(),
     CONSTRAINT notifications_channel_check CHECK (channel IN ('email')),
-    CONSTRAINT notifications_status_check CHECK (status IN ('pending', 'sent', 'failed', 'skipped')),
+    CONSTRAINT notifications_status_check CHECK (status IN ('pending', 'processing', 'sent', 'failed', 'skipped')),
     CONSTRAINT notifications_event_type_check CHECK (
         event_type IN ('ticket_created', 'ticket_assigned', 'ticket_updated', 'ticket_resolved', 'new_comment')
     )
 );
+
+ALTER TABLE notifications
+DROP CONSTRAINT IF EXISTS notifications_status_check;
+
+ALTER TABLE notifications
+ADD CONSTRAINT notifications_status_check
+CHECK (status IN ('pending', 'processing', 'sent', 'failed', 'skipped'));
 
 CREATE TABLE IF NOT EXISTS email_logs (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -45,6 +52,22 @@ CREATE TABLE IF NOT EXISTS email_logs (
     error text,
     created_at timestamp with time zone NOT NULL DEFAULT now()
 );
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'email_logs_notification_id_fkey'
+          AND conrelid = 'email_logs'::regclass
+    ) THEN
+        ALTER TABLE email_logs
+        ADD CONSTRAINT email_logs_notification_id_fkey
+        FOREIGN KEY (notification_id)
+        REFERENCES notifications(id)
+        ON DELETE CASCADE;
+    END IF;
+END $$;
 
 ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE email_logs ENABLE ROW LEVEL SECURITY;
@@ -65,6 +88,27 @@ CREATE INDEX IF NOT EXISTS idx_notifications_ticket_id
 CREATE INDEX IF NOT EXISTS idx_email_logs_notification_id
     ON email_logs(notification_id);
 
+CREATE OR REPLACE FUNCTION claim_pending_email_notifications(batch_limit integer DEFAULT 25)
+RETURNS SETOF notifications
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+    UPDATE notifications
+    SET status = 'processing',
+        updated_at = now()
+    WHERE id IN (
+        SELECT id
+        FROM notifications
+        WHERE channel = 'email'
+          AND status = 'pending'
+        ORDER BY created_at
+        LIMIT GREATEST(batch_limit, 0)
+        FOR UPDATE SKIP LOCKED
+    )
+    RETURNING *;
+$$;
+
 GRANT ALL ON notifications TO service_role;
 GRANT ALL ON email_logs TO service_role;
-
+GRANT EXECUTE ON FUNCTION claim_pending_email_notifications(integer) TO service_role;

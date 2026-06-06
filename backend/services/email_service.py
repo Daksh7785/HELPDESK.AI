@@ -270,5 +270,5 @@ class EmailService:
                 message_id = response.headers.get("X-Message-Id")
                 return EmailDeliveryResult(True, "sendgrid", message_id=message_id)
         except urllib.error.HTTPError as exc:
-            logger.error("SendGrid delivery failed: %s", exc.read().decode("utf-8", errors="replace"))
+            logger.error("SendGrid delivery failed: status=%s reason=%s", exc.code, exc.reason)
             raise

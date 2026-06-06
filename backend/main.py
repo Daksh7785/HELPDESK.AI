@@ -586,8 +586,13 @@ async def save_ticket(request_body: TicketSaveRequest):
                     )
                     if prefs_res.data:
                         profile["notification_prefs"] = prefs_res.data.get("notification_prefs")
-                except Exception:
-                    profile["notification_prefs"] = None
+                except Exception as prefs_error:
+                    profile["notification_prefs"] = {"email_enabled": False}
+                    logger.warning(
+                        "Notification preference lookup failed for user %s; email notifications disabled for this request: %s",
+                        hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8],
+                        prefs_error,
+                    )
             except HTTPException:
                 raise
             except Exception as profile_error:

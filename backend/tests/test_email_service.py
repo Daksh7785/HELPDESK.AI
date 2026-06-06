@@ -7,7 +7,14 @@ from backend.services.notification_worker import notification_enabled
 
 class EmailServiceTests(unittest.TestCase):
     def setUp(self):
+        self.previous_email_provider = os.environ.get("EMAIL_PROVIDER")
         os.environ["EMAIL_PROVIDER"] = "disabled"
+
+    def tearDown(self):
+        if self.previous_email_provider is None:
+            os.environ.pop("EMAIL_PROVIDER", None)
+        else:
+            os.environ["EMAIL_PROVIDER"] = self.previous_email_provider
 
     def test_renders_ticket_email_with_escaped_values(self):
         service = EmailService(provider="disabled", app_base_url="https://helpdesk.example")
@@ -54,4 +61,3 @@ class EmailServiceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
