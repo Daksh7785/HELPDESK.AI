@@ -793,7 +793,7 @@ async def analyze_only(request_body: TicketRequest):
     if request_body.image_base64 and not gemini_analysis["ocr_text"]:
         try:
             print("[AI] Detecting visual context via Gemini...")
-            vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+            vision_result = await asyncio.to_thread(gemini_service.analyze_image, request_body.image_base64, text)
             gemini_analysis.update(vision_result)
         except Exception as e:
             print(f"[VISION ERROR] {e}")
@@ -802,10 +802,10 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Classification ---
     try:
-        classification_v3_res = classifier_v3.predict(text)
+        classification_v3_res = await asyncio.to_thread(classifier_v3.predict, text)
         if "error" in classification_v3_res:
             # Fallback to V1
-            classification = classifier_service.predict(text)
+            classification = await asyncio.to_thread(classifier_service.predict, text)
         else:
             # Parse V3 output
             cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
@@ -837,7 +837,7 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- NER ---
     try:
-        entities = ner_service.extract_entities(text)
+        entities = await asyncio.to_thread(ner_service.extract_entities, text)
     except Exception:
         entities = []
     
@@ -845,14 +845,14 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Duplicate detection ---
     try:
-        dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+        dup_result = await asyncio.to_thread(duplicate_service.check_duplicate, text, threshold=duplicate_sensitivity)
     except Exception:
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
     # --- RAG Knowledge Base Check ---
     rag_match = None
     try:
-        rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+        rag_match = await asyncio.to_thread(rag_service.search_knowledge_base, text, threshold=0.85)
         if rag_match:
             classification["auto_resolve"] = True
             classification["assigned_team"] = "Auto-Resolve AI"
@@ -947,7 +947,7 @@ async def analyze_stream(request_body: TicketRequest):
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
             try:
-                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                vision_result = await asyncio.to_thread(gemini_service.analyze_image, request_body.image_base64, text)
                 gemini_analysis.update(vision_result)
             except Exception as e:
                 pass
@@ -958,7 +958,7 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Extracting technical entities', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            entities = ner_service.extract_entities(text)
+            entities = await asyncio.to_thread(ner_service.extract_entities, text)
         except Exception:
             entities = []
         timeline["metadata_harvested"] = get_now_ist()
@@ -967,9 +967,9 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            classification_v3_res = classifier_v3.predict(text)
+            classification_v3_res = await asyncio.to_thread(classifier_v3.predict, text)
             if "error" in classification_v3_res:
-                classification = classifier_service.predict(text)
+                classification = await asyncio.to_thread(classifier_service.predict, text)
             else:
                 cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
                 sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
@@ -1000,7 +1000,7 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+            dup_result = await asyncio.to_thread(duplicate_service.check_duplicate, text, threshold=duplicate_sensitivity)
         except Exception:
             dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
@@ -1009,7 +1009,7 @@ async def analyze_stream(request_body: TicketRequest):
         await asyncio.sleep(0.2)
         rag_match = None
         try:
-            rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+            rag_match = await asyncio.to_thread(rag_service.search_knowledge_base, text, threshold=0.85)
             if rag_match:
                 classification["auto_resolve"] = True
                 classification["assigned_team"] = "Auto-Resolve AI"
@@ -1082,7 +1082,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
     try:
-        prediction = classifier_v2.predict(text)
+        prediction = await asyncio.to_thread(classifier_v2.predict, text)
         return {
             "status": "success",
             "category": prediction["category"]["prediction"],
