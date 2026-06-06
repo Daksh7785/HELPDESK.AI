@@ -46,7 +46,7 @@ class AutoCloseService:
         """
         self.supabase = create_client(
             os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
         )
         # Global fallback default (used when company has no settings)
         self.default_auto_close_days = int(os.getenv("AUTO_CLOSE_DAYS", "7"))

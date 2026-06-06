@@ -114,6 +114,7 @@ def test_dry_run_skips_insert_but_reports_pending_records():
 def test_build_client_reports_missing_environment(monkeypatch):
     monkeypatch.delenv("SUPABASE_URL", raising=False)
     monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
 
     with pytest.raises(EnvironmentError) as exc_info:
         seed_mod._build_client()
@@ -121,6 +122,26 @@ def test_build_client_reports_missing_environment(monkeypatch):
     message = str(exc_info.value)
     assert "SUPABASE_URL" in message
     assert "SUPABASE_SERVICE_ROLE_KEY" in message
+    assert "SUPABASE_SERVICE_KEY" in message
+
+
+def test_build_client_accepts_service_key_alias(monkeypatch):
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.delenv("SUPABASE_SERVICE_ROLE_KEY", raising=False)
+    monkeypatch.setenv("SUPABASE_SERVICE_KEY", "service-key")
+
+    with patch.dict("sys.modules", {"supabase": MagicMock()}):
+        import supabase
+
+        supabase.create_client.return_value = "client"
+
+        client = seed_mod._build_client()
+
+    assert client == "client"
+    supabase.create_client.assert_called_once_with(
+        "https://example.supabase.co",
+        "service-key",
+    )
 
 
 def test_main_reuses_one_client_for_seed_and_verify():
