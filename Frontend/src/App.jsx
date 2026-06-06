@@ -36,6 +36,24 @@ const TicketTracking = React.lazy(() => import("./user/pages/TicketTracking"));
 const UserLayout = React.lazy(() => import("./user/UserLayout"));
 const AdminLayout = React.lazy(() => import("./admin/layout/AdminLayout"));
 
+// Route guards (tiny, keep eager)
+import AdminProtectedRoute from './components/shared/AdminProtectedRoute';
+import MasterAdminProtectedRoute from './components/shared/MasterAdminProtectedRoute';
+import ProtectedRoute from './components/shared/ProtectedRoute';
+
+// ---------------------------------------------------------------------------
+// Lazily-loaded lobby / shell pages
+// ---------------------------------------------------------------------------
+const AdminLobby = lazy(() => import('./pages/AdminLobby'));
+const UserLobby  = lazy(() => import('./pages/UserLobby'));
+
+// ---------------------------------------------------------------------------
+// Lazily-loaded layouts
+// ---------------------------------------------------------------------------
+const UserLayout  = lazy(() => import('./user/UserLayout'));
+const AdminLayout = lazy(() => import('./admin/layout/AdminLayout'));
+
+// ---------------------------------------------------------------------------
 // User Pages
 const Dashboard = React.lazy(() => import("./user/pages/Dashboard"));
 const CreateTicket = React.lazy(() => import("./user/pages/CreateTicket"));
@@ -301,6 +319,33 @@ function AppContent() {
           </Route>
         </Route>
 
+        {/* ── Protected admin routes ───────────────────────────────────── */}
+        <Route element={<AdminProtectedRoute />}>
+          <Route path="/admin" element={<Suspense fallback={<PageSkeleton />}><AdminLayout /></Suspense>}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<Suspense fallback={<PageSkeleton />}><AdminDashboard /></Suspense>} />
+            <Route path="tickets"   element={<Suspense fallback={<PageSkeleton />}><AdminTickets /></Suspense>} />
+            <Route path="tickets/:id" element={<Suspense fallback={<PageSkeleton />}><AdminTicketDetail /></Suspense>} />
+            <Route path="users"     element={<Suspense fallback={<PageSkeleton />}><AdminUsers /></Suspense>} />
+            <Route path="analytics" element={<Suspense fallback={<PageSkeleton />}><AdminAnalytics /></Suspense>} />
+            <Route path="settings"  element={<Suspense fallback={<PageSkeleton />}><AdminSettings /></Suspense>} />
+            <Route path="profile"   element={<Suspense fallback={<PageSkeleton />}><AdminProfile /></Suspense>} />
+          </Route>
+        </Route>
+
+        {/* ── Master admin routes ──────────────────────────────────────── */}
+        <Route element={<MasterAdminProtectedRoute />}>
+          <Route path="/master-admin" element={<Suspense fallback={<PageSkeleton />}><MasterAdminLayout /></Suspense>}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard"        element={<Suspense fallback={<PageSkeleton />}><MasterAdminDashboard /></Suspense>} />
+            <Route path="admins"           element={<Suspense fallback={<PageSkeleton />}><AllAdmins /></Suspense>} />
+            <Route path="companies"        element={<Suspense fallback={<PageSkeleton />}><AllCompanies /></Suspense>} />
+            <Route path="pending-requests" element={<Suspense fallback={<PageSkeleton />}><PendingAdminRequests /></Suspense>} />
+            <Route path="bug-reports"      element={<Suspense fallback={<PageSkeleton />}><MasterBugReports /></Suspense>} />
+          </Route>
+        </Route>
+
+        {/* ── 404 ─────────────────────────────────────────────────────── */}
         <Route path="*" element={<NotFound />} />
       </Routes>
         </Suspense>
