@@ -2929,17 +2929,6 @@ async def analyze_ticket(request_body: TicketRequest, request: Request, current_
     returns the consolidated ``TicketResponse``. Throttled to 10 requests per
     minute per IP."""
     text = request_body.text
-    
-    # Grab client metadata
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-    origin_host = request.headers.get("origin", "unknown")
-    
-    env_metadata = {
-        "ip": client_ip,
-        "user_agent": user_agent,
-        "origin": origin_host
-    }
 
     # --- Layer 1: Local OCR (CPU, no API required) ---
     local_ocr_text = ""
