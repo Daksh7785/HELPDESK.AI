@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
-import { Lock, Mail, Eye, EyeOff, Zap, ArrowRight, ShieldCheck } from 'lucide-react-native';
+import { Lock, Mail, Eye, EyeOff, Zap, ArrowRight, ShieldCheck, ArrowLeft } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useNavigation } from '@react-navigation/native';
@@ -106,6 +106,11 @@ const LoginScreen = () => {
     }
   };
 
+  const goHome = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('Onboarding');
+  };
+
   const handleSubmit = () => {
     isMagicLink ? handleMagicLink() : handleLogin();
   };
@@ -122,6 +127,10 @@ const LoginScreen = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          <TouchableOpacity style={styles.homeLinkRow} onPress={goHome} activeOpacity={0.7}>
+            <ArrowLeft size={18} color="rgba(255,255,255,0.75)" />
+            <Text style={styles.homeLinkText}>Back to Home</Text>
+          </TouchableOpacity>
           {/* Logo */}
           <Animated.View style={[styles.header, { opacity: logoOpacity, transform: [{ scale: logoScale }] }]}>
             <View style={styles.logoWrap}>
@@ -273,6 +282,14 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 40, flexWrap: 'wrap' },
   footerText: { color: 'rgba(255,255,255,0.45)', fontSize: 14 },
   footerLink: { color: COLORS.primary, fontSize: 14, fontWeight: '800' },
+  homeLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+    marginLeft: 4,
+  },
+  homeLinkText: { color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: '700' },
   adminLink: { color: 'rgba(255,255,255,0.3)', fontSize: 13, fontWeight: '600', textDecorationLine: 'underline' },
   magicLinkBtn: { height: 56, borderRadius: 18, overflow: 'hidden', ...SHADOWS.small },
   magicLinkGradient: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },

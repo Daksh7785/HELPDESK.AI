@@ -287,6 +287,12 @@ function AdminSignup() {
 
             {/* Right Side: Step Form */}
             <div className="flex-1 overflow-y-auto px-4 py-8 lg:p-12 relative flex justify-center items-start lg:items-center" style={{ background: '#ffffff', borderLeft: '1px solid #f0fdf4' }}>
+                <div className="lg:hidden absolute top-4 left-4 z-20">
+                    <Link to="/" className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700 hover:text-emerald-600 transition-colors">
+                        <ChevronLeft className="w-4 h-4" />
+                        Back to Home
+                    </Link>
+                </div>
 
                 <div className="w-full max-w-2xl bg-white rounded-[2rem] p-6 md:p-12 my-auto relative z-10" style={{ boxShadow: '0 4px 40px rgba(0,0,0,0.06)', border: '1px solid #f0fdf4' }}>
 
