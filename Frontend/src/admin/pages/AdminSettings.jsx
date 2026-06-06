@@ -13,6 +13,9 @@ import {
     Eye,
     Mail,
     Send,
+    Route,
+    Plus,
+    Trash2,
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
 import useAuthStore from '../../store/authStore';
@@ -41,6 +44,11 @@ const AdminSettings = () => {
     const [isSendingTest, setIsSendingTest] = useState(false);
     const [testEmailStatus, setTestEmailStatus] = useState('');
     const [lastDigestSent, setLastDigestSent] = useState(null);
+
+    // Routing rules state
+    const [routingRules, setRoutingRules] = useState([]);
+    const [loadingRules, setLoadingRules] = useState(false);
+    const [newRule, setNewRule] = useState({ department: '', keywords: '', category: '', priority: 1 });
 
     const companyId = useMemo(() => resolveCompanyId(profile, user), [profile, user]);
 
@@ -134,6 +142,62 @@ const AdminSettings = () => {
 
         return () => window.clearTimeout(saveTimer);
     }, [hasUnsavedChanges, isLoadingSettings, isSavingSettings, saveCompanySettings, settings]);
+
+    // Load routing rules for this company
+    useEffect(() => {
+        if (!companyId) return;
+        setLoadingRules(true);
+        supabase
+            .from('routing_rules')
+            .select('*')
+            .eq('company_id', companyId)
+            .order('priority', { ascending: false })
+            .then(({ data }) => {
+                setRoutingRules(data || []);
+                setLoadingRules(false);
+            });
+    }, [companyId]);
+
+    const addRule = async () => {
+        if (!companyId || !newRule.department) return;
+        const keywords = newRule.keywords
+            ? newRule.keywords.split(',').map(k => k.trim()).filter(Boolean)
+            : [];
+        const rulesToInsert = [];
+        if (keywords.length > 0) {
+            keywords.forEach(kw => rulesToInsert.push({
+                company_id: companyId,
+                department: newRule.department,
+                rule_type: 'keyword',
+                pattern: kw,
+                target_department: newRule.department,
+                priority: parseInt(newRule.priority) || 1,
+                is_active: true,
+            }));
+        } else if (newRule.category) {
+            rulesToInsert.push({
+                company_id: companyId,
+                department: newRule.department,
+                rule_type: 'category',
+                pattern: newRule.category,
+                target_department: newRule.department,
+                priority: parseInt(newRule.priority) || 1,
+                is_active: true,
+            });
+        } else {
+            return;
+        }
+        const { data } = await supabase.from('routing_rules').insert(rulesToInsert).select();
+        if (data) {
+            setRoutingRules(prev => [...prev, ...data]);
+            setNewRule({ department: '', keywords: '', category: '', priority: 1 });
+        }
+    };
+
+    const deleteRule = async (ruleId) => {
+        await supabase.from('routing_rules').delete().eq('id', ruleId);
+        setRoutingRules(prev => prev.filter(r => r.id !== ruleId));
+    };
 
     return (
         <div className="max-w-4xl mx-auto py-6 space-y-10 pb-20 animate-in fade-in duration-700">
@@ -486,6 +550,110 @@ const AdminSettings = () => {
                     </div>
                     <CardContent className="p-8">
                         <WebhookSettings />
+                    </CardContent>
+                </Card>
+
+                {/* 6. Department Routing Rules */}
+                <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
+                    <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
+                        <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-3">
+                            <Route size={18} className="text-violet-400" /> Department Routing Rules
+                        </h3>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-violet-400 bg-violet-950 px-3 py-1 rounded-full">
+                            Auto-Route
+                        </span>
+                    </div>
+                    <CardContent className="p-8 space-y-6">
+                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest leading-relaxed">
+                            Define keyword or category rules to automatically route incoming tickets to specific departments — bypassing the AI classifier when a rule matches.
+                        </p>
+
+                        {/* Add new rule form */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Target Department *</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Billing, Network Ops"
+                                    value={newRule.department}
+                                    onChange={e => setNewRule(r => ({ ...r, department: e.target.value }))}
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 placeholder-slate-300 outline-none focus:border-indigo-500 transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Keywords (comma-separated)</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. billing, invoice, payment"
+                                    value={newRule.keywords}
+                                    onChange={e => setNewRule(r => ({ ...r, keywords: e.target.value }))}
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 placeholder-slate-300 outline-none focus:border-indigo-500 transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Or Match Category</label>
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Network, Security"
+                                    value={newRule.category}
+                                    onChange={e => setNewRule(r => ({ ...r, category: e.target.value }))}
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 placeholder-slate-300 outline-none focus:border-indigo-500 transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-1.5">Priority (higher = first match)</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    max="100"
+                                    value={newRule.priority}
+                                    onChange={e => setNewRule(r => ({ ...r, priority: e.target.value }))}
+                                    className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 outline-none focus:border-indigo-500 transition-all"
+                                />
+                            </div>
+                            <div className="md:col-span-2 flex justify-end">
+                                <button
+                                    onClick={addRule}
+                                    disabled={!newRule.department || (!newRule.keywords && !newRule.category)}
+                                    className="inline-flex items-center gap-2 rounded-xl bg-violet-600 hover:bg-violet-700 px-5 py-2.5 text-xs font-black uppercase tracking-widest text-white transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg shadow-violet-200"
+                                >
+                                    <Plus size={14} /> Add Rule
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Rules list */}
+                        {loadingRules ? (
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Loading rules...</p>
+                        ) : routingRules.length === 0 ? (
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No routing rules configured. Add one above to get started.</p>
+                        ) : (
+                            <div className="space-y-3">
+                                {routingRules.map(rule => (
+                                    <div key={rule.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group">
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <span className="text-xs font-black text-slate-800 uppercase tracking-wider">{rule.target_department}</span>
+                                                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${
+                                                    rule.rule_type === 'keyword' ? 'bg-indigo-100 text-indigo-700' : 'bg-emerald-100 text-emerald-700'
+                                                }`}>{rule.rule_type}</span>
+                                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-0.5 rounded-full">P{rule.priority}</span>
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 font-bold mt-1 truncate">
+                                                {rule.rule_type === 'keyword' ? `Keyword: "${rule.pattern}"` : `Category: "${rule.pattern}"`}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => deleteRule(rule.id)}
+                                            className="ml-4 p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all shrink-0"
+                                            title="Delete Rule"
+                                        >
+                                            <Trash2 size={15} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
