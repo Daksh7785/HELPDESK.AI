@@ -536,14 +536,26 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
 @limiter.limit("60/minute")
-async def get_tickets(request: Request, company_id: str | None = None):
+async def get_tickets(
+    request: Request,
+    company_id: str | None = None,
+    limit: int = 50,
+    offset: int = 0
+):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    # Prevent excessive limit values
+    if limit > 100:
+        limit = 100
+        
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
     if company_id:
         query = query.eq("company_id", company_id)
+        
+    # Apply pagination
+    query = query.range(offset, offset + limit - 1)
         
     res = query.execute()
     return res.data
