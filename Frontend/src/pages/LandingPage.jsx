@@ -59,6 +59,7 @@ function AnimatedStat({ target, suffix = '', prefix = '', label, isWord = false 
 
 // ---- Demo Modal ----
 function DemoModal({ onClose }) {
+    const navigate = useNavigate();
     const [isPlaying, setIsPlaying] = useState(false);
     const videoId = "Bj00LzeMylM";
 
@@ -124,7 +125,7 @@ function DemoModal({ onClose }) {
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
-                            onClick={() => { onClose(); window.location.href = '/admin-signup'; }}
+                            onClick={() => { onClose(); navigate('/admin-signup'); }}
                             className="flex-1 md:px-8 bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-xl font-black italic uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20"
                         >
                             Start Free <ArrowRight className="w-4 h-4 ml-1" />
