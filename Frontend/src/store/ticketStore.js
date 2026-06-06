@@ -65,18 +65,8 @@ const useTicketStore = create(
                 )
             })),
 
-            addTicket: (ticket) => set((state) => {
-                if (state.tickets.some(t => t.id === ticket.id)) return state;
-                return { tickets: [...state.tickets, ticket] };
-            }),
-
-            updateTicket: (ticketId, updates) => set((state) => ({
-                tickets: state.tickets.map(t => t.id === ticketId ? { ...t, ...updates } : t)
-            })),
-
-            removeTicket: (ticketId) => set((state) => ({
-                tickets: state.tickets.filter(t => t.id !== ticketId)
-            })),
+            // Note: addTicket, updateTicket, and removeTicket are defined above
+            // using the utility helpers from ticketStoreUtils for proper dedup.
 
             reset: () => set({
                 aiTicket: null,
