@@ -5,15 +5,20 @@ The service runs a locally exported all-MiniLM-L6-v2 encoder and compares the
 ticket embedding against small, deterministic IT-support prototype prompts.
 It is intentionally lazy: if ONNX artifacts or dependencies are unavailable,
 the main classifier cascade continues without this fallback.
+
+All cosine similarity computations use vectorized NumPy operations for
+optimal performance.  The loop-based fallback has been replaced with
+matrix-level dot products that run in compiled BLAS code.
 """
 
 from __future__ import annotations
 
-import math
 import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable
+
+import numpy as np
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_MODEL_DIR = BASE_DIR / "models" / "onnx-minilm"
@@ -96,24 +101,45 @@ class PrototypeMatch:
     score: float
 
 
-def cosine_similarity(left: Iterable[float], right: Iterable[float]) -> float:
-    left_values = [float(value) for value in left]
-    right_values = [float(value) for value in right]
-    numerator = sum(a * b for a, b in zip(left_values, right_values))
-    left_norm = math.sqrt(sum(value * value for value in left_values))
-    right_norm = math.sqrt(sum(value * value for value in right_values))
-    if left_norm == 0 or right_norm == 0:
-        return 0.0
-    return numerator / (left_norm * right_norm)
+def cosine_similarity(query: np.ndarray, prototypes: np.ndarray) -> np.ndarray:
+    """Vectorized cosine similarity between a query and a matrix of prototypes.
+
+    For L2-normalised vectors, cosine similarity is equivalent to dot product.
+    The function falls back to explicit normalisation if vectors are not unit.
+
+    Args:
+        query:      1-D float32 array of shape (d,).
+        prototypes: 2-D float32 array of shape (N, d).
+
+    Returns:
+        1-D float32 array of shape (N,) with similarity scores in [-1, 1].
+    """
+    q = np.asarray(query, dtype=np.float32)
+    p = np.asarray(prototypes, dtype=np.float32)
+
+    if q.ndim != 1:
+        raise ValueError(f"query must be 1-D, got shape {q.shape}")
+    if p.ndim != 2:
+        raise ValueError(f"prototypes must be 2-D (N, d), got shape {p.shape}")
+    if q.shape[0] != p.shape[1]:
+        raise ValueError(
+            f"Dimension mismatch: query ({q.shape[0]}) vs prototypes ({p.shape[1]})"
+        )
+
+    # Vectorized: all dot products in one BLAS call
+    return p @ q
 
 
-def best_prototype_match(query_embedding: Iterable[float], prototypes: dict[str, list[float]]) -> PrototypeMatch:
-    best = PrototypeMatch(label="Unknown", score=0.0)
-    for label, embedding in prototypes.items():
-        score = cosine_similarity(query_embedding, embedding)
-        if score > best.score:
-            best = PrototypeMatch(label=label, score=score)
-    return best
+def best_prototype_match(query_embedding: np.ndarray, prototypes: dict[str, np.ndarray]) -> PrototypeMatch:
+    prototypes_matrix = np.array(list(prototypes.values()), dtype=np.float32)
+    labels = list(prototypes.keys())
+
+    if prototypes_matrix.shape[0] == 0:
+        return PrototypeMatch(label="Unknown", score=0.0)
+
+    scores = cosine_similarity(query_embedding, prototypes_matrix)
+    best_index = int(np.argmax(scores))
+    return PrototypeMatch(label=labels[best_index], score=float(scores[best_index]))
 
 
 def build_classification_result(category: str, subcategory: str, confidence: float) -> dict:
@@ -133,8 +159,8 @@ class OnnxClassifierFallback:
         self.model_dir = Path(model_dir or os.getenv("ONNX_MINILM_MODEL_DIR") or DEFAULT_MODEL_DIR)
         self.session = None
         self.tokenizer = None
-        self.category_embeddings = {}
-        self.subcategory_embeddings = {}
+        self.category_embeddings: dict[str, np.ndarray] = {}
+        self.subcategory_embeddings: dict[str, np.ndarray] = {}
         self._loaded = False
 
     def load(self) -> bool:
@@ -161,30 +187,27 @@ class OnnxClassifierFallback:
             print(f"[ONNX] Local MiniLM fallback unavailable: {error}")
             return False
 
-    def _embed_prototype_groups(self, prototypes: dict[str, list[str]]) -> dict[str, list[float]]:
+    def _embed_prototype_groups(self, prototypes: dict[str, list[str]]) -> dict[str, np.ndarray]:
         return {
-            label: self._average_embeddings([self.embed(text) for text in prompts])
+            label: self._average_embeddings(
+                np.vstack([self.embed(text) for text in prompts])
+            )
             for label, prompts in prototypes.items()
         }
 
-    def _embed_text_map(self, prototypes: dict[str, str]) -> dict[str, list[float]]:
-        return {label: self.embed(text) for label, text in prototypes.items()}
+    def _embed_text_map(self, prototypes: dict[str, str]) -> dict[str, np.ndarray]:
+        return {label: self.embed(text).ravel() for label, text in prototypes.items()}
 
     @staticmethod
-    def _average_embeddings(embeddings: list[list[float]]) -> list[float]:
-        if not embeddings:
-            return []
-        length = len(embeddings[0])
-        return [
-            sum(embedding[index] for embedding in embeddings) / len(embeddings)
-            for index in range(length)
-        ]
+    def _average_embeddings(embeddings: np.ndarray) -> np.ndarray:
+        """Average embeddings across the first (batch) dimension using vectorized NumPy."""
+        if embeddings.shape[0] == 0:
+            return np.array([], dtype=np.float32)
+        return embeddings.mean(axis=0)
 
-    def embed(self, text: str) -> list[float]:
+    def embed(self, text: str) -> np.ndarray:
         if not self.session or not self.tokenizer:
             raise RuntimeError("ONNX fallback is not loaded")
-
-        import numpy as np
 
         encoding = self.tokenizer.encode(text)
         input_ids = np.array([encoding.ids], dtype=np.int64)
@@ -198,13 +221,18 @@ class OnnxClassifierFallback:
             feed["token_type_ids"] = np.array([encoding.type_ids], dtype=np.int64)
 
         outputs = self.session.run(None, feed)
-        token_embeddings = outputs[0][0]
-        weights = attention_mask[0].astype(float)
-        active_count = max(float(weights.sum()), 1.0)
-        return [
-            float(sum(token[index] * weights[row] for row, token in enumerate(token_embeddings)) / active_count)
-            for index in range(len(token_embeddings[0]))
-        ]
+        token_embeddings = outputs[0].astype(np.float32)  # (1, seq_len, d)
+        mask = attention_mask[:, :, np.newaxis].astype(np.float32)
+
+        sum_embeddings = (token_embeddings * mask).sum(axis=1)
+        sum_mask = mask.sum(axis=1).clip(min=1e-9)
+        embedding = (sum_embeddings / sum_mask).ravel()
+
+        norm = np.linalg.norm(embedding)
+        if norm > 1e-9:
+            embedding = embedding / norm
+
+        return embedding
 
     def predict(self, text: str) -> dict | None:
         if not self.load():

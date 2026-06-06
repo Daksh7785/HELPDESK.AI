@@ -3,7 +3,7 @@ Tests for issue #1403 — Vectorize Sentence-Transformers Cosine Similarity
 Computations with NumPy and ONNX Runtime.
 
 Covers:
-- cosine_similarity_matrix: identical vectors → 1.0, orthogonal → 0.0
+- cosine_similarity_matrix: identical vectors -> 1.0, orthogonal -> 0.0
 - cosine_similarity_matrix: correct shape (N,)
 - cosine_similarity_matrix: L2-normalised query/corpus gives correct similarity
 - cosine_similarity_matrix: batch of different queries
