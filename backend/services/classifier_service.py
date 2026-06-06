@@ -136,8 +136,13 @@ class ClassifierService:
                 if category == "General" or confidence < 0.9:
                     category = cat
                     assigned_team = TEAM_MAP.get(cat, "General Support")
+                    # Re-derive fields from the corrected category
+                    # Use Unknown subcategory for keyword-only matches; priority/auto_resolve reset
+                    subcategory = "Unknown"
+                    priority = PRIORITY_MAP.get(subcategory, "Medium")
+                    auto_resolve = subcategory in AUTO_RESOLVE_SUBS
                     # Boost confidence significantly for verified technical signals
-                    confidence = max(confidence, 0.92) 
+                    confidence = max(confidence, 0.92)
                     break
 
         return {
