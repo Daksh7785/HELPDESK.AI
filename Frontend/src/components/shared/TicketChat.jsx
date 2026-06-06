@@ -227,9 +227,12 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
       .on('broadcast', { event: 'typing' }, (payload) => {
         if (payload.payload.user_id !== user?.id) {
           setIsTyping(true);
-          clearTimeout(window.typingTimeout);
-          window.typingTimeout = setTimeout(() => {
+          if (typingIndicatorTimeoutRef.current) {
+            clearTimeout(typingIndicatorTimeoutRef.current);
+          }
+          typingIndicatorTimeoutRef.current = window.setTimeout(() => {
             setIsTyping(false);
+            typingIndicatorTimeoutRef.current = null;
           }, 3000);
           setTimeout(() => scrollToBottom(), 50);
         }
@@ -237,6 +240,10 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
       .subscribe();
 
     return () => {
+      if (typingIndicatorTimeoutRef.current) {
+        clearTimeout(typingIndicatorTimeoutRef.current);
+        typingIndicatorTimeoutRef.current = null;
+      }
       supabase.removeChannel(channel);
     };
   }, [ticketId]);
@@ -345,6 +352,10 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
             .subscribe();
 
         return () => {
+            if (typingIndicatorTimeoutRef.current) {
+                clearTimeout(typingIndicatorTimeoutRef.current);
+                typingIndicatorTimeoutRef.current = null;
+            }
             supabase.removeChannel(channel);
             if (callTimerRef.current) clearInterval(callTimerRef.current);
             if (recordTimerRef.current) clearInterval(recordTimerRef.current);
