@@ -1185,8 +1185,6 @@ METRICS_ALLOWED_IPS = {
     if ip.strip()
 }
 
-import ipaddress
-from fastapi import Response
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
 instrumentator = Instrumentator(
