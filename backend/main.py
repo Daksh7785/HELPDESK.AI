@@ -28,9 +28,9 @@ import contextlib
 from logging.handlers import RotatingFileHandler
 
 # Suppress harmless PyTorch CPU pin_memory warning
-from encryption import encrypt_pii, decrypt_pii, is_encrypted
-from services.encryption_service import encrypt_ticket_pii, decrypt_ticket_pii
-from pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
+from backend.encryption import encrypt_pii, decrypt_pii, is_encrypted
+from backend.services.encryption_service import encrypt_ticket_pii, decrypt_ticket_pii
+from backend.pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
@@ -1210,7 +1210,7 @@ print(f"[startup] CORS allowed origins: {_allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -2209,7 +2209,6 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
     Raises:
         HTTPException: 500 if the Supabase database connection is unavailable.
     """
-    request_body.user_id = user.get("id", request_body.user_id) # Enforce IDOR protection
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
@@ -2225,6 +2224,11 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
 
     logger = logging.getLogger(__name__)
 
+    profile = _get_authenticated_profile(user)
+    company_id = _ticket_company_scope(profile, request_body.company_id)
+    if not request_body.company_id:
+        request_body.company_id = company_id
+    final_data = request_body.model_dump()
 
     try:
         # Backfill company name if missing.
@@ -4093,7 +4097,7 @@ async def scan_text_for_pii(
     if not text:
         return {"findings": {}, "message": "No text provided"}
 
-    from pii_redaction import scan_pii
+    from backend.pii_redaction import scan_pii
     findings = scan_pii(text)
     return {
         "findings": findings,
