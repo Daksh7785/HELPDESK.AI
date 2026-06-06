@@ -25,11 +25,14 @@
     "MD060": false
   },
   "ignores": [
-    ".tmp-ci-venv/**",
-    "scratch/**",
-    "Summary/**",
-    "node_modules/**",
-    "venv/**",
-    ".venv/**"
+    "**/.tmp-ci-venv/**",
+    "**/scratch/**",
+    "**/Summary/**",
+    "**/node_modules/**",
+    "**/venv/**",
+    "**/.venv/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/.pytest_cache/**"
   ]
 }
