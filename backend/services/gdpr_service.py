@@ -388,6 +388,35 @@ class GdprService:
             logger.error("Privacy Lifecycle: failed inactive account cleanup: %s", exc)
         return count
 
+    def process_expired_deletion_requests(self, days: int = 30) -> int:
+        """Process deletion requests that have passed the grace period (default 30 days)."""
+        count = 0
+        try:
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
+            res = (
+                self.supabase.table("privacy_requests")
+                .select("id, user_id")
+                .eq("request_type", "deletion")
+                .eq("status", "Submitted")
+                .lt("created_at", cutoff)
+                .execute()
+            )
+            requests = res.data or []
+            for req in requests:
+                user_id = req["user_id"]
+                req_id = req["id"]
+                try:
+                    self.execute_account_deletion_anonymization(user_id)
+                    self.update_privacy_request_status(req_id, "Completed", "Grace period expired, account permanently deleted.")
+                    count += 1
+                except Exception as e:
+                    logger.error("Failed to process deletion request %s for user %s: %s", req_id, user_id, e)
+            if count > 0:
+                logger.info("Privacy Lifecycle: executed %d expired deletion requests", count)
+        except Exception as exc:
+            logger.error("Privacy Lifecycle: failed to process expired deletion requests: %s", exc)
+        return count
+
 
 _instance: Optional[GdprService] = None
 

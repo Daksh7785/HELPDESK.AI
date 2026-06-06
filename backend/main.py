@@ -1329,6 +1329,11 @@ async def lifespan(app: FastAPI):
         asyncio.create_task(digest_scheduler_loop_async(supabase, interval_seconds=3600))
         print("[Startup] Weekly digest email scheduler started (interval=3600s)")
 
+        # Start background privacy retention scheduler loop (checks daily - interval=86400s)
+        from backend.routes.privacy import privacy_retention_scheduler_loop_async
+        asyncio.create_task(privacy_retention_scheduler_loop_async(supabase, interval_seconds=86400))
+        print("[Startup] Privacy retention background scanner started (interval=86400s)")
+
     print("[Startup] Classifier V2 Shadow: Ready.")
     print(f"[Startup] ONNX MiniLM Fallback: {'READY' if getattr(onnx_classifier, '_loaded', False) else 'DEGRADED (artifacts missing)'}")
     print("[Startup] Ready.")
@@ -1675,6 +1680,10 @@ app.include_router(tag_router)
 # Sentiment router (Issue #775)
 from backend.sentiment_router import router as sentiment_router
 app.include_router(sentiment_router)
+
+# Privacy / GDPR compliance router
+from backend.routes.privacy import router as privacy_router
+app.include_router(privacy_router)
 
 
 # ---------------------------------------------------------------------------

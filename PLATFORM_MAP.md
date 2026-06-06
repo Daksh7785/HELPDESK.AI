@@ -23,6 +23,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Auto-Resolve** | AI troubleshooting hub. | Interactive chat for self-resolution. |
 | **Notifications** | Activity center. | Real-time updates on ticket movement. |
 | **User Profile** | Identity management. | Personal details, company affiliation. |
+| **Privacy Settings** | Consent & compliance center. | Manage consent preferences, export personal data (JSON/CSV), request/cancel account deletion. |
 
 ## 🏢 Layer 3: Company Admin Portal
 | Page | Description | Key Features |
