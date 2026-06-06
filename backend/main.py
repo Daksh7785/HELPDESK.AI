@@ -176,8 +176,7 @@ class TicketRecord(BaseModel):
     timeline: dict = {} # Milestones: created, analyzed, triaged, routed, in_progress, resolved
 
 
-# --- In-Memory Database (to be replaced with SQL later) ---
-TICKETS_DB: list[TicketRecord] = []
+# --- In-Memory Database Removed ---
 
 
 class HealthResponse(BaseModel):
@@ -690,34 +689,33 @@ async def get_ticket_by_id(ticket_id: str, request: Request):
     return res.data
 
 
-@app.post("/tickets", response_model=TicketRecord)
+@app.post("/tickets")
 @limiter.limit("30/minute")
-async def create_ticket(ticket: TicketRecord, request: Request):
-    """Save a new ticket into the system."""
-    # Check for duplicates before adding
-    existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
-    if existing:
-        return existing
-        
-    TICKETS_DB.append(ticket)
-    print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
-    return ticket
+async def create_ticket(ticket: dict, request: Request):
+    """Save a new ticket into the system (persisted to Supabase)."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    
+    res = supabase.table("tickets").insert(ticket).execute()
+    if not res.data:
+        raise HTTPException(status_code=400, detail="Failed to create ticket")
+    
+    print(f"[DB] Ticket created: {res.data[0].get('id')}")
+    return res.data[0]
 
 
-@app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
+@app.patch("/tickets/{ticket_id}")
 @limiter.limit("60/minute")
 async def update_ticket(ticket_id: str, updates: dict, request: Request):
-    """Partially update a ticket's fields (e.g., status, viewed_at)."""
-    for i, ticket in enumerate(TICKETS_DB):
-        if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
-            ticket_dict = ticket.dict()
-            ticket_dict.update(updates)
-            updated_ticket = TicketRecord(**ticket_dict)
-            TICKETS_DB[i] = updated_ticket
-            return updated_ticket
+    """Partially update a ticket's fields (e.g., status, viewed_at) via Supabase."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    raise HTTPException(status_code=404, detail="Ticket not found")
+    res = supabase.table("tickets").update(updates).eq("id", ticket_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+        
+    return res.data[0]
 
 
 # ---------------------------------------------------------------------------
