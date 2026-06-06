@@ -116,33 +116,6 @@ const TicketTracking = () => {
         finalizeTracking();
     }, [aiTicket, addTicket, navigate, user, profile?.company, profile?.company_id, resolutionSteps]);
 
-        if (res.data?.ticket_id) {
-          const newTicket = {
-            ...aiTicket,
-            id: res.data.ticket_id,
-            ticket_id: res.data.ticket_id,
-            status,
-          };
-          addTicket(newTicket);
-          setCreatedTicket(newTicket);
-          setIsCreating(false);
-
-          // Redirect to the detail page after a short confirmation pause
-          setTimeout(() => {
-            navigate(`/ticket/${res.data.ticket_id}`);
-          }, 2500);
-        } else {
-          throw new Error('Failed to retrieve ID from backend.');
-        }
-      } catch (err) {
-        console.error('Tracking Error:', err);
-        setError(err.message || 'Failed to create ticket.');
-        setIsCreating(false);
-      }
-    };
-
-    finalizeTracking();
-  }, [aiTicket, addTicket, navigate, user, profile?.company, location.state]);
 
   if (!aiTicket) return null;
 

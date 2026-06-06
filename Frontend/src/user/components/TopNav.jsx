@@ -14,8 +14,7 @@ import { useTheme } from "../../contexts/ThemeContext";
 
 const TopNav = () => {
     const navigate = useNavigate();
-    
- 
+    const location = useLocation();
     const { profile, logout } = useAuthStore();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -28,6 +27,7 @@ const TopNav = () => {
     };
 
 
+    const isActive = (path) => location.pathname === path;
 
     return (
         <header className="w-full bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-800 sticky top-0 z-50 transition-colors duration-200">
@@ -37,7 +37,9 @@ const TopNav = () => {
                     <div className="flex items-center justify-center overflow-hidden">
                         <img src="/favicon.png" alt="HELPDESK.AI Logo" className="w-7 h-7 object-contain" />
                     </div>
-                    <h1 className="text-xl font-black tracking-tighter text-gray-900 dark:text-white italic">HELPDESK.AI</h1>
+                    <h1 className="text-xl font-black tracking-tighter text-white font-syne italic uppercase">
+                        HelpDesk<span className="text-emerald-500">.ai</span>
+                    </h1>
                 </div>
 
                 {/* Center: Navigation Links */}
@@ -48,9 +50,8 @@ const TopNav = () => {
                     <Link className="text-sm font-semibold text-gray-500 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white transition-colors" to="/docs">Documentation</Link>
                 </nav>
 
-                {/* Right: Profile */}
-                <div className="flex items-center gap-3">
-                    <ThemeToggle />
+                {/* Right: Operational Telemetry & Profile */}
+                <div className="flex items-center gap-2 sm:gap-4">
                     <NotificationPopover />
                     <div className="hidden md:block">
                         <Avatar
@@ -139,3 +140,4 @@ const TopNav = () => {
 };
 
 export default TopNav;
+

@@ -1,35 +1,31 @@
 import React from 'react';
 import { Bell, CheckCircle2, MessageSquare, Ticket, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { Popover, PopoverContent, PopoverTrigger } from '../../components/ui/popover';
-import { Button } from '../../components/ui/button';
-import useTicketStore from '../../store/ticketStore';
+import { Popover, PopoverContent, PopoverTrigger } from "../../components/ui/popover";
+import { Button } from "../../components/ui/button";
+import useTicketStore from "../../store/ticketStore";
 
 const NotificationPopover = ({ isAdmin = false }) => {
-  const navigate = useNavigate();
-  const { notifications = [], markNotificationsRead } = useTicketStore();
-  const currentRole = isAdmin ? 'admin' : 'user';
+    const navigate = useNavigate();
+    const { notifications = [], markNotificationsRead } = useTicketStore();
+    const currentRole = isAdmin ? 'admin' : 'user';
 
-  // Filter to only show notifications meant for this role.
-  // Legacy notifications without recipientRole are shown to everyone for backwards compat.
-  const myNotifications = notifications.filter(
-    (n) => !n.recipientRole || n.recipientRole === currentRole
-  );
+    // Filter to only show notifications meant for this role.
+    // Legacy notifications without recipientRole are shown to everyone for backwards compat.
+    const myNotifications = notifications.filter(
+        n => !n.recipientRole || n.recipientRole === currentRole
+    );
 
-  const unreadCount = myNotifications.filter((n) => !n.read).length;
+    const unreadCount = myNotifications.filter(n => !n.read).length;
 
-  const getIcon = (type) => {
-    switch (type) {
-      case 'resolution':
-        return <CheckCircle2 className='w-5 h-5 text-emerald-500' />;
-      case 'message':
-        return <MessageSquare className='w-5 h-5 text-blue-500' />;
-      case 'new_ticket':
-        return <Ticket className='w-5 h-5 text-amber-500' />;
-      default:
-        return <Bell className='w-5 h-5 text-gray-400' />;
-    }
-  };
+    const getIcon = (type) => {
+        switch (type) {
+            case 'resolution': return <CheckCircle2 className="w-5 h-5 text-emerald-500" />;
+            case 'message': return <MessageSquare className="w-5 h-5 text-blue-500" />;
+            case 'new_ticket': return <Ticket className="w-5 h-5 text-amber-500" />;
+            default: return <Bell className="w-5 h-5 text-gray-400" />;
+        }
+    };
 
     return (
         <Popover onOpenChange={(open) => { if (!open) markNotificationsRead(); }}>
@@ -37,12 +33,7 @@ const NotificationPopover = ({ isAdmin = false }) => {
                 <Button
                     variant="ghost"
                     size="icon"
-<<<<<<< HEAD
                     className="relative text-gray-500 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-800 rounded-full transition-colors"
-=======
-                    aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
-                    className="relative text-gray-500 hover:bg-gray-100 rounded-full transition-colors"
->>>>>>> upstream/gssoc
                 >
                     <Bell className="w-5 h-5" />
                     {unreadCount > 0 && (
@@ -105,51 +96,14 @@ const NotificationPopover = ({ isAdmin = false }) => {
                 <div className="p-3 bg-gray-50 dark:bg-slate-950 border-t border-gray-100 dark:border-slate-700">
                     <button
                         onClick={() => markNotificationsRead()}
-<<<<<<< HEAD
                         className="w-full py-2 text-xs font-black text-gray-400 dark:text-slate-400 uppercase tracking-widest hover:text-emerald-600 transition-colors bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-700"
-=======
-                        aria-label="Mark all notifications as read"
-                        className="w-full py-2 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-emerald-600 transition-colors bg-white rounded-lg border border-gray-100"
->>>>>>> upstream/gssoc
                     >
-                      {notif.title}
-                    </p>
-                    <p className='text-[11px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed'>
-                      {notif.message}
-                    </p>
-                    <p className='text-[9px] font-bold text-gray-400 mt-2 uppercase tracking-tighter'>
-                      {new Date(notif.timestamp).toLocaleString([], {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  </div>
+                        Mark all as read
+                    </button>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <div className='p-10 text-center flex flex-col items-center'>
-              <div className='size-12 bg-gray-50 rounded-2xl flex items-center justify-center mb-4'>
-                <Bell className='w-6 h-6 text-gray-200' />
-              </div>
-              <p className='text-sm font-bold text-gray-900'>All caught up</p>
-              <p className='text-xs font-medium text-gray-500 mt-1'>No new activity to show</p>
-            </div>
-          )}
-        </div>
-        <div className='p-3 bg-gray-50 border-t border-gray-100'>
-          <button
-            onClick={() => markNotificationsRead()}
-            className='w-full py-2 text-[10px] font-black text-gray-400 uppercase tracking-widest hover:text-emerald-600 transition-colors bg-white rounded-lg border border-gray-100'
-          >
-            Mark all as read
-          </button>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
+            </PopoverContent>
+        </Popover>
+    );
 };
 
 export default NotificationPopover;

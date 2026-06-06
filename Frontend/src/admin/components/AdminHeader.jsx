@@ -11,117 +11,22 @@ import { supabase } from '../../lib/supabaseClient';
 /**
  * AdminHeader Component
  * Refined 64px header for the administrative console.
- * Features a solid white background, specific search placeholder, 
- * and a functional avatar dropdown menu.
  */
 const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar }) => {
   const { theme, toggleTheme } = useTheme();
     const [isProfileOpen, setIsProfileOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
-    const [searchResults, setSearchResults] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [isSearchFocused, setIsSearchFocused] = useState(false);
-    const [highlightedIndex, setHighlightedIndex] = useState(-1);
-    
     const dropdownRef = useRef(null);
     const searchRef = useRef(null);
-    const searchContainerRef = useRef(null);
     const navigate = useNavigate();
-    
     const { logout, profile: adminProfile } = useAuthStore();
     const initials = adminProfile?.full_name ? adminProfile.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : 'AD';
     const { theme, toggleTheme } = useTheme();
 
-    // Debounced pg_trgm trigram global search implementation
-    useEffect(() => {
-        if (!searchQuery.trim()) {
-            setSearchResults([]);
-            return;
-        }
-
-        setIsLoading(true);
-        const delayDebounce = setTimeout(async () => {
-            try {
-                const query = searchQuery.trim();
-                let dbQuery = supabase
-                    .from('tickets')
-                    .select('id, ticket_id, subject, description, category, status, priority, company_id')
-                    .order('created_at', { ascending: false });
-
-                // Filter by role and company_id
-                if (adminProfile?.role !== 'master_admin' && adminProfile?.company_id) {
-                    dbQuery = dbQuery.eq('company_id', adminProfile.company_id);
-                }
-
-                // Trigram search across subject, description, category, status, assigned_team, and ticket_id
-                const orConditions = [
-                    `subject.ilike.%${query}%`,
-                    `description.ilike.%${query}%`,
-                    `category.ilike.%${query}%`,
-                    `status.ilike.%${query}%`,
-                    `assigned_team.ilike.%${query}%`,
-                    `ticket_id.ilike.%${query}%`
-                ];
-                
-                dbQuery = dbQuery.or(orConditions.join(','));
-                
-                const { data, error } = await dbQuery.limit(8);
-                
-                if (error) {
-                    console.error("[Search Error] Supabase query failed:", error);
-                } else {
-                    setSearchResults(data || []);
-                }
-            } catch (err) {
-                console.error("[Search Error] Exception inside search query:", err);
-            } finally {
-                setIsLoading(false);
-                setHighlightedIndex(-1);
-            }
-        }, 300); // 300ms debounce
-
-        return () => clearTimeout(delayDebounce);
-    }, [searchQuery, adminProfile]);
-
-    const handleSearchKeyDown = (e) => {
-        if (e.key === 'Enter') {
-            if (highlightedIndex >= 0 && highlightedIndex < searchResults.length) {
-                const selected = searchResults[highlightedIndex];
-                navigate(`/admin/ticket/${selected.ticket_id || selected.id}`);
-                setIsSearchFocused(false);
-                setSearchQuery('');
-            } else if (searchQuery.trim()) {
-                navigate(`/admin/tickets?q=${encodeURIComponent(searchQuery.trim())}`);
-                setIsSearchFocused(false);
-                searchRef.current?.blur();
-            }
-        } else if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            setHighlightedIndex(prev => (searchResults.length ? (prev + 1) % searchResults.length : -1));
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            setHighlightedIndex(prev => (searchResults.length ? (prev - 1 + searchResults.length) % searchResults.length : -1));
-        } else if (e.key === 'Escape') {
-            setSearchQuery('');
-            setIsSearchFocused(false);
-            searchRef.current?.blur();
-        }
-    };
-
-    const handleSearchClear = () => {
-        setSearchQuery('');
-        setSearchResults([]);
-        searchRef.current?.focus();
-    };
-
-    // Handle clicks outside of dropdowns to close them
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
                 setIsProfileOpen(false);
-            }
-            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target)) {
-                setIsSearchFocused(false);
             }
         };
         const handleCloseModals = () => setIsProfileOpen(false);
@@ -145,7 +50,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                 {/* Mobile Menu Toggle */}
                 <button
                     onClick={onMobileNavToggle}
-                    className="lg:hidden p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"
+                    className="lg:hidden p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl text-slate-500 dark:text-slate-400 transition-colors"
                 >
                     <Menu size={20} />
                 </button>
@@ -184,6 +89,8 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                             <X size={14} />
                         </button>
                     )}
+                </div>
+            </div>
 
                     {/* Debounced Search Results Floating Dropdown Dropdown */}
                     {isSearchFocused && searchQuery.trim() && (

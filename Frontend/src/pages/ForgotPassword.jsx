@@ -126,7 +126,23 @@ const handleUpdatePassword = async (e) => {
     setLoading(true);
     setError('');
 
-    return (
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+      setStep(4);
+      setMessage('Sync Successful! Your password has been updated.');
+    } catch (err) {
+      console.error('Password update error:', err);
+      setError(err.message || 'Failed to update password.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
         <div className="min-h-screen flex flex-col items-center justify-center font-sans relative overflow-hidden p-6 py-12 bg-gradient-to-br from-[#f0fdf4] via-[#dcfce7] to-[#bbf7d0] dark:from-[#102219] dark:via-[#142f22] dark:to-[#173a2a] text-slate-900 dark:text-slate-100 transition-colors duration-200">
             {/* Background Patterns */}
             <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>

@@ -64,8 +64,6 @@ const AdminLayout = () => {
             <AdminSidebar isMobile={true} onClose={() => setIsMobileNavOpen(false)} />
           </div>
         </div>
-      )}
-    </div>
   );
 };
 
