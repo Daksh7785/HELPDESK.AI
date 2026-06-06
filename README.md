@@ -29,6 +29,12 @@ pinned: false
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=for-the-badge)](https://opensource.org/licenses/MIT)
 [![Vercel Deployment](https://img.shields.io/badge/Production-Live-000000?style=for-the-badge&logo=vercel&logoColor=white)](https://helpdeskaiv1.vercel.app/)
 
+[![CI - Frontend Lint](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=frontend-lint)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
+[![CI - Frontend Build](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=frontend-build)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
+[![CI - Backend Lint](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=backend-lint)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
+[![CI - Backend Tests](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=backend-tests)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
+[![CI - Model Validation](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml/badge.svg?job=model-validation)](https://github.com/Lin081984/fugui-fix-env/actions/workflows/ci.yml)
+
 <br/>
 
   <a href="https://helpdeskaiv1.vercel.app/">
