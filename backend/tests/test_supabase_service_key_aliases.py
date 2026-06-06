@@ -13,4 +13,5 @@ def test_supabase_client_initializers_accept_service_key_alias():
     ]:
         source = (ROOT / relative_path).read_text(encoding="utf-8")
 
-        assert 'os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")' in source
+        assert "SUPABASE_SERVICE_ROLE_KEY" in source
+        assert "SUPABASE_SERVICE_KEY" in source

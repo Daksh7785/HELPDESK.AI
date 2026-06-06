@@ -144,6 +144,25 @@ def test_build_client_accepts_service_key_alias(monkeypatch):
     )
 
 
+def test_build_client_prefers_service_role_key_over_alias(monkeypatch):
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "primary-key")
+    monkeypatch.setenv("SUPABASE_SERVICE_KEY", "fallback-key")
+
+    with patch.dict("sys.modules", {"supabase": MagicMock()}):
+        import supabase
+
+        supabase.create_client.return_value = "client"
+
+        client = seed_mod._build_client()
+
+    assert client == "client"
+    supabase.create_client.assert_called_once_with(
+        "https://example.supabase.co",
+        "primary-key",
+    )
+
+
 def test_main_reuses_one_client_for_seed_and_verify():
     client = FakeSupabase({
         "tickets": [{"company_id": "c1"}],
