@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import logger from '../../utils/logger';
 import { useNavigate } from 'react-router-dom';
 import useToastStore from '../../store/toastStore';
 import {

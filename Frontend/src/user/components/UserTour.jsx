@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import secureStorage from '../../utils/secureStorage';
 import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride';
 
 const TOUR_KEY = 'userTourCompleted';

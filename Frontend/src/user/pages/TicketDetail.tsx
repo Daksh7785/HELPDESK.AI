@@ -42,11 +42,9 @@ const TicketDetail = () => {
         const fetchInitialTicket = async () => {
             setLoading(true);
             try {
-                const { data, error } = await supabase
-                    .from('tickets')
-                    .select('*')
-                    .eq('id', ticket_id)
-                    .single();
+                const response = await axios.get(`${API_CONFIG.BACKEND_URL}/tickets/${ticket_id}`);
+                const data = response.data;
+                const error = null;
 
                 if (error) throw error;
                 if (data) {
@@ -58,7 +56,7 @@ const TicketDetail = () => {
                     });
                 }
             } catch (err) {
-                console.error("Error fetching ticket:", err);
+                logger.error("Error fetching ticket:", err);
             } finally {
                 setLoading(false);
             }
@@ -104,7 +102,7 @@ const TicketDetail = () => {
             if (upError) throw upError;
             setTicket(prev => ({ ...prev, ...updates }));
         } catch (err) {
-            console.error("Failed to reopen ticket:", err);
+            logger.error("Failed to reopen ticket:", err);
         } finally {
             setIsReopening(false);
         }

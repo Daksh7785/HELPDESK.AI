@@ -1,7 +1,5 @@
 """
-FastAPI Backend — AI Helpdesk Ticket Analyzer
-POST /ai/analyze_ticket  →  full analysis of a support ticket
-GET  /health             →  service health check
+FastAPI Backend — AI Helpdesk Ticket Analyzer (Refactored)
 """
 
 import os

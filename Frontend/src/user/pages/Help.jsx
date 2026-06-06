@@ -69,8 +69,8 @@ const Help = () => {
             const cacheTimeKey = `yt_videos_time_v3_${activeTab}_${debouncedSearch}`;
             
             try {
-                const cachedData = localStorage.getItem(cacheKey);
-                const cacheTimestamp = localStorage.getItem(cacheTimeKey);
+                const cachedData = secureStorage.getItem(cacheKey);
+                const cacheTimestamp = secureStorage.getItem(cacheTimeKey);
                 
                 if (cachedData && cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < 86400000) {
                     setVideos(JSON.parse(cachedData));

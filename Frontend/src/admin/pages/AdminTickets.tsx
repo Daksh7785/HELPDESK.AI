@@ -474,10 +474,7 @@ const AdminTickets = () => {
     const handleUpdateTicket = async (id, updates) => {
         setIsUpdating(id);
         try {
-            const { error: upError } = await supabase
-                .from('tickets')
-                .update(updates)
-                .eq('id', id);
+            await api.apiUpdateTicket(id, updates); const upError = null;
 
             if (upError) throw upError;
 

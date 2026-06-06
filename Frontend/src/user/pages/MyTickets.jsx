@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import logger from '../../utils/logger';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -154,7 +155,7 @@ function MyTickets() {
                 'postgres_changes',
                 { event: '*', schema: 'public', table: 'tickets', filter: `user_id=eq.${user.id}` },
                 (payload) => {
-                    console.log("User tickets real-time event:", payload.eventType, payload.new);
+                    logger.log("User tickets real-time event:", payload.eventType, payload.new);
                     if (payload.eventType === 'INSERT') {
                         setTickets(prev => [payload.new, ...prev].slice(0, PAGE_SIZE));
                     } else if (payload.eventType === 'UPDATE') {

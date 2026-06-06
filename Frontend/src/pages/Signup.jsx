@@ -237,8 +237,8 @@ function Signup() {
 
         <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8" style={{ boxShadow: '0 8px 40px rgba(0,0,0,0.08)', border: '1px solid #f0fdf4' }}>
           <div className="text-center" style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: '28px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', marginBottom: '8px' }}>Create Account</h2>
-            <p style={{ color: '#6b7280', fontSize: '14px' }}>Start automating your IT support today</p>
+            <h2 className="font-syne text-[28px] font-extrabold text-gray-900 tracking-tight mb-2">Create Account</h2>
+            <p className="text-gray-500 text-sm">Start automating your IT support today</p>
           </div>
 
           {error && (

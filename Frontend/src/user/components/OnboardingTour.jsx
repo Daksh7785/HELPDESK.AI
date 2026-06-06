@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import secureStorage from '../../utils/secureStorage';
 import Joyride, { STATUS } from 'react-joyride';
 
 const OnboardingTour = () => {
