@@ -536,7 +536,8 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+@limiter.limit("60/minute")
+async def get_tickets(request: Request, company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -549,6 +550,7 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
+@limiter.limit("30/minute")
 async def save_ticket(request_body: TicketSaveRequest, request: Request):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
@@ -676,7 +678,8 @@ async def save_ticket(request_body: TicketSaveRequest, request: Request):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+@limiter.limit("60/minute")
+async def get_ticket_by_id(ticket_id: str, request: Request):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -688,7 +691,8 @@ async def get_ticket_by_id(ticket_id: str):
 
 
 @app.post("/tickets", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+@limiter.limit("30/minute")
+async def create_ticket(ticket: TicketRecord, request: Request):
     """Save a new ticket into the system."""
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
@@ -701,7 +705,8 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+@limiter.limit("60/minute")
+async def update_ticket(ticket_id: str, updates: dict, request: Request):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
