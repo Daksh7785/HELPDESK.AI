@@ -27,7 +27,7 @@ function Signup() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
   const { signup, loginWithGoogle, loading, user, profile } = useAuthStore();
-  const passwordRules = { minLength: 6 };
+  const passwordRules = { minLength: 8, requireUppercase: true, requireNumber: true };
   const passwordChecks = getPasswordValidation(password, passwordRules);
   const passwordWarning = getPasswordValidationMessage(passwordChecks, passwordRules);
   const confirmPasswordWarning = confirmPassword && password !== confirmPassword ? "Passwords do not match." : "";

@@ -3,6 +3,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "../lib/supabaseClient";
 import { BrainCircuit, Lock, Eye, EyeOff, Loader2, CheckCircle2, ArrowLeft } from "lucide-react";
+import validatePassword from "@/utils/validatePassword";
 
 function ResetPassword() {
   const [password, setPassword] = useState('');
@@ -25,10 +26,11 @@ function ResetPassword() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (password.length < 8) {
-            setError("Password must be at least 8 characters long");
-            return;
-        }
+        const passwordError = validatePassword(password);
+if (passwordError) {
+    setError(passwordError);
+    return;
+}
         if (password !== confirmPassword) {
             setError("Passwords do not match");
             return;
