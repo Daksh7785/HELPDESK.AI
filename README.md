@@ -291,6 +291,38 @@ npm install
 npm run dev
 ```
 
+### Healthcheck Verification Checklist
+Use this checklist after local Docker/container startup and before promoting a deployment:
+
+1. **Confirm the API process is listening**
+   ```bash
+   curl -fsS http://localhost:7860/health
+   ```
+   Expected result: HTTP 200 with `status: "ok"`. This confirms the FastAPI app is reachable.
+
+2. **Check readiness for model-dependent traffic**
+   ```bash
+   curl -fsS http://localhost:7860/ready
+   ```
+   Expected result: HTTP 200 with `status: "ready"` when required model services and configured dependencies are available. A 503 response means at least one readiness check is still failing and the instance should not receive production traffic yet.
+
+3. **Run the container healthcheck script**
+   ```bash
+   cd backend
+   HEALTHCHECK_URL=http://localhost:7860/ready python healthcheck.py
+   ```
+   Expected result: exit code `0`. Override `HEALTHCHECK_TIMEOUT_SECONDS` if the local environment needs a longer probe timeout.
+
+4. **Verify runtime configuration**
+   - Set `REQUIRE_SUPABASE=true` when the deployment must fail readiness without Supabase configuration.
+   - Use `ALLOW_DEGRADED_STARTUP=1` only for local development or controlled smoke tests where duplicate-index and RAG availability are optional.
+   - Confirm frontend `VITE_BACKEND_URL` points to the same backend URL being checked.
+
+5. **Inspect deployment logs if readiness fails**
+   - Review startup logs for classifier, NER, duplicate-index, RAG, and Supabase initialization messages.
+   - Re-run `/ready` after fixing configuration or model asset issues.
+   - Do not route user traffic to the instance until readiness returns `ready`.
+
 ---
 
 <h2 id="roadmap">🗺️ Roadmap</h2>
