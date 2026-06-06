@@ -121,21 +121,21 @@ const AdminDashboard = () => {
     }, [tickets]);
 
     return (
-        <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '40px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10">
+        <div className="space-y-10 -m-6 p-6 md:-m-10 md:p-10 bg-[#f8faf9] min-h-screen pb-10">
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 style={{ fontFamily: 'Syne, sans-serif', fontSize: '24px', fontWeight: 800, color: '#0f1f12', letterSpacing: '-0.02em', margin: 0 }}>
+                    <h1 className="font-syne text-2xl font-extrabold text-gray-900 tracking-tight m-0">
                         Dashboard
                     </h1>
-                    <p style={{ color: '#6b7280', fontSize: '13px', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 500 }}>
-                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}></span>
+                    <p className="text-gray-500 text-[13px] mt-1 flex items-center gap-2 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block"></span>
                         Real-time updates active
                     </p>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 16px', background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: '100px' }}>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#15803d', letterSpacing: '0.08em', textTransform: 'uppercase' }}>System Active</span>
+                <div className="flex items-center gap-2 px-4 py-1.5 bg-green-50 border-[1.5px] border-green-200 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-[pulse-dot_2s_infinite]"></span>
+                    <span className="text-[11px] font-bold text-green-700 tracking-[0.08em] uppercase">System Active</span>
                 </div>
             </div>
 
@@ -159,12 +159,12 @@ const AdminDashboard = () => {
                 {/* Recent Activity */}
                 <div className="lg:col-span-8 space-y-6">
                     <div className="flex items-center justify-between px-2">
-                        <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h2 className="font-syne text-[15px] font-bold text-gray-900 flex items-center gap-2">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
                             Recent Tickets
                         </h2>
                     </div>
-                    <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                    <div className="bg-white rounded-[20px] border border-green-50 shadow-[0_2px_16px_rgba(0,0,0,0.05)] overflow-hidden">
                         <TicketTable tickets={tickets} limit={10} isLoading={isLoading} />
                     </div>
                 </div>
@@ -176,35 +176,35 @@ const AdminDashboard = () => {
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
                             AI Status
                         </h2>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '100px', padding: '3px 10px' }}>
-                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
-                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#15803d' }}>LIVE SYNC</span>
+                        <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-full px-2.5 py-[3px]">
+                            <span className="w-[5px] h-[5px] rounded-full bg-green-500 inline-block animate-[pulse-dot_2s_infinite]"></span>
+                            <span className="text-[10px] font-bold text-green-700">LIVE SYNC</span>
                         </div>
                     </div>
-                    <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', padding: '24px' }}>
+                    <div className="bg-white rounded-[20px] border border-green-50 p-6">
                         <div className="space-y-4">
                             {aiSubsystems.map((sub, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 transition-all cursor-default hover:bg-white hover:border-green-100" style={{ background: '#f8faf9' }}>
+                                <div key={idx} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 transition-all cursor-default hover:bg-white hover:border-green-100 bg-[#f8faf9]">
                                     <div className="flex items-center gap-3">
-                                        <div style={{ background: aiIconMap[idx].bg, color: aiIconMap[idx].color, width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                        <div style={{ background: aiIconMap[idx].bg, color: aiIconMap[idx].color }} className="w-9 h-9 rounded-[10px] flex items-center justify-center">
                                             {aiIconMap[idx].icon}
                                         </div>
                                         <div>
-                                            <p style={{ fontSize: '13px', fontWeight: 600, color: '#111827', margin: 0 }}>{sub.name}</p>
-                                            <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '1px' }}>Status: {sub.latency}</p>
+                                            <p className="text-[13px] font-semibold text-gray-900 m-0">{sub.name}</p>
+                                            <p className="text-[11px] text-gray-500 mt-[1px]">Status: {sub.latency}</p>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 10px', background: sub.status === 'Active' ? '#dcfce7' : '#f3f4f6', color: sub.status === 'Active' ? '#15803d' : '#6b7280', border: sub.status === 'Active' ? '1px solid #bbf7d0' : '1px solid #e5e7eb', borderRadius: '100px' }}>
-                                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: sub.status === 'Active' ? '#22c55e' : '#9ca3af' }}></div>
-                                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>{sub.status}</span>
+                                    <div className={`flex items-center gap-1.5 px-2.5 py-[3px] rounded-full border ${sub.status === 'Active' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-500 border-gray-200'}`}>
+                                        <div className={`w-[5px] h-[5px] rounded-full ${sub.status === 'Active' ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                                        <span className="text-[10px] font-bold uppercase">{sub.status}</span>
                                     </div>
                                 </div>
                             ))}
                             <div className="pt-4 mt-4 border-t border-gray-100 flex flex-col items-center gap-2">
-                                <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.14em', fontWeight: 600, textTransform: 'uppercase' }}>All systems operating normally</p>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: '#f8faf9', borderRadius: '100px', border: '1px solid #e5e7eb' }}>
+                                <p className="text-[10px] text-gray-400 tracking-[0.14em] font-semibold uppercase">All systems operating normally</p>
+                                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#f8faf9] rounded-full border border-gray-200">
                                     <Activity size={10} color="#9ca3af" />
-                                    <span style={{ fontSize: '9px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                    <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-[0.1em]">
                                         Last Synced: {formatTimelineDate(new Date())}
                                     </span>
                                 </div>

@@ -65,12 +65,10 @@ function KnowledgeCheck() {
                 <div className="absolute -top-20 -left-20 w-72 h-72 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-20 right-0 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
                 {/* Dot-grid overlay */}
-                <div className="absolute inset-0 opacity-[0.04]"
-                    style={{ backgroundImage: 'radial-gradient(circle, #fff 1px, transparent 1px)', backgroundSize: '24px 24px' }} />
+                <div className="absolute inset-0 opacity-[0.04] bg-[radial-gradient(circle,#fff_1px,transparent_1px)] bg-[size:24px_24px]" />
                 {/* Scanning beam */}
                 <div className="absolute top-0 left-0 h-full pointer-events-none overflow-hidden w-full">
-                    <div className="absolute top-0 bottom-0 w-[3px] bg-gradient-to-b from-transparent via-emerald-400/70 to-transparent"
-                        style={{ animation: 'knowledgeScan 3.5s ease-in-out infinite' }} />
+                    <div className="absolute top-0 bottom-0 w-[3px] bg-gradient-to-b from-transparent via-emerald-400/70 to-transparent animate-[knowledgeScan_3.5s_ease-in-out_infinite]" />
                 </div>
                 <style>{`@keyframes knowledgeScan{0%{left:0%;opacity:0}10%{opacity:1}90%{opacity:1}100%{left:100%;opacity:0}}`}</style>
 
@@ -123,8 +121,7 @@ function KnowledgeCheck() {
                                     {i < steps.length - 1 && (
                                         <div className="flex-1 mx-4 mt-[-28px] relative h-[2px]">
                                             <div className="absolute inset-0 bg-white/10 rounded-full" />
-                                            <div className="absolute inset-y-0 left-0 bg-emerald-400 rounded-full transition-all duration-700 shadow-[0_0_6px_rgba(52,211,153,0.5)]"
-                                                style={{ width: i < activeStep ? '100%' : '0%' }} />
+                                            <div className={`absolute inset-y-0 left-0 bg-emerald-400 rounded-full transition-all duration-700 shadow-[0_0_6px_rgba(52,211,153,0.5)] ${i < activeStep ? 'w-full' : 'w-0'}`} />
                                         </div>
                                     )}
                                 </React.Fragment>
