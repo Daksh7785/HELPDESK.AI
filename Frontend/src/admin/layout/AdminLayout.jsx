@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Outlet } from 'react-router-dom';
 import AdminSidebar from '../components/AdminSidebar';
 import AdminHeader from '../components/AdminHeader';
@@ -20,7 +20,7 @@ const AdminLayout = () => {
     return (
         <div className="flex h-screen bg-[#f8faf9] dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden font-sans transition-colors duration-200">
             {/* Master Navigation Column (Responsive) */}
-            <div 
+            <div
                 className={`hidden md:block flex-shrink-0 relative z-40 transition-all duration-300`}
                 style={{ width: isSidebarCollapsed ? '80px' : '260px' }}
             >
