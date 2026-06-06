@@ -34,7 +34,7 @@ from pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
@@ -403,45 +403,6 @@ from backend.services.rate_limit_config import limiter
 ML_HEAVY_LIMIT  = "10/minute"   # NLP, OCR, Gemini — GPU/CPU intensive
 ML_LIGHT_LIMIT  = "30/minute"   # Similar incident search — lighter
 
-app = FastAPI(title="AI Helpdesk Ticket Analyzer")
-
-# ── Apply to FastAPI app ──────────────────────────────────────────────────────
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(SlowAPIMiddleware)
-
-# Hard request body size cap — rejects oversized payloads before any JSON parsing
-# or Pydantic validation runs, preventing memory exhaustion from multi-MB uploads.
-# Default: 20 MB to accommodate the 14 MB image_base64 limit plus JSON overhead.
-_MAX_REQUEST_BODY_BYTES = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(20 * 1024 * 1024)))
-
-
-@app.middleware("http")
-async def request_body_size_guard(request: Request, call_next):
-    """Reject requests whose body exceeds _MAX_REQUEST_BODY_BYTES.
-
-    The Content-Length header is checked first (fast path); bodies sent with
-    chunked transfer encoding are read and measured before they reach any
-    endpoint handler.
-    """
-    content_length = request.headers.get("content-length")
-    if content_length:
-        try:
-            cl = int(content_length)
-            if cl > _MAX_REQUEST_BODY_BYTES:
-                return JSONResponse(
-                    status_code=413,
-                    content={
-                        "detail": (
-                            f"Request body too large ({cl:,} bytes). "
-                            f"Maximum allowed size is {_MAX_REQUEST_BODY_BYTES:,} bytes."
-                        )
-                    },
-                )
-        except ValueError:
-            pass  # malformed Content-Length — let downstream handle it
-
-    return await call_next(request)
 
 # ---------------------------------------------------------------------------
 # Request / Response models
@@ -653,61 +614,8 @@ class TicketSaveRequest(BaseModel):
     assigned_team: str
     status: str
 
-# ── Endpoints ─────────────────────────────────────────────────────────────────
 
-@app.get("/health")
-async def health_check():
-    """Return a lightweight status payload showing whether core models are loaded."""
-    return {"status": "ok"}
 
-# NLP classification endpoint
-@app.post("/analyze")
-@limiter.limit(ML_HEAVY_LIMIT)
-async def analyze_ticket(request: Request, ticket: TicketRequest):
-    """Legacy NLP classification endpoint. Use /ai/analyze_ticket for full pipeline."""
-    # ... existing implementation unchanged ...
-    pass
-
-# OCR processing endpoint
-@app.post("/analyze-ocr")
-@limiter.limit(ML_HEAVY_LIMIT)
-async def analyze_ocr(request: Request, ticket: TicketRequest):
-    """Legacy OCR analysis endpoint. Extracts text from images and classifies alongside ticket text."""
-    # ... existing implementation unchanged ...
-    pass
-
-# Similar incident detection endpoint
-@app.post("/similar")
-@limiter.limit(ML_LIGHT_LIMIT)
-async def find_similar(request: Request, ticket: TicketRequest):
-    """Legacy similar ticket detection. Use /ai/check_duplicate for the current implementation."""
-    # ... existing implementation unchanged ...
-    pass
-
-# Gemini LLM resolution endpoint
-@app.post("/gemini-resolve")
-@limiter.limit(ML_HEAVY_LIMIT)
-async def gemini_resolve(request: Request, ticket: TicketRequest):
-    # ... existing implementation unchanged ...
-    pass
-    auto_resolve: bool
-    is_duplicate: bool
-    confidence: float
-    detected_language: str | None = None
-    original_body: str | None = None
-    image_url: str | None = None
-    company: str | None = None
-    company_id: str | None = None
-    sla_breach_at: str
-    sla_status: str | None = None
-    escalation_level: int = 0
-    metadata: dict = {}
-    entities: list = []
-    solution_steps: list = []
-    ocr_text: str = ""
-    needs_review: bool = False
-    routing_confidence: float = 0.0
-    source: str = "text"
 
 
 
@@ -1132,9 +1040,56 @@ TAGS_METADATA = [
 ]
 
 app = FastAPI(
-
+    title="HELPDESK.AI Backend",
+    description=API_DESCRIPTION,
+    version="1.0.0",
+    lifespan=lifespan,
+    openapi_tags=TAGS_METADATA,
+    swagger_ui_parameters={
+        "defaultModelsExpandDepth": -1,
+        "docExpansion": "none",
+        "filter": True,
+        "syntaxHighlight.theme": "obsidian",
+    },
+    swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
+    swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
+    contact={"name": "HELPDESK.AI Team", "url": "https://github.com/ritesh-1918/HELPDESK.AI"},
+    license_info={"name": "MIT"},
 )
 app.state.supabase = supabase
+
+# Hard request body size cap — rejects oversized payloads before any JSON parsing
+# or Pydantic validation runs, preventing memory exhaustion from multi-MB uploads.
+# Default: 20 MB to accommodate the 14 MB image_base64 limit plus JSON overhead.
+_MAX_REQUEST_BODY_BYTES = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(20 * 1024 * 1024)))
+
+
+@app.middleware("http")
+async def request_body_size_guard(request: Request, call_next):
+    """Reject requests whose body exceeds _MAX_REQUEST_BODY_BYTES.
+
+    The Content-Length header is checked first (fast path); bodies sent with
+    chunked transfer encoding are read and measured before they reach any
+    endpoint handler.
+    """
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            cl = int(content_length)
+            if cl > _MAX_REQUEST_BODY_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "detail": (
+                            f"Request body too large ({cl:,} bytes). "
+                            f"Maximum allowed size is {_MAX_REQUEST_BODY_BYTES:,} bytes."
+                        )
+                    },
+                )
+        except ValueError:
+            pass  # malformed Content-Length — let downstream handle it
+
+    return await call_next(request)
 
 # Corporate-clean Swagger theme overrides (HELPDESK.AI palette: emerald + slate).
 SWAGGER_CUSTOM_CSS = """
@@ -1179,8 +1134,10 @@ body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', sy
 """
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
-from backend.services.rate_limit_config import limiter
+from backend.services.rate_limit_config import limiter, RATE_LIMIT_AI
 app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+
 
 
 
@@ -1395,6 +1352,7 @@ async def audit_context_middleware(request: Request, call_next):
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse, tags=["System"], summary="API landing page")
 async def root():
+    """Serve the interactive HTML landing page for the HELPDESK.AI API."""
     return """
     <!DOCTYPE html>
     <html lang="en">
@@ -4149,6 +4107,7 @@ async def list_api_tokens(
     user: dict = Depends(get_current_user),
     manager: TokenManager = Depends(_get_token_manager),
 ):
+    """List all active API tokens registered under the user's company."""
     return manager.list_tokens(company_id=user.get("company_id", ""))
 
 
@@ -4159,6 +4118,7 @@ async def revoke_api_token(
     user: dict = Depends(get_current_user),
     manager: TokenManager = Depends(_get_token_manager),
 ):
+    """Revoke a specific API token to prevent further authentication."""
     manager.revoke_token(
         token_id=token_id,
         company_id=user.get("company_id", ""),
@@ -4193,6 +4153,7 @@ async def get_token_usage(
     user: dict = Depends(get_current_user),
     manager: TokenManager = Depends(_get_token_manager),
 ):
+    """Retrieve detailed usage statistics and request counts for a specific API token."""
     return manager.get_usage_summary(
         token_id=token_id,
         company_id=user.get("company_id", ""),
