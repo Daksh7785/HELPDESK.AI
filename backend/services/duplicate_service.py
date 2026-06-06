@@ -5,6 +5,8 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
+import threading
+import tempfile
 from sentence_transformers import SentenceTransformer, util
 
 SIMILARITY_THRESHOLD = 0.70
@@ -17,6 +19,7 @@ class DuplicateService:
         self._load_failed = False
         # In-memory store: list of (ticket_id, embedding, text)
         self._tickets: list[tuple[str, object, str]] = []
+        self._lock = threading.Lock()  # Protects _tickets, _loaded, _load_failed
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
 
@@ -66,7 +69,7 @@ class DuplicateService:
                 raise
 
     def save_to_disk(self, ticket_id: str, text: str):
-        """Append a new ticket to the JSON storage."""
+        """Append a new ticket to the JSON storage using atomic write."""
         import json
         data = []
         try:
@@ -77,24 +80,36 @@ class DuplicateService:
                         data = json.load(f)
                         if not isinstance(data, list):
                             data = []
-                    except:
+                    except Exception:
                         data = []
-            
             data.append({"ticket_id": ticket_id, "text": text})
-            with open(self.storage_file, "w") as f:
-                json.dump(data, f, indent=2)
+            # Atomic write: tmp file + os.replace prevents torn writes
+            tmp_fd, tmp_path = tempfile.mkstemp(
+                dir=os.path.dirname(self.storage_file), suffix=".json"
+            )
+            try:
+                with os.fdopen(tmp_fd, "w") as f:
+                    json.dump(data, f, indent=2)
+                os.replace(tmp_path, self.storage_file)
+            except Exception:
+                if os.path.exists(tmp_path):
+                    os.unlink(tmp_path)
+                raise
             print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
         except Exception as e:
             print(f"[DuplicateService] Failed to save to disk: {e}")
 
     def add_ticket(self, ticket_id: str, text: str):
-        """Add a ticket to the in-memory store and persist to disk."""
+        """Add a ticket to the in-memory store and persist to disk.
+        Thread-safe: uses _lock to prevent data races on _tickets.
+        """
         self.load()
         if not self.is_available():
             print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
         embedding = self.model.encode(text, convert_to_tensor=True)
-        self._tickets.append((ticket_id, embedding, text))
+        with self._lock:
+            self._tickets.append((ticket_id, embedding, text))
         self.save_to_disk(ticket_id, text)
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
@@ -135,10 +150,14 @@ class DuplicateService:
 
         query_embedding = self.model.encode(text, convert_to_tensor=True)
 
+        # Snapshot _tickets under lock to prevent TOCTOU races
+        with self._lock:
+            tickets_snapshot = list(self._tickets)
+
         best_score = 0.0
         best_id = None
 
-        for ticket_id, stored_emb, _ in self._tickets:
+        for ticket_id, stored_emb, _ in tickets_snapshot:
             score = util.cos_sim(query_embedding, stored_emb).item()
             if score > best_score:
                 best_score = score
