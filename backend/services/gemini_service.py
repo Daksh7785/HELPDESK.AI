@@ -26,6 +26,7 @@ import json
 from pathlib import Path
 
 from dotenv import load_dotenv
+from fastapi import HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,11 @@ except ImportError:
     genai = None
     _HAS_GEMINI_DEPS = False
 
+try:
+    import google.api_core.exceptions as _gax
+except ImportError:
+    _gax = None
+
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent.parent / '.env'
 load_dotenv(dotenv_path=env_path)
@@ -46,9 +52,9 @@ load_dotenv(dotenv_path=env_path)
 # Size and concurrency limits for analyze_image
 # ---------------------------------------------------------------------------
 # Base64 string length gate — reject before any decoding (1 base64 char ≈ 0.75 bytes)
-MAX_BASE64_LEN: int = 15 * 1024 * 1024        # 15 MB string  (~11 MB decoded)
+MAX_BASE64_LEN: int = 5 * 1024 * 1024         # 5 MB string
 # Decoded binary gate — secondary check after decoding
-MAX_DECODED_BYTES: int = 10 * 1024 * 1024     # 10 MB
+MAX_DECODED_BYTES: int = 3750000              # Decoded bytes cap (~3.75 MB)
 # Pixel-count gate — prevents decompression-bomb attacks (a 1 KB PNG → 1 GB raster)
 MAX_PIXELS: int = 4096 * 4096                  # ~16.7 MP
 MAX_DIMENSION: int = 4096                       # per side
@@ -71,11 +77,29 @@ def _error_response(reason: str) -> dict:
     return {"image_description": reason, "ocr_text": "", "detected_problem": ""}
 
 
+SUPPORTED_MODELS = {
+    "gemini-3.5-flash",
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-preview-05-20",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+}
+DEFAULT_MODEL = "gemini-3.5-flash"
+
+
 class GeminiService:
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY")
         self._initialized = False
-        self.model_name = 'gemini-2.5-flash'
+
+        requested_model = os.getenv("GEMINI_MODEL_NAME", DEFAULT_MODEL).strip()
+        if requested_model not in SUPPORTED_MODELS:
+            logger.warning(
+                "[GeminiService] Unknown model '%s'. Falling back to default: %s",
+                requested_model, DEFAULT_MODEL
+            )
+            requested_model = DEFAULT_MODEL
+        self.model_name = requested_model
 
         if self.api_key and _HAS_GEMINI_DEPS:
             try:
@@ -83,7 +107,8 @@ class GeminiService:
                 self._initialized = True
                 logger.info("[GeminiService] Connected to Google GenAI API (Model: %s)", self.model_name)
             except Exception as exc:
-                logger.error("[GeminiService] Initialization Error: %s", exc)
+                safe_msg = self._safe_error_msg(exc)
+                logger.error("[GeminiService] Initialization Error: %s", safe_msg)
         else:
             if not _HAS_GEMINI_DEPS:
                 logger.warning(
@@ -91,6 +116,62 @@ class GeminiService:
                 )
             else:
                 logger.warning("[GeminiService] GEMINI_API_KEY not found in environment.")
+
+    def _safe_error_msg(self, exc: Exception) -> str:
+        """Helper to redact the API key from exception messages to prevent log leaks."""
+        msg = str(exc)
+        if self.api_key:
+            msg = msg.replace(self.api_key, "[REDACTED]")
+        return msg
+
+    def _handle_genai_error(self, e: Exception, context: str) -> None:
+        """
+        Handle errors raised by Gemini API calls. Propagates standard FastAPI 
+        HTTPExceptions for known API errors (quota/rate-limiting, configuration, auth, service availability).
+        """
+        err_str = str(e).lower()
+        is_quota = False
+        is_model_err = False
+        is_auth_err = False
+        is_unavailable = False
+
+        if _gax:
+            if isinstance(e, _gax.ResourceExhausted):
+                is_quota = True
+            elif isinstance(e, _gax.InvalidArgument) and "model" in err_str:
+                is_model_err = True
+            elif isinstance(e, (_gax.PermissionDenied, _gax.Unauthenticated)):
+                is_auth_err = True
+            elif isinstance(e, _gax.ServiceUnavailable):
+                is_unavailable = True
+
+        if not is_quota and ("resourceexhausted" in err_str or "429" in err_str or "quota" in err_str):
+            is_quota = True
+        if not is_model_err and ("invalidargument" in err_str or "model" in err_str) and ("not found" in err_str or "not available" in err_str or "not exist" in err_str):
+            is_model_err = True
+        if not is_auth_err and ("api key not valid" in err_str or "invalid api key" in err_str or "403" in err_str or "401" in err_str or "permissiondenied" in err_str or "unauthenticated" in err_str):
+            is_auth_err = True
+        if not is_unavailable and ("serviceunavailable" in err_str or "503" in err_str or "unavailable" in err_str):
+            is_unavailable = True
+
+        safe_msg = self._safe_error_msg(e)
+        logger.error("[GeminiService] %s Error: %s", context, safe_msg)
+
+        if is_quota:
+            raise HTTPException(status_code=429, detail="AI quota exceeded. Retry after 60s.")
+        if is_model_err:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Gemini model '{self.model_name}' not available. Check GEMINI_MODEL_NAME."
+            )
+        if is_auth_err:
+            raise HTTPException(status_code=401, detail="Invalid Gemini API key credentials.")
+        if is_unavailable:
+            raise HTTPException(status_code=503, detail="Gemini service unavailable. Please retry later.")
+
+        # Raise general 500 exception for any other unhandled errors
+        raise HTTPException(status_code=500, detail=f"Gemini API failure during {context}: {safe_msg}")
+
 
     # ------------------------------------------------------------------
     # Input validation helpers
@@ -291,8 +372,8 @@ class GeminiService:
                 }
 
             except Exception as exc:
-                logger.error("[GeminiService] Image Analysis Error: %s", exc)
-                return _error_response(f"Error analyzing image: {exc}")
+                self._handle_genai_error(exc, "Image Analysis")
+                return _error_response(f"Error analyzing image: {self._safe_error_msg(exc)}")
 
 
     def get_summary(self, ticket_text: str) -> str:
@@ -310,7 +391,7 @@ class GeminiService:
             response = self.client.models.generate_content(model=self.model_name, contents=prompt)
             return response.text.strip().replace("\n", " ")
         except Exception as exc:
-            logger.error("[GeminiService] Summarization Error: %s", exc)
+            self._handle_genai_error(exc, "Summarization")
             return ticket_text[:100] + ("…" if len(ticket_text) > 100 else "")
 
     def get_reasoning(self, ticket_text: str, category: str, team: str) -> dict:
@@ -341,7 +422,7 @@ class GeminiService:
 
             return {"reasoning": reasoning, "highlights": highlights}
         except Exception as exc:
-            logger.error("[GeminiService] Reasoning Error: %s", exc)
+            self._handle_genai_error(exc, "Reasoning")
             return {"reasoning": "", "highlights": []}
 
     def get_troubleshooting_step(self, ticket_text: str, history: list[dict], category: str) -> dict:
@@ -389,7 +470,7 @@ class GeminiService:
                 "is_final": final_match.group(1).lower() == "true" if final_match else False,
             }
         except Exception as exc:
-            logger.error("[GeminiService] Troubleshooting Error: %s", exc)
+            self._handle_genai_error(exc, "Troubleshooting")
             return {
                 "step_text": "I encountered an error. Let's try one more basic check.",
                 "options": ["Okay", "Skip to agent"],
@@ -476,12 +557,12 @@ class GeminiService:
             }
 
         except Exception as exc:
-            logger.error("[GeminiService] Agent coaching error: %s", exc)
+            self._handle_genai_error(exc, "Agent Coaching")
             return {
                 "performance_score": 0,
                 "strengths": [],
                 "improvement_areas": [],
-                "coaching_tip": f"Coaching analysis failed: {exc}",
+                "coaching_tip": f"Coaching analysis failed: {self._safe_error_msg(exc)}",
                 "recommended_training": [],
             }
 
@@ -506,8 +587,8 @@ class GeminiService:
             response = self.client.models.generate_content(model=self.model_name, contents=prompt)
             return response.text.strip()
         except Exception as exc:
-            logger.error("[GeminiService] Bug Analysis Error: %s", exc)
-            return f"Diagnostic analysis failed: {exc}"
+            self._handle_genai_error(exc, "Bug Analysis")
+            return f"Diagnostic analysis failed: {self._safe_error_msg(exc)}"
 
     def detect_language(self, text: str) -> dict:
         """Detect language for the given text. Returns ISO-ish language code and English name."""
@@ -531,7 +612,7 @@ class GeminiService:
             name = str(parsed.get("name", "English"))
             return {"code": code or "en", "name": name or "English"}
         except Exception as exc:
-            logger.error("[GeminiService] Language detection error: %s", exc)
+            self._handle_genai_error(exc, "Language Detection")
             return {"code": "en", "name": "English"}
 
     def translate_to_english(self, text: str, source_language: str | None = None) -> str:
@@ -553,5 +634,5 @@ class GeminiService:
             response = self.client.models.generate_content(model=self.model_name, contents=prompt)
             return (response.text or "").strip() or text
         except Exception as exc:
-            logger.error("[GeminiService] Translation error: %s", exc)
+            self._handle_genai_error(exc, "Translation")
             return text
