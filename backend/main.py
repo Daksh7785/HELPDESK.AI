@@ -4153,3 +4153,6 @@ async def get_token_usage(
         token_id=token_id,
         company_id=user.get("company_id", ""),
     )
+# Register AI-Generated Resolution Summary router
+from backend.routers.resolution_summary import router as resolution_summary_router
+app.include_router(resolution_summary_router)
