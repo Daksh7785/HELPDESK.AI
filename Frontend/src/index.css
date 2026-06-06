@@ -92,11 +92,32 @@
   }
 }
 
-html{
+html {
   overflow-y: scroll;
   scrollbar-gutter: stable;
 }
 
-body{
+html::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 10px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dark html::-webkit-scrollbar-thumb {
+  background: #475569;
+}
+
+.dark html::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+body {
   overflow-x: hidden;
 }
