@@ -7,7 +7,7 @@ Ensures that email, push, and admin alert notifications respect company-level se
 - `digest_frequency`: Control digest email frequency (daily, weekly, disabled)
 
 Features:
-- Company settings caching to reduce DB queries
+- Company settings caching to reduce DB queries (with TTL, lock, UUID validation, size limits)
 - Audit logging for all notification decisions
 - Fail-open design (allow notification if settings unavailable)
 - Reusable for all notification trigger points
@@ -15,6 +15,10 @@ Features:
 
 import os
 import logging
+import re
+import threading
+import uuid
+from collections import OrderedDict
 from datetime import datetime, timezone
 from typing import Optional, Dict
 from enum import Enum
@@ -32,6 +36,13 @@ formatter = logging.Formatter("[NotificationRouting] %(asctime)s - %(levelname)s
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
+# Cache configurations
+SETTINGS_CACHE_TTL_SECONDS = int(os.getenv("SETTINGS_CACHE_TTL", "300"))
+SETTINGS_CACHE_MAX_SIZE = int(os.getenv("SETTINGS_CACHE_MAX_SIZE", "1000"))
+
+# Lock for thread safety
+_cache_lock = threading.Lock()
+
 
 class NotificationType(str, Enum):
     """Types of notifications that can be gated."""
@@ -45,17 +56,13 @@ class NotificationType(str, Enum):
 class NotificationRoutingMiddleware:
     """Middleware for routing and gating notifications based on company settings."""
 
-# NOTE: method names updated from `*_company_settings` to `*_system_settings` to match
-# the new schema. The database table and column names are `system_settings`,
-# `email_notifications`, and `admin_alerts`.
-
     def __init__(self):
         """Initialize the notification routing middleware."""
         self.supabase = create_client(
             os.getenv("SUPABASE_URL"),
             os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         )
-        self._settings_cache: Dict[str, Dict] = {}
+        self._settings_cache: OrderedDict[str, Dict] = OrderedDict()
         self.log_level = os.getenv("NOTIFICATION_ROUTING_LOG_LEVEL", "info").lower()
 
     def _fetch_system_settings(self, company_id: str) -> Dict:
@@ -91,7 +98,7 @@ class NotificationRoutingMiddleware:
 
     def get_system_settings(self, company_id: str) -> Dict:
         """
-        Get company settings with caching.
+        Get company settings with caching, TTL, thread safety, size limit, and UUID validation.
         
         Args:
             company_id: UUID of company
@@ -99,9 +106,40 @@ class NotificationRoutingMiddleware:
         Returns:
             Dict with company notification preferences
         """
-        if company_id not in self._settings_cache:
-            self._settings_cache[company_id] = self._fetch_system_settings(company_id)
-        return self._settings_cache[company_id]
+        # Validate company_id is a valid UUID
+        try:
+            uuid.UUID(str(company_id))
+        except ValueError:
+            logger.error(f"Invalid company_id format: {company_id}")
+            raise ValueError(f"company_id must be a valid UUID string, got: {company_id}")
+
+        now = datetime.now(timezone.utc)
+        
+        with _cache_lock:
+            # Check cache and TTL
+            if company_id in self._settings_cache:
+                entry = self._settings_cache[company_id]
+                age = (now - entry["cached_at"]).total_seconds()
+                if age < SETTINGS_CACHE_TTL_SECONDS:
+                    # Move to end to mark as recently used
+                    self._settings_cache.move_to_end(company_id)
+                    return entry["data"]
+            
+            # Fetch fresh settings
+            fresh_settings = self._fetch_system_settings(company_id)
+            
+            # Save to cache
+            self._settings_cache[company_id] = {
+                "data": fresh_settings,
+                "cached_at": now
+            }
+            
+            # Enforce max size limit (evict oldest FIFO/LRU)
+            if len(self._settings_cache) > SETTINGS_CACHE_MAX_SIZE:
+                oldest_key, _ = self._settings_cache.popitem(last=False)
+                logger.debug(f"Evicted cache entry for company_id={oldest_key}")
+                
+            return fresh_settings
 
     def should_send_email_notification(self, company_id: str, notification_type: NotificationType) -> bool:
         """
@@ -223,9 +261,10 @@ class NotificationRoutingMiddleware:
         Args:
             company_id: UUID of company
         """
-        if company_id in self._settings_cache:
-            del self._settings_cache[company_id]
-            logger.info(f"Invalidated settings cache for company {company_id}")
+        with _cache_lock:
+            if company_id in self._settings_cache:
+                del self._settings_cache[company_id]
+                logger.info(f"Invalidated settings cache for company {company_id}")
 
 
 # Singleton instance
@@ -244,3 +283,4 @@ def load():
 def get_instance() -> Optional[NotificationRoutingMiddleware]:
     """Get the singleton instance if already loaded."""
     return _instance
+
