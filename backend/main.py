@@ -36,11 +36,15 @@ warnings.filterwarnings("ignore", message="'pin_memory'")
 # HF Rebuild Trigger: 2026-03-08-2030
 from fastapi import FastAPI, Depends, HTTPException, Request, Response, WebSocket, WebSocketDisconnect, Header, BackgroundTasks
 from slowapi import Limiter, _rate_limit_exceeded_handler
+from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from starlette.middleware.base import BaseHTTPMiddleware as _BaseHTTPMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, Response, StreamingResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest, CollectorRegistry, REGISTRY
+from prometheus_fastapi_instrumentator import Instrumentator
 from fastapi.encoders import jsonable_encoder
 import asyncio
 import redis
@@ -116,6 +120,9 @@ except Exception as e:
 import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
+
+from backend.auth.tenant_middleware import security_manager
 
 FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "https://helpdeskaiv1.vercel.app").rstrip("/")
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
@@ -404,6 +411,298 @@ ML_LIGHT_LIMIT  = "30/minute"   # Similar incident search — lighter
 
 
 # ---------------------------------------------------------------------------
+# WebSocket Connection Manager — real-time ticket dashboards
+# ---------------------------------------------------------------------------
+
+HEARTBEAT_INTERVAL = 30  # seconds between ping broadcasts
+HEARTBEAT_TIMEOUT = 10   # seconds to wait for a pong before disconnect
+EVICT_INTERVAL = 60      # seconds between stale-connection sweep passes
+MAX_PER_ROOM = 50        # max connections per company room
+MAX_TOTAL = 500          # global connection cap
+
+
+class ConnectionManager:
+    """Tracks active WebSocket connections grouped by ``company_id``.
+
+    Thread-safe for concurrent connect/disconnect calls from multiple
+    ASGI workers (single-process via ``asyncio.Lock``).
+    """
+
+    def __init__(self) -> None:
+        self._connections: dict[str, set[WebSocket]] = {}
+        self._lock = asyncio.Lock()
+        self._last_pong: dict[WebSocket, float] = {}
+
+    async def connect(self, company_id: str, ws: WebSocket) -> bool:
+        """Accept a new WebSocket and register it under ``company_id``.
+
+        Returns False if global or per-room cap is reached.
+        """
+        import time
+        # Check caps before accepting
+        async with self._lock:
+            total = sum(len(s) for s in self._connections.values())
+            if total >= MAX_TOTAL:
+                print(f"[WS] Global connection cap reached ({MAX_TOTAL})")
+                return False
+            room = self._connections.setdefault(company_id, set())
+            if len(room) >= MAX_PER_ROOM:
+                print(f"[WS] Room {company_id} cap reached ({MAX_PER_ROOM})")
+                return False
+
+        await ws.accept()
+        async with self._lock:
+            self._connections.setdefault(company_id, set()).add(ws)
+            self._last_pong[ws] = time.time()
+        return True
+
+    async def disconnect(self, company_id: str, ws: WebSocket) -> None:
+        """Remove a WebSocket from the pool."""
+        async with self._lock:
+            connections = self._connections.get(company_id)
+            if connections:
+                connections.discard(ws)
+                # Clean up empty company groups
+                if not connections:
+                    del self._connections[company_id]
+            self._last_pong.pop(ws, None)
+
+    def record_pong(self, ws: WebSocket) -> None:
+        """Record the timestamp of the last received pong frame from a client."""
+        import time
+        self._last_pong[ws] = time.time()
+
+    async def broadcast(self, company_id: str, message: dict) -> int:
+        """Send a JSON message to every client in a company group.
+
+        Returns:
+            Number of successfully sent messages.
+        """
+        payload = json.dumps(message, default=str)
+        sent = 0
+        async with self._lock:
+            connections = set(self._connections.get(company_id, []))
+
+        for ws in connections:
+            try:
+                await ws.send_text(payload)
+                sent += 1
+            except Exception:
+                await self.disconnect(company_id, ws)
+        return sent
+
+    async def broadcast_all(self, message: dict) -> int:
+        """Send a JSON message to **all** connected clients."""
+        payload = json.dumps(message, default=str)
+        sent = 0
+        async with self._lock:
+            all_connections = {
+                ws for group in self._connections.values() for ws in group
+            }
+
+        for ws in all_connections:
+            try:
+                await ws.send_text(payload)
+                sent += 1
+            except Exception:
+                pass
+        return sent
+
+    async def ping_all(self) -> None:
+        """Send a ``{"type": "ping"}`` heartbeat to every connection.
+
+        Connections that fail to receive the ping or fail to respond within the timeout are removed.
+        """
+        import time
+        current_time = time.time()
+        
+        async with self._lock:
+            # Snapshot all connections under lock so iteration is safe
+            snapshot = {
+                cid: set(ws_set) for cid, ws_set in self._connections.items()
+            }
+
+        for cid, ws_set in snapshot.items():
+            for ws in list(ws_set):
+                last_active = self._last_pong.get(ws, current_time)
+                if current_time - last_active > (HEARTBEAT_INTERVAL + HEARTBEAT_TIMEOUT):
+                    print(f"[WS] Client timed out (inactive for {current_time - last_active:.1f}s) — company_id={cid}")
+                    await self.disconnect(cid, ws)
+                    try:
+                        await ws.close(code=1000, reason="Ping timeout")
+                    except Exception:
+                        pass
+                    continue
+
+                try:
+                    await ws.send_json({"type": "ping"})
+                except Exception:
+                    await self.disconnect(cid, ws)
+
+    @property
+    def active_count(self) -> int:
+        """Total number of connected clients across all companies."""
+        return sum(len(ws_set) for ws_set in self._connections.values())
+
+    async def eviction_sweep(self) -> int:
+        """Dedicated sweep that evicts connections whose last pong exceeds the timeout.
+
+        Returns the number of evicted connections.
+        """
+        import time
+        now = time.time()
+        stale: list[tuple[str, WebSocket]] = []
+
+        async with self._lock:
+            for cid, ws_set in self._connections.items():
+                for ws in list(ws_set):
+                    last = self._last_pong.get(ws, now)
+                    if now - last > (HEARTBEAT_INTERVAL + HEARTBEAT_TIMEOUT):
+                        stale.append((cid, ws))
+
+        evicted = 0
+        for cid, ws in stale:
+            await self.disconnect(cid, ws)
+            try:
+                await ws.close(code=1000, reason="Heartbeat timeout")
+            except Exception:
+                pass
+            evicted += 1
+
+        if evicted:
+            print(f"[WS] Eviction sweep: removed {evicted} stale connection(s)")
+        return evicted
+
+    def room_stats(self) -> dict:
+        """Return per-room and total connection counts for monitoring."""
+        return {
+            "total": self.active_count,
+            "rooms": {cid: len(ws_set) for cid, ws_set in self._connections.items()},
+            "room_count": len(self._connections),
+        }
+
+
+# Singleton — reused across lifespan and WebSocket route
+connection_manager = ConnectionManager()
+
+
+async def _heartbeat_loop() -> None:
+    """Background task: broadcast ping every ``HEARTBEAT_INTERVAL`` seconds.
+
+    Clients that fail the ping are disconnected automatically by
+    ``ConnectionManager.ping_all()``.
+    """
+    while True:
+        await asyncio.sleep(HEARTBEAT_INTERVAL)
+        try:
+            await connection_manager.ping_all()
+            count = connection_manager.active_count
+            if count:
+                print(f"[WS] Heartbeat sent to {count} active connection(s)")
+        except Exception as exc:
+            print(f"[WS] Heartbeat error: {exc}")
+
+
+async def _eviction_loop() -> None:
+    """Background task: sweep for stale connections every ``EVICT_INTERVAL`` seconds.
+
+    Connections that missed their pong deadline are closed and removed.
+    """
+    while True:
+        await asyncio.sleep(EVICT_INTERVAL)
+        try:
+            await connection_manager.eviction_sweep()
+        except Exception as exc:
+            print(f"[WS] Eviction sweep error: {exc}")
+
+
+# ---------------------------------------------------------------------------
+# SLA helper functions (must be defined before save_ticket uses them)
+# ---------------------------------------------------------------------------
+
+def calculate_sla_breach_at(priority: str) -> datetime.datetime:
+    """Return the UTC datetime by which the ticket must be resolved."""
+    hours_map = {"critical": 2, "high": 8, "medium": 24, "low": 72}
+    hours = hours_map.get(str(priority).lower().strip(), 72)
+    return datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=hours)
+
+
+def calculate_sla_response_at(priority: str) -> datetime.datetime:
+    """Return the UTC datetime by which the ticket must receive a first response."""
+    hours_map = {"critical": 0.5, "high": 2, "medium": 6, "low": 18}
+    hours = hours_map.get(str(priority).lower().strip(), 6)
+    return datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=hours)
+
+
+def classify_sla_status(sla_breach_at: str | None) -> str:
+    """Return 'BREACHED', 'WARNING', or 'ACTIVE' based on the breach time."""
+    if not sla_breach_at:
+        return "ACTIVE"
+    try:
+        clean_val = str(sla_breach_at).replace("Z", "+00:00")
+        deadline = datetime.datetime.fromisoformat(clean_val)
+        if deadline.tzinfo is None:
+            deadline = deadline.replace(tzinfo=datetime.timezone.utc)
+    except Exception:
+        return "ACTIVE"
+
+    now = datetime.datetime.now(datetime.timezone.utc)
+    if deadline <= now:
+        return "BREACHED"
+    if deadline - now <= datetime.timedelta(hours=1):
+        return "WARNING"
+    return "ACTIVE"
+
+# ── Rate limiter setup ────────────────────────────────────────────────────────
+# Uses client IP as the key. In production behind a proxy, set:
+#   get_remote_address to read X-Forwarded-For instead.
+limiter = Limiter(key_func=get_remote_address)
+
+# Limits (tune via env vars in production)
+ML_HEAVY_LIMIT  = "10/minute"   # NLP, OCR, Gemini — GPU/CPU intensive
+ML_LIGHT_LIMIT  = "30/minute"   # Similar incident search — lighter
+
+app = FastAPI(title="AI Helpdesk Ticket Analyzer")
+
+# ── Apply to FastAPI app ──────────────────────────────────────────────────────
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
+
+# Hard request body size cap — rejects oversized payloads before any JSON parsing
+# or Pydantic validation runs, preventing memory exhaustion from multi-MB uploads.
+# Default: 20 MB to accommodate the 14 MB image_base64 limit plus JSON overhead.
+_MAX_REQUEST_BODY_BYTES = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(20 * 1024 * 1024)))
+
+
+@app.middleware("http")
+async def request_body_size_guard(request: Request, call_next):
+    """Reject requests whose body exceeds _MAX_REQUEST_BODY_BYTES.
+
+    The Content-Length header is checked first (fast path); bodies sent with
+    chunked transfer encoding are read and measured before they reach any
+    endpoint handler.
+    """
+    content_length = request.headers.get("content-length")
+    if content_length:
+        try:
+            cl = int(content_length)
+            if cl > _MAX_REQUEST_BODY_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={
+                        "detail": (
+                            f"Request body too large ({cl:,} bytes). "
+                            f"Maximum allowed size is {_MAX_REQUEST_BODY_BYTES:,} bytes."
+                        )
+                    },
+                )
+        except ValueError:
+            pass  # malformed Content-Length — let downstream handle it
+
+    return await call_next(request)
+
+# ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
 def get_system_settings(company_id: str) -> dict:
@@ -554,6 +853,50 @@ class TicketRequest(BaseModel):
     company: str | None = None
     company_id: str | None = None
     image_url: str | None = None
+
+    # Guard limits — tune via environment variables in production
+    _MAX_TEXT_LEN: int = int(os.getenv("MAX_TICKET_TEXT_LEN", "50000"))
+    # base64 expands binary by ~4/3, so 10 MB binary ≈ 13.3 MB base64
+    _MAX_IMAGE_BASE64_LEN: int = int(os.getenv("MAX_IMAGE_BASE64_LEN", "14000000"))
+
+    @field_validator("text")
+    @classmethod
+    def validate_text_length(cls, v: str) -> str:
+        max_len = int(os.getenv("MAX_TICKET_TEXT_LEN", "50000"))
+        if len(v) > max_len:
+            raise ValueError(
+                f"Ticket text exceeds maximum length of {max_len:,} characters "
+                f"(got {len(v):,}). Please shorten your description."
+            )
+        return v
+
+    @field_validator("image_base64")
+    @classmethod
+    def validate_image_base64_size(cls, v: str) -> str:
+        """Reject oversized base64 payloads before any decoding or OCR is attempted.
+
+        Raising ValueError here causes Pydantic to return a 422 Unprocessable
+        Entity with a clear error message. A middleware-level 413 guard (via
+        RequestBodySizeLimitMiddleware) acts as the first line of defence so
+        this validator is primarily a safety net for requests that bypass the
+        middleware (e.g. unit tests, internal calls).
+        """
+        if not v:
+            return v
+        max_len = int(os.getenv("MAX_IMAGE_BASE64_LEN", "14000000"))
+        if len(v) > max_len:
+            raise ValueError(
+                f"Image payload exceeds the {max_len // 1_000_000} MB limit. "
+                "Please resize or compress the image before uploading."
+            )
+        return v
+
+    @field_validator("confidence_threshold", "duplicate_sensitivity")
+    @classmethod
+    def validate_threshold_range(cls, v: float) -> float:
+        if not 0.0 <= v <= 1.0:
+            raise ValueError(f"Value must be between 0.0 and 1.0, got {v}")
+        return v
 
     # Guard limits — tune via environment variables in production
     _MAX_TEXT_LEN: int = int(os.getenv("MAX_TICKET_TEXT_LEN", "50000"))
@@ -1130,6 +1473,48 @@ body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', sy
 .swagger-ui .response-col_description__inner div.markdown, .swagger-ui .response-col_description__inner div.renderedMarkdown { background: #0b1220; color: var(--hd-text); }
 """
 
+# Corporate-clean Swagger theme overrides (HELPDESK.AI palette: emerald + slate).
+SWAGGER_CUSTOM_CSS = """
+:root {
+  --hd-bg: #0f172a;
+  --hd-panel: #1e293b;
+  --hd-border: #334155;
+  --hd-text: #f8fafc;
+  --hd-muted: #94a3b8;
+  --hd-accent: #10b981;
+  --hd-accent-2: #3b82f6;
+}
+body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+.swagger-ui, .swagger-ui .info .title, .swagger-ui .opblock-tag, .swagger-ui .opblock .opblock-summary-operation-id,
+.swagger-ui .opblock .opblock-summary-path, .swagger-ui .opblock .opblock-summary-description,
+.swagger-ui table thead tr th, .swagger-ui .parameter__name, .swagger-ui .parameter__type,
+.swagger-ui .response-col_status, .swagger-ui .model-title, .swagger-ui .markdown p,
+.swagger-ui .info p, .swagger-ui label, .swagger-ui .tab li, .swagger-ui section.models h4 { color: var(--hd-text); }
+.swagger-ui .topbar { background: linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom: 1px solid var(--hd-border); padding: 12px 24px; }
+.swagger-ui .topbar .download-url-wrapper { display: none; }
+.swagger-ui .info { margin: 32px 0; }
+.swagger-ui .info .title { font-weight: 700; letter-spacing: -0.02em; }
+.swagger-ui .info .title small.version-stamp { background: var(--hd-accent); color: #052e1c; }
+.swagger-ui .scheme-container { background: var(--hd-panel); border: 1px solid var(--hd-border); box-shadow: none; padding: 16px 20px; }
+.swagger-ui .opblock-tag { border-bottom: 1px solid var(--hd-border); font-weight: 600; }
+.swagger-ui .opblock { background: var(--hd-panel); border: 1px solid var(--hd-border); border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.25); margin: 0 0 16px; }
+.swagger-ui .opblock .opblock-summary { border-bottom: 1px solid var(--hd-border); }
+.swagger-ui .opblock.opblock-get .opblock-summary-method { background: var(--hd-accent-2); }
+.swagger-ui .opblock.opblock-post .opblock-summary-method { background: var(--hd-accent); }
+.swagger-ui .opblock.opblock-patch .opblock-summary-method { background: #f59e0b; }
+.swagger-ui .opblock.opblock-delete .opblock-summary-method { background: #ef4444; }
+.swagger-ui .btn { border-radius: 8px; border-color: var(--hd-border); color: var(--hd-text); }
+.swagger-ui .btn.execute { background: var(--hd-accent); border-color: var(--hd-accent); color: #052e1c; }
+.swagger-ui .btn.execute:hover { background: #0ea271; }
+.swagger-ui .btn.authorize { background: var(--hd-accent-2); border-color: var(--hd-accent-2); color: #ffffff; }
+.swagger-ui input[type=text], .swagger-ui textarea, .swagger-ui select { background: #0b1220; color: var(--hd-text); border: 1px solid var(--hd-border); }
+.swagger-ui .markdown code, .swagger-ui .renderedMarkdown code { background: #0b1220; color: #5eead4; padding: 2px 6px; border-radius: 4px; }
+.swagger-ui section.models { background: var(--hd-panel); border: 1px solid var(--hd-border); border-radius: 10px; }
+.swagger-ui .model-box { background: #0b1220; }
+.swagger-ui .responses-inner h4, .swagger-ui .responses-inner h5 { color: var(--hd-muted); }
+.swagger-ui .response-col_description__inner div.markdown, .swagger-ui .response-col_description__inner div.renderedMarkdown { background: #0b1220; color: var(--hd-text); }
+"""
+
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 from backend.services.rate_limit_config import limiter, RATE_LIMIT_AI
 app.state.limiter = limiter
@@ -1166,8 +1551,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
 )
 
 # Active Learning pipeline router (Issue #1933)
@@ -1341,6 +1726,116 @@ async def audit_context_middleware(request: Request, call_next):
 
 
 # ---------------------------------------------------------------------------
+# Prometheus HTTP request instrumentation
+# ---------------------------------------------------------------------------
+# Exposes http_request_duration_seconds, http_requests_total, http_requests_in_progress
+METRICS_TOKEN = os.environ.get("METRICS_TOKEN", "")
+METRICS_ALLOWED_IPS = {
+    ip.strip()
+    for ip in os.environ.get("METRICS_ALLOWED_IPS", "127.0.0.1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16").split(",")
+    if ip.strip()
+}
+
+instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_group_untemplated=True,
+    excluded_handlers=["/metrics", "/health"],
+)
+instrumentator.instrument(app)
+
+# Translation service routes
+from backend.routes.translation import router as translation_router
+app.include_router(translation_router)
+
+# Response time estimator routes
+from backend.routes.estimator import router as estimator_router
+app.include_router(estimator_router)
+
+# Tagging router (Issue #404)
+from tag_router import router as tag_router
+app.include_router(tag_router)
+
+# Sentiment router (Issue #775)
+from sentiment_router import router as sentiment_router
+app.include_router(sentiment_router)
+
+
+# ---------------------------------------------------------------------------
+# Custom Swagger UI with branding
+# ---------------------------------------------------------------------------
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html(request: Request):
+    """Serve custom Swagger UI with AI Helpdesk branding."""
+    theme = request.query_params.get("theme", "light")
+    dark_mode = theme == "dark"
+    return HTMLResponse(
+        content=f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>AI Helpdesk API Documentation</title>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css">
+        <style>{SWAGGER_UI_CUSTOM_CSS}</style>
+        <style id="swagger-dark-css">{SWAGGER_UI_DARK_CSS if dark_mode else ''}</style>
+    </head>
+    <body>
+        <div id="swagger-ui"></div>
+        <script src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+        <script>
+            const ui = SwaggerUIBundle({{
+                url: '/openapi.json',
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIBundle.SwaggerUIStandalonePreset
+                ],
+                layout: "BaseLayout",
+                defaultModelsExpandDepth: -1,
+                docExpansion: "none",
+                filter: true,
+                syntaxHighlight: {{"theme": "monokai"}}
+            }});
+            window._swaggerUi = ui;
+        </script>
+        <script id="swagger-dark-data" type="application/json">{json.dumps(SWAGGER_UI_DARK_CSS)}</script>
+        <script>{SWAGGER_UI_CUSTOM_JS}</script>
+    </body>
+    </html>
+    """,
+        media_type="text/html",
+    )
+
+
+# ---------------------------------------------------------------------------
+
+# Prometheus Metrics
+from prometheus_fastapi_instrumentator import Instrumentator, metrics
+from prometheus_client import CollectorRegistry, generate_latest, CONTENT_TYPE_LATEST
+
+# Initialize Prometheus instrumentator
+instrumentator = Instrumentator(
+    should_group_status_codes=True,
+    should_ignore_untemplated=True,
+    should_instrument_requests_inprogress=True,
+    excluded_handlers=["/health", "/ready", "/metrics"],
+    inprogress_name="helpdesk_requests_in_progress",
+    inprogress_labels=True,
+)
+
+# Add custom metrics
+try:
+    instrumentator.add(metrics.latency(buckets=(0.01, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0)))
+    instrumentator.add(metrics.request_size(buckets=(100, 1000, 10000, 100000, 1000000)))
+    instrumentator.add(metrics.response_size(buckets=(100, 1000, 10000, 100000, 1000000)))
+except TypeError:
+    # Newer prometheus-fastapi-instrumentator versions don't support custom buckets
+    instrumentator.add(metrics.latency())
+    instrumentator.add(metrics.request_size())
+    instrumentator.add(metrics.response_size())
+
+# Instrument the app
+instrumentator.instrument(app).expose(app, endpoint="/prometheus-metrics", include_in_schema=False)
+
 # Root & Health check
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse, tags=["System"], summary="API landing page")
@@ -1519,10 +2014,6 @@ async def send_digest_now(current_user: dict = Depends(get_current_user)):
 
 
 
-class TroubleshootResponse(BaseModel):
-    step_text: str
-    options: list[str]
-    is_final: bool
 
 
 class TroubleshootRequest(BaseModel):
@@ -1906,36 +2397,13 @@ def _cookie_kwargs() -> dict:
     }
 
 def extract_token(request: Request) -> str | None:
-    cookie_token = request.cookies.get(ACCESS_COOKIE)
+    cookie_token = request.cookies.get("access_token")
     if cookie_token:
         return cookie_token
     auth = request.headers.get("authorization") or request.headers.get("Authorization")
     if auth and auth.lower().startswith("bearer "):
         return auth.split(" ", 1)[1].strip() or None
     return None
-
-def _set_session_cookies(response: Response, session) -> None:
-    if not session or not getattr(session, "access_token", None):
-        return
-    response.set_cookie(
-        ACCESS_COOKIE,
-        session.access_token,
-        max_age=ACCESS_MAX_AGE,
-        **_cookie_kwargs(),
-    )
-    refresh = getattr(session, "refresh_token", None)
-    if refresh:
-        response.set_cookie(
-            REFRESH_COOKIE,
-            refresh,
-            max_age=REFRESH_MAX_AGE,
-            **_cookie_kwargs(),
-        )
-
-def _clear_session_cookies(response: Response) -> None:
-    kwargs = _cookie_kwargs()
-    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
-    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
 
 async def get_current_user(request: Request) -> dict:
     token = extract_token(request)
@@ -4350,10 +4818,10 @@ async def analytics_resolution_time(company_id: str | None = None):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@app.post("/auth/logout")
-async def auth_logout(response: Response):
-    _clear_session_cookies(response)
-    return {"ok": True}
+@app.get("/ws/stats")
+async def ws_stats():
+    """Return WebSocket connection pool statistics for monitoring."""
+    return connection_manager.room_stats()
 
 def _get_token_manager() -> TokenManager:
     if supabase is None:
