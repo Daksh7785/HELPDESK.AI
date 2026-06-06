@@ -5,6 +5,7 @@ import urllib.request
 import urllib.error
 import json
 import asyncio
+import re
 from collections import Counter
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -24,6 +25,14 @@ DEFAULT_SENDER = "Helpdesk.AI <onboarding@resend.dev>"
 
 # Template directory
 TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
+
+
+def _build_digest_email_subject(stats: dict) -> str:
+    """Return a UTF-8-safe weekly digest subject for email APIs."""
+    company_name = str(stats.get("company_name") or "Your Company")
+    cleaned_company = re.sub(r"[\x00-\x1f\x7f]+", " ", company_name)
+    cleaned_company = re.sub(r"\s+", " ", cleaned_company).strip() or "Your Company"
+    return f"Weekly Helpdesk Operations Digest - {cleaned_company}"
 
 
 def get_weekly_stats(company_id: str) -> dict:
@@ -300,11 +309,11 @@ def _build_team_performance_html(team_performance: list) -> str:
 
         rows.append(
             f'<tr style="border-bottom: 1px solid #f3f4f6;">'
-            f'<td style="padding: 10px 12px; font-weight: 600; color: #111827;">{tm["team"]}</td>'
-            f'<td style="padding: 10px 12px; text-align: center;">{tm["total"]}</td>'
-            f'<td style="padding: 10px 12px; text-align: center;">{tm["resolved"]}</td>'
-            f'<td style="padding: 10px 12px; text-align: center; color: {rate_color}; font-weight: 600;">{tm["resolution_rate"]}%</td>'
-            f'<td style="padding: 10px 12px; text-align: center;">{tm["avg_resolution_time"]}</td>'
+            f'<td style="padding: 10px 12px; font-weight: 600; color: #111827;">{tm.get("team", "Unassigned")}</td>'
+            f'<td style="padding: 10px 12px; text-align: center;">{tm.get("total", 0)}</td>'
+            f'<td style="padding: 10px 12px; text-align: center;">{tm.get("resolved", 0)}</td>'
+            f'<td style="padding: 10px 12px; text-align: center; color: {rate_color}; font-weight: 600;">{tm.get("resolution_rate", 0)}%</td>'
+            f'<td style="padding: 10px 12px; text-align: center;">{tm.get("avg_resolution_time", "N/A")}</td>'
             f'<td style="padding: 10px 12px; text-align: center; color: {breach_color}; font-weight: 600;">{breaches}</td>'
             f'</tr>'
         )
@@ -405,13 +414,13 @@ def send_digest_email(admin_email: str, stats: dict, ai_summary: str) -> bool:
     payload = {
         "from": sender_email,
         "to": [admin_email],
-        "subject": f"Weekly Helpdesk Operations Digest — {stats['company_name']}",
-        "html": email_html
+        "html": email_html,
+        "subject": _build_digest_email_subject(stats)
     }
     
     req = urllib.request.Request(
         "https://api.resend.com/emails",
-        data=json.dumps(payload).encode("utf-8"),
+        data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
         headers={
             "Authorization": f"Bearer {resend_api_key}",
             "Content-Type": "application/json"
