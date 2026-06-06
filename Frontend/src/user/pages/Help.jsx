@@ -6,6 +6,9 @@ import { Card, CardContent } from "../../components/ui/card";
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
 import useAuthStore from "../../store/authStore";
 
+// In-memory cache replaces localStorage to prevent data leakage (XSS Mitigation)
+const videoCache = new Map();
+const videoCacheTime = new Map();
 const FAQItem = ({ faq }) => {
     const [isOpen, setIsOpen] = useState(false);
     return (

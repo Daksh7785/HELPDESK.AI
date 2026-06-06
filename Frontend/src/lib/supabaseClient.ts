@@ -116,8 +116,29 @@ if (!hasValidConfig) {
 // Issue #898: Configure Supabase client to NOT persist sessions in localStorage.
 // Session tokens are managed as httpOnly cookies by the backend (/auth/login, /auth/logout).
 // The Supabase JS client is used ONLY for profile fetching and DB queries — not for auth state.
+// Custom In-Memory Storage to prevent JWT tokens from touching localStorage (XSS Mitigation)
+const inMemoryStorage = {
+	items: new Map(),
+	getItem(key: string) {
+		return this.items.get(key) || null;
+	},
+	setItem(key: string, value: string) {
+		this.items.set(key, value);
+	},
+	removeItem(key: string) {
+		this.items.delete(key);
+	}
+};
+
 export const supabase = hasValidConfig
-  ? createClient(supabaseUrl, supabaseKey)
-  : createDisabledSupabaseClient();
+	? createClient(supabaseUrl, supabaseKey, {
+			auth: {
+				storage: inMemoryStorage,
+				persistSession: true, // Will persist to our secure in-memory Map instead of localStorage
+				autoRefreshToken: true,
+				detectSessionInUrl: true
+			}
+	  })
+	: createDisabledSupabaseClient();
 
 export { isLikelyValidUrl, isLikelyValidAnonKey, makeQueryBuilder, createDisabledSupabaseClient, INVALID_MARKERS, disabledMessage }

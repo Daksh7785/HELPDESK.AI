@@ -7,7 +7,6 @@ const validatePassword = (password) => {
 };
 
 import { create } from 'zustand';
-import { createPersistedStore } from './persistenceMiddleware';
 import { supabase } from '../lib/supabaseClient';
 import { API_CONFIG } from '../config';
 import useTicketStore from './ticketStore';
@@ -67,7 +66,6 @@ const getProfileCache = (profile) => {
 };
 
 const useAuthStore = create(
-    createPersistedStore('auth',
         (set, get) => ({
             // --- AUTH STATE ---
             user: null,

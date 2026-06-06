@@ -13,10 +13,13 @@ const getSlaBreachAt = (priority = 'Low') => {
   return new Date(Date.now() + slaHours * 60 * 60 * 1000).toISOString();
 };
 
+// In-memory cache replaces localStorage to prevent data leakage (XSS Mitigation)
+const inMemoryCache = new Map();
+
 // Safe helper to get data from storage or default
 const getStorage = <T>(key: string, defaultData: T): T => {
   try {
-    const stored = localStorage.getItem(key);
+    const stored = inMemoryCache.get(key);
     if (!stored) {
       setStorage(key, defaultData);
       return defaultData;
@@ -31,9 +34,9 @@ const getStorage = <T>(key: string, defaultData: T): T => {
 // Safe helper to set data and handle QuotaExceeded
 const setStorage = <T>(key: string, data: T): void => {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    inMemoryCache.set(key, JSON.stringify(data));
   } catch (error) {
-    console.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
+    console.warn(`[Storage Error] Failed to write '${key}':`, error);
   }
 };
 
