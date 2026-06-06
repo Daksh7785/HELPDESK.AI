@@ -57,13 +57,13 @@ def _build_client():
         EnvironmentError: If required environment variables are missing.
     """
     url = os.getenv("SUPABASE_URL")
-    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY")
 
     missing = []
     if not url:
         missing.append("SUPABASE_URL")
     if not key:
-        missing.append("SUPABASE_SERVICE_ROLE_KEY")
+        missing.append("SUPABASE_SERVICE_ROLE_KEY or SUPABASE_SERVICE_KEY")
 
     if missing:
         raise EnvironmentError(
