@@ -136,7 +136,7 @@ from backend.services.cache_service import cache_service
 from backend.services.spam_service import SpamService
 from backend.services.sla_engine import SLAEngine, compute_sla_breach_at, get_sla_policy
 from backend.services.redis_cache import redis_cache
-from backend.sla_predictor import get_sla_estimate
+from backend.sla_predictor import get_sla_estimate, compute_risk_score, trigger_admin_notification
 from backend.sanitization import get_security_headers
 from backend.limiter import limiter, ML_HEAVY_LIMIT, ML_LIGHT_LIMIT
 from backend.auth_cookie import router as auth_cookie_router, get_current_user  # noqa: F401
@@ -3646,6 +3646,29 @@ async def trigger_sla_check(current_user: dict = Depends(get_current_user)):
 
 
 # ---------------------------------------------------------------------------
+@app.post("/sla/predict", tags=["SLA"], summary="Predict SLA breach risk score")
+async def sla_predict(
+    body: SLAPredictRequest,
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+):
+    """Compute SLA breach risk score: 0-100, risk level, factor breakdown."""
+    profile = _get_authenticated_profile(current_user)
+    company_id = body.company_id or profile.get("company_id")
+    risk = compute_risk_score(
+        priority=body.priority,
+        sla_breach_at=body.sla_breach_at,
+        category=body.category,
+        company_id=company_id,
+        sentiment=None,
+        supabase=supabase if supabase else None,
+    )
+    notification = trigger_admin_notification(
+        {"priority": body.priority, "sla_breach_at": body.sla_breach_at, "id": "predict"},
+        risk,
+    )
+    return {**risk, "notification_triggered": notification is not None, "company_id": company_id}
+
 # Semantic Duplicate Detection Endpoints
 # ---------------------------------------------------------------------------
 
