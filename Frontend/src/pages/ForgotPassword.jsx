@@ -2,19 +2,20 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import { BrainCircuit, Mail, ArrowLeft, Loader2, CheckCircle2, Lock, KeyRound, AlertCircle } from "lucide-react";
- 
+
 import { motion, AnimatePresence } from "framer-motion";
+import validatePassword from "@/utils/validatePassword";
 
 function ForgotPassword() {
-  const [step, setStep] = useState(1);
-  const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState('');
-  const [error, setError] = useState('');
-  const [timeLeft, setTimeLeft] = useState(900);
-  const [timerExpired, setTimerExpired] = useState(false);
+    const [step, setStep] = useState(1);
+    const [email, setEmail] = useState('');
+    const [otp, setOtp] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
+    const [timeLeft, setTimeLeft] = useState(900);
+    const [timerExpired, setTimerExpired] = useState(false);
 
     useEffect(() => {
         if (step !== 2) return;
@@ -46,79 +47,80 @@ function ForgotPassword() {
             return;
         }
         return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
+    });
+}, 1000);
+return () => clearInterval(timer);
   }, [step]);
 
-  const formatTime = (seconds) => {
+const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
+};
 
-        try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email);
-            if (error) throw error;
-            setMessage("Check your email for the 6-digit recovery code!");
-            setStep(2);
-        } catch (err) {
-            console.error("Password reset error:", err);
-            setError(err.message || "An error occurred. Please try again.");
-        } finally {
-            setLoading(false);
-        }
+try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
+    if (error) throw error;
+    setMessage("Check your email for the 6-digit recovery code!");
+    setStep(2);
+} catch (err) {
+    console.error("Password reset error:", err);
+    setError(err.message || "An error occurred. Please try again.");
+} finally {
+    setLoading(false);
+}
     };
 
-      if (error) throw error;
+if (error) throw error;
 
-      setMessage('Check your email for the 6-digit recovery code!');
-      setStep(2);
+setMessage('Check your email for the 6-digit recovery code!');
+setStep(2);
     } catch (err) {
-      console.error('Password reset error:', err);
-      setError(err.message || 'An error occurred. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+    console.error('Password reset error:', err);
+    setError(err.message || 'An error occurred. Please try again.');
+} finally {
+    setLoading(false);
+}
   };
 
-  const handleVerifyOtp = async (e) => {
+const handleVerifyOtp = async (e) => {
     e.preventDefault();
     if (!otp || otp.length !== 6) {
-      setError('Please enter the 6-digit code');
-      return;
+        setError('Please enter the 6-digit code');
+        return;
     }
     if (timerExpired) {
-      setError('Your code has expired. Please request a new one.');
-      return;
+        setError('Your code has expired. Please request a new one.');
+        return;
     }
 
     setLoading(true);
     setError('');
 
     try {
-      const { error } = await supabase.auth.verifyOtp({
-        email,
-        token: otp,
-        type: 'recovery',
-      });
+        const { error } = await supabase.auth.verifyOtp({
+            email,
+            token: otp,
+            type: 'recovery',
+        });
 
-      if (error) throw error;
-      setStep(3);
-      setMessage('Code verified. Please enter your new password.');
+        if (error) throw error;
+        setStep(3);
+        setMessage('Code verified. Please enter your new password.');
     } catch (err) {
-      console.error('OTP verification error:', err);
-      setError('Invalid or expired code. Please check your email and try again.');
+        console.error('OTP verification error:', err);
+        setError('Invalid or expired code. Please check your email and try again.');
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
-  const handleUpdatePassword = async (e) => {
+const handleUpdatePassword = async (e) => {
     e.preventDefault();
-    if (!newPassword || newPassword.length < 6) {
-      setError('Password must be at least 6 characters long.');
-      return;
+    const passwordError = validatePassword(newPassword);
+    if (passwordError) {
+        setError(passwordError);
+        return;
     }
 
     setLoading(true);
@@ -129,9 +131,9 @@ function ForgotPassword() {
             {/* Background Patterns */}
             <div className="absolute top-0 left-0 w-full h-full opacity-[0.03] pointer-events-none" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
             <div className="absolute top-0 left-0 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-            
+
             <div className="w-full max-w-md relative z-10 flex flex-col items-center">
-                
+
                 {/* Back Button - Expose beautifully at the top */}
                 <Link
                     to="/login"
@@ -151,7 +153,7 @@ function ForgotPassword() {
                     </Link>
                 </div>
 
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-white dark:bg-[#1a2e24] border border-white/50 dark:border-[#2a4034] shadow-[0_20px_50px_rgba(0,0,0,0.08)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] rounded-[2.5rem] p-6 sm:p-10 relative overflow-hidden w-full"
@@ -169,7 +171,7 @@ function ForgotPassword() {
 
                     <AnimatePresence mode="wait">
                         {step === 4 ? (
-                            <motion.div 
+                            <motion.div
                                 key="success"
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
@@ -192,7 +194,7 @@ function ForgotPassword() {
                         ) : (
                             <div className="space-y-6">
                                 {error && (
-                                    <motion.div 
+                                    <motion.div
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: 'auto' }}
                                         className="bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 text-red-600 dark:text-red-400 px-5 py-4 rounded-2xl text-sm font-semibold flex items-start gap-3"
@@ -258,9 +260,8 @@ function ForgotPassword() {
                                                     autoFocus
                                                 />
                                             </div>
-                                            <p className={`text-center text-xs font-bold mt-1 ${
-                                                timerExpired ? 'text-red-500' : timeLeft < 60 ? 'text-orange-500' : 'text-slate-400'
-                                            }`}>
+                                            <p className={`text-center text-xs font-bold mt-1 ${timerExpired ? 'text-red-500' : timeLeft < 60 ? 'text-orange-500' : 'text-slate-400'
+                                                }`}>
                                                 {timerExpired ? '⚠ Code expired — request a new one below' : `Expires in ${formatTime(timeLeft)}`}
                                             </p>
                                         </div>
@@ -310,7 +311,7 @@ function ForgotPassword() {
 
                                         <button
                                             type="submit"
-                                            disabled={loading || newPassword.length < 6}
+                                            disabled={loading || newPassword.length < 8}
                                             className="w-full rounded-2xl py-4 font-bold transition-all flex items-center justify-center gap-2 text-white bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 shadow-lg"
                                             onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
                                             onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
