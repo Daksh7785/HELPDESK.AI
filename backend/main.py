@@ -81,12 +81,27 @@ def get_system_settings(company_id: str) -> dict:
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
+
+def resolve_company_name_to_id(company_name: str | None) -> str | None:
+    if not supabase or not company_name:
+        return None
+    try:
+        res = supabase.table("companies").select("id").eq("name", company_name).single().execute()
+        return res.data.get("id") if res.data else None
+    except Exception as e:
+        print(f"[WARNING] Could not resolve company name={company_name} to id: {e}")
+    return None
+
+def get_request_company_id(request_body: "TicketRequest") -> str | None:
+    return request_body.company_id or resolve_company_name_to_id(request_body.company)
+
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
+    company_id: str | None = None
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
@@ -702,7 +717,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     text = request_body.text
 
-    settings = get_system_settings(request_body.company)
+    settings = get_system_settings(get_request_company_id(request_body))
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -739,7 +754,7 @@ async def analyze_only(request_body: TicketRequest):
     """
     text = request_body.text
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(request_body.company)
+    settings = get_system_settings(get_request_company_id(request_body))
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -908,7 +923,7 @@ async def analyze_stream(request_body: TicketRequest):
             "api_endpoint": "/ai/analyze_stream"
         }
         timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company)
+        settings = get_system_settings(get_request_company_id(request_body))
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
         enable_auto_resolve = settings["enable_auto_resolve"]
