@@ -29,7 +29,7 @@ from logging.handlers import RotatingFileHandler
 
 # Suppress harmless PyTorch CPU pin_memory warning
 from backend.encryption import encrypt_pii, decrypt_pii, is_encrypted
-from services.encryption_service import encrypt_ticket_pii, decrypt_ticket_pii
+from backend.services.encryption_service import encrypt_ticket_pii, decrypt_ticket_pii
 from backend.pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
