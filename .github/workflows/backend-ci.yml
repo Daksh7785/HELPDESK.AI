@@ -53,7 +53,7 @@ jobs:
           # Install a lighter subset that still covers service imports
           pip install fastapi uvicorn pydantic python-dotenv slowapi \
                       supabase==2.22.4 storage3==2.22.4 \
-                      requests httpx \
+                      requests httpx apscheduler \
                       pytest pytest-cov
           # Try full requirements but tolerate torch/transformers failures in CI
           pip install -r backend/requirements.txt --ignore-requires-python || true

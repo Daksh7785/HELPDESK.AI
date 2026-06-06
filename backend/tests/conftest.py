@@ -17,6 +17,8 @@ def db_connection():
     Skips DB-dependent tests if psycopg2 is not installed or
     if the database is unavailable in the current environment.
     """
+    if psycopg2 is None:
+        pytest.skip("psycopg2 is not installed")
 
     if not HAS_PSYCOPG2:
         pytest.skip("psycopg2 not installed — skipping DB-dependent tests")

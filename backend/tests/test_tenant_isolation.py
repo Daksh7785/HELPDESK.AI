@@ -72,6 +72,13 @@ class MockSupabaseTable:
                     resource_company = parts[2] if len(parts) > 2 else "company-mock-default"
                 else:
                     resource_company = "companyA"
+                
+                # IMPORTANT FIX FOR MOCK: respect company_id filter if set
+                if self.filters.get("company_id") and self.filters.get("company_id") != resource_company:
+                    if self._is_single:
+                        raise Exception("Mock error: single() returned nothing")
+                    return MockResult([])
+
                 ticket_data = {"id": ticket_id, "company_id": resource_company, "subject": "Ticket"}
                 comp_filter = self.filters.get("company_id")
                 if comp_filter and comp_filter != resource_company:
@@ -195,12 +202,14 @@ async def mock_get_current_user(request: Request) -> dict:
 app.dependency_overrides[get_current_user] = mock_get_current_user
 
 import backend.main as main
+from backend.auth.tenant_middleware import security_manager
 
 @pytest.fixture(autouse=True)
 def force_mock_supabase():
     original = main.supabase
     main.supabase = mock_supabase
     app.dependency_overrides[get_current_user] = mock_get_current_user
+    app.dependency_overrides[security_manager.get_current_user_profile] = mock_get_current_user
     yield
     main.supabase = original
 
@@ -226,6 +235,8 @@ def test_public_endpoints_accessible_without_token():
     assert response.status_code == 200
     
     response = client.get("/ready")
+    if response.status_code != 200:
+        print("READY ERROR:", response.json())
     assert response.status_code == 200
 
 

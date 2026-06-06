@@ -44,11 +44,14 @@ class TestTextKeyFunction(unittest.TestCase):
         self.assertEqual(len(key), len("prefix:") + 32)
 
     def test_empty_text(self):
-        self.assertIsNone(_text_key("prefix:", ""))
-        self.assertIsNone(_text_key("prefix:", "   "))
+        with self.assertRaises(ValueError):
+            _text_key("prefix:", "")
+        with self.assertRaises(ValueError):
+            _text_key("prefix:", "   ")
 
     def test_none_text(self):
-        self.assertIsNone(_text_key("prefix:", None))
+        with self.assertRaises(ValueError):
+            _text_key("prefix:", None)
 
     def test_whitespace_stripped(self):
         key1 = _text_key("prefix:", "Hello")
