@@ -26,7 +26,7 @@ def main():
 
     overall_start = time.time()
 
-    # ── Step 1: Classifier ────────────────────────────────────
+    # ── Step 1: Classifier ─────────────────────────────────────
     print("[1/2] Training Classifier Model …\n")
     t0 = time.time()
     try:
