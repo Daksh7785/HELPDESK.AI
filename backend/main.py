@@ -291,6 +291,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 # Root & Health check
 # ---------------------------------------------------------------------------
+@limiter.limit("60/minute")
 @app.get("/", response_class=HTMLResponse)
 async def root():
     return """
@@ -373,6 +374,7 @@ async def root():
     """
 
 
+@limiter.limit("60/minute")
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     return HealthResponse(
@@ -382,6 +384,7 @@ async def health_check():
     )
 
 
+@limiter.limit("60/minute")
 @app.get("/ready", response_model=ReadinessResponse)
 async def readiness_check():
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
@@ -425,6 +428,7 @@ class TroubleshootResponse(BaseModel):
     options: list[str]
     is_final: bool
 
+@limiter.limit("10/minute")
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
 async def troubleshoot(request: TroubleshootRequest):
     """Get dynamic troubleshooting steps from Gemini."""
@@ -452,6 +456,7 @@ class BugReportAnalysisRequest(BaseModel):
 class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 async def analyze_bug(request: BugReportAnalysisRequest):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
@@ -474,6 +479,7 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 # ---------------------------------------------------------------------------
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
+@limiter.limit("10/minute")
 @app.post("/ai/log_correction")
 async def log_correction(raw_request: Request):
     """Log an admin correction when the AI prediction differs from the human decision."""
@@ -535,6 +541,7 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
+@limiter.limit("60/minute")
 @app.get("/tickets")
 async def get_tickets(company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
@@ -548,6 +555,7 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
+@limiter.limit("60/minute")
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
@@ -651,6 +659,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+@limiter.limit("60/minute")
 @app.get("/tickets/{ticket_id}")
 async def get_ticket_by_id(ticket_id: str):
     """Fetch single persistent ticket."""
@@ -663,6 +672,7 @@ async def get_ticket_by_id(ticket_id: str):
     return res.data
 
 
+@limiter.limit("60/minute")
 @app.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
     """Save a new ticket into the system."""
@@ -676,6 +686,7 @@ async def create_ticket(ticket: TicketRecord):
     return ticket
 
 
+@limiter.limit("60/minute")
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
 async def update_ticket(ticket_id: str, updates: dict):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
@@ -694,6 +705,7 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
 async def analyze_ticket(request_body: TicketRequest, request: Request):
@@ -730,6 +742,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     # Initalize Timeline
     return await analyze_only(request_body)
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze")
 async def analyze_only(request_body: TicketRequest):
     """
@@ -891,6 +904,7 @@ async def analyze_only(request_body: TicketRequest):
         sla_breach_at=sla_breach_dt.isoformat() + "Z"
     )
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_stream")
 async def analyze_stream(request_body: TicketRequest):
     """
@@ -1043,6 +1057,7 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze_ticket/legacy")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
@@ -1051,6 +1066,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     return await analyze_only(request_body)
 
+@limiter.limit("10/minute")
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
@@ -1150,6 +1166,7 @@ class SignupBody(BaseModel):
     role: str | None = "user"
     company: str | None = None
 
+@limiter.limit("5/minute")
 @app.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):
     if not supabase:
@@ -1170,6 +1187,7 @@ async def auth_login(body: LoginBody, response: Response):
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
     return {"user": user_payload, "message": "Session cookies set"}
 
+@limiter.limit("5/minute")
 @app.post("/auth/signup")
 async def auth_signup(body: SignupBody, response: Response):
     if not supabase:
@@ -1200,11 +1218,13 @@ async def auth_signup(body: SignupBody, response: Response):
     user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
     return {"user": user_payload, "message": "Signup complete"}
 
+@limiter.limit("10/minute")
 @app.post("/auth/logout")
 async def auth_logout(response: Response):
     _clear_session_cookies(response)
     return {"ok": True}
 
+@limiter.limit("10/minute")
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
