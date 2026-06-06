@@ -89,6 +89,195 @@ Support agents can tweak active settings on the **System Settings** page to alig
     `,
   },
   {
+    id: 'api-response-payload-schema',
+    categoryId: 'api-reference',
+    title: 'API Response Payload Schema',
+    description: 'Reference schemas for core backend response payloads and error shapes.',
+    tags: ['api', 'schema', 'responses', 'gssoc'],
+    content: `
+# API Response Payload Schema
+This guide documents the response shapes returned by the core HELPDESK.AI backend endpoints. Use it when wiring frontend views, tests, or integration clients.
+
+> Base URL: use \`VITE_BACKEND_URL\` from the frontend environment, or the locally running FastAPI service URL during development.
+
+## Common Error Response
+FastAPI returns this shape for validation errors and explicit failures:
+
+\`\`\`json
+{
+  "detail": "Database connection not initialized"
+}
+\`\`\`
+
+Validation failures may return \`detail\` as an array of field errors instead of a string.
+
+## GET /health
+
+\`\`\`json
+{
+  "status": "ok",
+  "classifier_loaded": true,
+  "ner_loaded": true
+}
+\`\`\`
+
+- \`status\`: process health, usually \`ok\`.
+- \`classifier_loaded\`: whether the classifier singleton loaded successfully.
+- \`ner_loaded\`: whether the NER singleton loaded successfully.
+
+## GET /ready
+
+\`\`\`json
+{
+  "status": "ready",
+  "checks": {
+    "api": true,
+    "classifier_loaded": true,
+    "ner_loaded": true,
+    "duplicate_index_loaded": true,
+    "rag_loaded": true,
+    "supabase_configured": true
+  }
+}
+\`\`\`
+
+\`supabase_configured\` is present only when \`REQUIRE_SUPABASE=true\`.
+
+## POST /ai/analyze and POST /ai/analyze_ticket
+Both endpoints return the \`TicketResponse\` analysis payload. \`/ai/analyze\` is read-only. \`/ai/analyze_ticket\` is rate limited and delegates to the same analysis flow.
+
+\`\`\`json
+{
+  "id": null,
+  "ticket_id": "7cc6e8ef-b5d9-4615-a349-1d629154e7c6",
+  "summary": "VPN connecting error 789 on router",
+  "category": "Network",
+  "subcategory": "VPN Failure",
+  "priority": "High",
+  "auto_resolve": false,
+  "assigned_team": "Network Ops",
+  "entities": [
+    { "text": "VPN", "label": "TECHNOLOGY", "confidence": 0.94 }
+  ],
+  "duplicate_ticket": {
+    "is_duplicate": false,
+    "duplicate_ticket_id": null,
+    "similarity": 0.0
+  },
+  "confidence": 0.96,
+  "needs_review": false,
+  "reasoning": "Categorized as 'Network' - VPN Failure.",
+  "decision_factors": ["High confidence match for 'VPN Failure'"],
+  "image_description": "",
+  "ocr_text": "",
+  "image_url": null,
+  "highlights": [
+    { "text": "VPN", "label": "TECHNOLOGY", "confidence": 0.94 }
+  ],
+  "timeline": {
+    "received": "2026-06-05T12:00:00Z",
+    "ai_analyzed": "2026-06-05T12:00:00Z",
+    "triaged": "2026-06-05T12:00:00Z",
+    "metadata_harvested": "2026-06-05T12:00:00Z",
+    "routed": "2026-06-05T12:00:00Z"
+  },
+  "env_metadata": {
+    "timestamp": "2026-06-05T12:00:00Z",
+    "model_version": "3.0.0-PRO",
+    "api_endpoint": "/ai/analyze"
+  },
+  "sla_breach_at": "2026-06-05T20:00:00Z",
+  "version": "2.1.0-Neural-Diagnostic"
+}
+\`\`\`
+
+### Ticket Analysis Fields
+- \`ticket_id\`: temporary UUID for preview analysis.
+- \`summary\`: AI or fallback summary of the ticket text.
+- \`category\`, \`subcategory\`, \`priority\`: predicted triage labels.
+- \`auto_resolve\`: true only when auto-resolution is enabled and confidence rules pass.
+- \`assigned_team\`: routing team selected by category or RAG match.
+- \`entities\`: extracted entities, each with \`text\`, \`label\`, and \`confidence\`.
+- \`duplicate_ticket\`: duplicate detection result with \`is_duplicate\`, \`duplicate_ticket_id\`, and \`similarity\`.
+- \`confidence\`: classifier confidence from \`0.0\` to \`1.0\`.
+- \`needs_review\`: true when confidence is below the active threshold.
+- \`decision_factors\`: concise evidence used for the decision.
+- \`timeline\`: ISO timestamps for analysis milestones.
+- \`env_metadata\`: request or model metadata for diagnostics.
+- \`sla_breach_at\`: ISO timestamp generated from priority SLA rules.
+
+## POST /ai/analyze_stream
+Streams Server-Sent Events instead of one JSON document. Parse each SSE \`data:\` line independently and handle disconnects gracefully.
+
+## POST /tickets/save
+Persists a reviewed ticket analysis to Supabase and creates the initial system message.
+
+\`\`\`json
+{
+  "status": "success",
+  "ticket_id": "8f4e8d46-6b0d-46f9-b5c0-4fd4a98cb8f4",
+  "duplicate_indexed": true
+}
+\`\`\`
+
+If duplicate indexing fails but the ticket is saved, the response includes \`duplicate_index_warning\`.
+
+## GET /tickets
+Returns an array of persisted ticket records from Supabase, ordered newest first. The exact columns mirror the \`tickets\` table, so consumers should treat unknown keys as forward-compatible metadata.
+
+## GET /tickets/{ticket_id}
+Returns one persisted ticket record. Missing records return \`404\` with \`{ "detail": "Ticket not found" }\`.
+
+## Auth Endpoints
+
+### POST /auth/login
+\`\`\`json
+{
+  "user": {
+    "id": "user-id",
+    "email": "user@example.com",
+    "role": "admin"
+  },
+  "message": "Session cookies set"
+}
+\`\`\`
+
+### POST /auth/signup
+\`\`\`json
+{
+  "user": {
+    "id": "user-id",
+    "email": "user@example.com",
+    "role": "user"
+  },
+  "message": "Signup complete"
+}
+\`\`\`
+
+### POST /auth/logout
+\`\`\`json
+{ "ok": true }
+\`\`\`
+
+### GET /auth/me
+\`\`\`json
+{
+  "user": {
+    "id": "user-id",
+    "email": "user@example.com",
+    "role": "user"
+  }
+}
+\`\`\`
+
+## Contributor Checklist
+- Keep frontend consumers tolerant of extra response fields.
+- Treat \`detail\` as either a string or an array for error handling.
+- Do not assume Supabase-backed endpoints are available in degraded local mode.
+- Use \`confidence\`, \`needs_review\`, and \`decision_factors\` together when explaining AI decisions to users.
+    `
+  },
+  {
     id: 'troubleshooting-connections',
     categoryId: 'troubleshooting',
     title: 'API & Connection Failures',
