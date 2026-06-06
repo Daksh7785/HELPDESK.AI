@@ -325,6 +325,25 @@ Use this checklist after local Docker/container startup and before promoting a d
 
 ---
 
+<h2 id="tech-stack">⚙️ Tech Stack</h2>
+
+| Category | Technology | Purpose |
+|---|---|---|
+| **Backend Framework** | [FastAPI](https://fastapi.tiangolo.com/) | High-performance async REST API |
+| **AI/ML** | [Google Gemini](https://ai.google.dev/) | AI-powered ticket analysis & summarization |
+| **AI/ML** | [DistilBERT](https://huggingface.co/distilbert-base-uncased) + [Sentence Transformers](https://www.sbert.net/) | Ticket categorization & semantic search |
+| **Database** | [Supabase](https://supabase.com/) (PostgreSQL) | Multi-tenant data storage with Row-Level Security |
+| **Frontend** | [Next.js](https://nextjs.org/) + [Tailwind CSS](https://tailwindcss.com/) | Modern reactive dashboard UI |
+| **Containerization** | [Docker](https://www.docker.com/) | Consistent deployment across environments |
+| **CI/CD** | [GitHub Actions](https://github.com/features/actions) | Automated testing and deployment |
+| **Rate Limiting** | [SlowAPI](https://pypi.org/project/slowapi/) | API rate limiting and DoS protection |
+| **Mobile** | Android (Kotlin) | Native mobile app for on-the-go ticket management |
+| **Monitoring** | [LogRocket](https://logrocket.com/) | Session replay and frontend error tracking |
+
+> See `.env.example` for required environment variables.
+
+---
+
 <h2 id="roadmap">🗺️ Roadmap</h2>
 
 - [x] **Phase 1**: Core Ticketing & DistilBERT Categorization.
