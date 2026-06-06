@@ -61,6 +61,26 @@ import classifier_service as cs_module
 import pytest
 
 
+# ─── Auto-cleanup for module-level sys.modules patches ──────────
+# The module-level torch/transformers mocks persist for the entire
+# session unless cleaned up. This autouse fixture restores them
+# after each test to avoid polluting other test files.
+
+_MOCKED_MODULES = ["torch", "torch.nn", "torch.nn.functional", "transformers"]
+_ORIGINAL_MODULES = {m: sys.modules.get(m) for m in _MOCKED_MODULES}
+
+
+@pytest.fixture(autouse=True)
+def cleanup_module_mocks():
+    """Restore sys.modules after each test to prevent mock pollution."""
+    yield
+    for mod_name in _MOCKED_MODULES:
+        if mod_name in sys.modules and mod_name not in _ORIGINAL_MODULES or            _ORIGINAL_MODULES.get(mod_name) is None:
+            sys.modules.pop(mod_name, None)
+        elif _ORIGINAL_MODULES.get(mod_name) is not None:
+            sys.modules[mod_name] = _ORIGINAL_MODULES[mod_name]
+
+
 # ─── Helpers ──────────────────────────────────────────────────────
 
 def _make_torch_max_result(confidence_val, label_idx):
@@ -221,8 +241,25 @@ class TestClassifierPredict:
         """predict() rejects missing or whitespace-only text at the boundary."""
         _svc, predict = predict_fixture
 
-        with pytest.raises(ValueError, match="must not be empty"):
+        with pytest.raises(ValueError, match="Classifier input text must not be empty"):
             predict(text)
+
+    def test_predict_oversized_text(self, predict_fixture):
+        """predict() handles very long input without crashing."""
+        svc, predict = predict_fixture
+        svc.id2label = {"0": "Software | Bug"}
+        long_text = "error " * 5000
+        result = predict(long_text.strip(), confidence_val=0.85)
+        assert result["category"] == "Software"
+        assert 0 <= result["confidence"] <= 1
+
+    def test_predict_non_string_type_raises(self, predict_fixture):
+        """predict() raises error for non-string input types."""
+        _svc, predict = predict_fixture
+        with pytest.raises((TypeError, ValueError)):
+            predict(12345)
+        with pytest.raises((TypeError, ValueError)):
+            predict(["hello", "world"])
 
     def test_predict_auto_resolve_subcategories(self, predict_fixture):
         """predict() marks auto_resolve=True for known simple issues."""
