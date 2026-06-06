@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen } from 'lucide-react';
+import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";
@@ -10,6 +10,7 @@ import useTicketStore from "../../store/ticketStore";
 import NotificationPopover from "./NotificationPopover";
 
 import useAuthStore from "../../store/authStore";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const TopNav = () => {
     const navigate = useNavigate();
@@ -19,6 +20,7 @@ const TopNav = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const initials = profile?.full_name ? profile.full_name[0].toUpperCase() : (profile?.email ? profile.email[0].toUpperCase() : 'U');
+    const { theme, toggleTheme } = useTheme();
 
     const handleLogout = async () => {
         await logout();
@@ -115,6 +117,13 @@ const TopNav = () => {
                         </div>
 
                         <div className="pt-6 border-t border-gray-50 dark:border-slate-800">
+                            <button
+                                onClick={() => { toggleTheme(); setIsMenuOpen(false); }}
+                                className="w-full py-4 bg-gray-50 rounded-2xl flex items-center justify-center gap-2 text-gray-700 font-bold active:scale-95 transition-all mb-3"
+                            >
+                                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                            </button>
                             <button
                                 onClick={handleLogout}
                                 className="w-full py-4 bg-gray-50 dark:bg-slate-800 rounded-2xl flex items-center justify-center gap-2 text-red-600 dark:text-red-400 font-bold active:scale-95 transition-all"

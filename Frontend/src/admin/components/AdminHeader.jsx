@@ -30,6 +30,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
     
     const { logout, profile: adminProfile } = useAuthStore();
     const initials = adminProfile?.full_name ? adminProfile.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : 'AD';
+    const { theme, toggleTheme } = useTheme();
 
     // Debounced pg_trgm trigram global search implementation
     useEffect(() => {
