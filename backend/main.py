@@ -664,7 +664,7 @@ async def save_ticket(request_body: TicketSaveRequest, request: Request):
             "ticket_id": ticket_id,
             "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
             "sender_name": "AI Assistant",
-            "sender_role": "admin",
+            "sender_role": "system",
             "message": msg
         }).execute()
         
