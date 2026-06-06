@@ -59,6 +59,7 @@ from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.notification_worker import enqueue_ticket_notification
 
 
 # ---------------------------------------------------------------------------
@@ -567,7 +568,7 @@ async def save_ticket(request_body: TicketSaveRequest):
             try:
                 profile_res = (
                     supabase.table("profiles")
-                    .select("company_id, company")
+                    .select("company_id, company, email, full_name")
                     .eq("id", request_body.user_id)
                     .single()
                     .execute()
@@ -575,6 +576,18 @@ async def save_ticket(request_body: TicketSaveRequest):
                 profile = profile_res.data or {}
                 if not profile:
                     raise HTTPException(status_code=404, detail="User profile not found")
+                try:
+                    prefs_res = (
+                        supabase.table("profiles")
+                        .select("notification_prefs")
+                        .eq("id", request_body.user_id)
+                        .single()
+                        .execute()
+                    )
+                    if prefs_res.data:
+                        profile["notification_prefs"] = prefs_res.data.get("notification_prefs")
+                except Exception:
+                    profile["notification_prefs"] = None
             except HTTPException:
                 raise
             except Exception as profile_error:
@@ -641,6 +654,23 @@ async def save_ticket(request_body: TicketSaveRequest):
             "sender_role": "admin",
             "message": msg
         }).execute()
+
+        try:
+            enqueue_ticket_notification(
+                supabase,
+                event_type="ticket_created",
+                ticket={**final_data, "id": ticket_id},
+                recipient_email=profile.get("email", ""),
+                recipient_user_id=request_body.user_id,
+                recipient_name=profile.get("full_name", ""),
+                notification_prefs=profile.get("notification_prefs"),
+            )
+        except Exception as notification_error:
+            logger.warning(
+                "Ticket email notification enqueue failed for ticket_id=%s: %s",
+                ticket_id,
+                notification_error,
+            )
         
         response = {"status": "success", "ticket_id": ticket_id, "duplicate_indexed": duplicate_indexed}
         if duplicate_index_warning:

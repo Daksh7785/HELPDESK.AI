@@ -11,6 +11,7 @@ accelerate>=0.25.0
 google-genai
 pillow
 python-dotenv
+jinja2>=3.1.0
 easyocr
 slowapi>=0.1.9
 supabase==2.22.4
