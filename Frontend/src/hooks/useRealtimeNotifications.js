@@ -13,6 +13,10 @@ const useTicketsRealtime = () => {
     // Only admins see the live ticket queue
     const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
     if (!isAdmin) return;
+    if (!profile.company_id) {
+      console.warn('useTicketsRealtime: profile.company_id is missing, skipping realtime subscription');
+      return;
+    }
 
     const channel = supabase
       .channel('tickets-realtime-dashboard')
