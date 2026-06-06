@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen } from 'lucide-react';
+import { Bell, Box, CheckCircle2, MessageSquare, Menu, X, LogOut, User as UserIcon, BookOpen, Sun, Moon } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";
@@ -10,6 +10,7 @@ import useTicketStore from "../../store/ticketStore";
 import NotificationPopover from "./NotificationPopover";
 
 import useAuthStore from "../../store/authStore";
+import { useTheme } from "../../contexts/ThemeContext";
 
 const TopNav = () => {
     const navigate = useNavigate();
@@ -19,6 +20,7 @@ const TopNav = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const initials = profile?.full_name ? profile.full_name[0].toUpperCase() : (profile?.email ? profile.email[0].toUpperCase() : 'U');
+    const { theme, toggleTheme } = useTheme();
 
     const handleLogout = async () => {
         await logout();
@@ -48,6 +50,16 @@ const TopNav = () => {
 
                 {/* Right: Profile */}
                 <div className="flex items-center gap-3">
+                    {/* Theme Toggle */}
+                    <button
+                        onClick={toggleTheme}
+                        className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                    >
+                        {theme === 'dark'
+                            ? <Sun className="w-5 h-5 text-yellow-400" />
+                            : <Moon className="w-5 h-5 text-gray-600" />}
+                    </button>
                     <NotificationPopover />
                     <div className="hidden md:block">
                         <Avatar
@@ -114,6 +126,13 @@ const TopNav = () => {
                         </div>
 
                         <div className="pt-6 border-t border-gray-50">
+                            <button
+                                onClick={() => { toggleTheme(); setIsMenuOpen(false); }}
+                                className="w-full py-4 bg-gray-50 rounded-2xl flex items-center justify-center gap-2 text-gray-700 font-bold active:scale-95 transition-all mb-3"
+                            >
+                                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+                            </button>
                             <button
                                 onClick={handleLogout}
                                 className="w-full py-4 bg-gray-50 rounded-2xl flex items-center justify-center gap-2 text-red-600 font-bold active:scale-95 transition-all"

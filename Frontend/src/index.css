@@ -43,7 +43,7 @@
   }
 
   body {
-    @apply bg-[#f6f8f7] text-slate-900;
+    @apply bg-background text-foreground;
   }
 
   .dark {

@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Search, Bell, Menu, User, ChevronDown, Settings, LogOut, UserCircle, X, PanelLeftClose, PanelLeftOpen, Sun, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import NotificationPopover from '../../user/components/NotificationPopover';
 import useAuthStore from '../../store/authStore';
 import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import { useTheme } from "../../contexts/ThemeContext";
 
 /**
  * AdminHeader Component
@@ -19,6 +20,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
     const navigate = useNavigate();
     const { logout, profile: adminProfile } = useAuthStore();
     const initials = adminProfile?.full_name ? adminProfile.full_name.split(' ').map(n => n[0]).join('').toUpperCase() : 'AD';
+    const { theme, toggleTheme } = useTheme();
 
     const handleSearchKeyDown = (e) => {
         if (e.key === 'Enter' && searchQuery.trim()) {
@@ -99,6 +101,17 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
 
             {/* Header Operations */}
             <div className="flex items-center gap-4 lg:gap-6">
+                {/* Theme Toggle */}
+                <button
+                    onClick={toggleTheme}
+                    className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-gray-700 transition-colors"
+                    aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+                >
+                    {theme === 'dark'
+                        ? <Sun className="w-5 h-5 text-yellow-400" />
+                        : <Moon className="w-5 h-5 text-gray-600" />}
+                </button>
+
                 {/* Communications Hub */}
                 <div className="relative border-r border-slate-200 pr-4 lg:pr-6 hidden sm:block">
                     <NotificationPopover isAdmin={true} />

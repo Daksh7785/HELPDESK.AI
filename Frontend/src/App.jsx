@@ -79,6 +79,7 @@ import MasterAdminProtectedRoute from "./components/shared/MasterAdminProtectedR
 import ProtectedRoute from "./components/shared/ProtectedRoute";
 import useAuthStore from "./store/authStore";
 import NotApproved from "./pages/NotApproved";
+import { ThemeProvider } from "./contexts/ThemeContext";
 
 // Master Admin Components
 import MasterAdminLogin from "./pages/MasterAdminLogin";
@@ -227,25 +228,28 @@ function App() {
 
   if (isDocsSubdomain) {
     return (
-      <BrowserRouter>
-        <TitleUpdater />
-        <ScrollToTop />
-        <Toaster />
-        <BugReportWidget />
-        <Routes>
-          <Route path="/" element={<DocsPortal />} />
-          <Route path="/docs" element={<Navigate to="/" replace />} />
-          <Route path="/api-reference" element={<ApiReference />} />
-          <Route path="/changelog" element={<Changelog />} />
-          <Route path="/status" element={<StatusPage />} />
-          <Route path="*" element={<DocsPortal />} />
-        </Routes>
-      </BrowserRouter>
+      <ThemeProvider>
+        <BrowserRouter>
+          <TitleUpdater />
+          <ScrollToTop />
+          <Toaster />
+          <BugReportWidget />
+          <Routes>
+            <Route path="/" element={<DocsPortal />} />
+            <Route path="/docs" element={<Navigate to="/" replace />} />
+            <Route path="/api-reference" element={<ApiReference />} />
+            <Route path="/changelog" element={<Changelog />} />
+            <Route path="/status" element={<StatusPage />} />
+            <Route path="*" element={<DocsPortal />} />
+          </Routes>
+        </BrowserRouter>
+      </ThemeProvider>
     );
   }
 
   return (
-    <BrowserRouter>
+    <ThemeProvider>
+      <BrowserRouter>
       <TitleUpdater />
       <ScrollToTop />
       <Toaster />
@@ -298,8 +302,9 @@ function App() {
           <Route path="/*" element={<AppLayout />} />
         </Route>
       </Routes>
-    </BrowserRouter>
-  );
+      </BrowserRouter>
+      </ThemeProvider>
+    );
 }
 
 export default App;
