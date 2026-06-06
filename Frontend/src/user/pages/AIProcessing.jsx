@@ -114,8 +114,6 @@ const AIProcessing = () => {
                         "System",
                     company_id: profile?.company_id || null,
                     image_url: uploadedImageUrl,
-                    confidence_threshold: settings.aiConfidenceThreshold,
-                    duplicate_sensitivity: settings.duplicateSensitivity,
                     // Smart Template metadata (backend can use for improved routing)
                     template_id: template_id || null,
                     template_used: template_used || false,

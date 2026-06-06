@@ -88,8 +88,6 @@ class TicketRequest(BaseModel):
     user_id: str | None = None
     company: str | None = None
     image_url: str | None = None
-    confidence_threshold: float = 0.20
-    duplicate_sensitivity: float = 0.85
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -699,35 +697,9 @@ async def update_ticket(ticket_id: str, updates: dict):
 async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
+    Delegates to `analyze_only` to avoid duplicated settings fetch, OCR, and metadata
+    gathering that were previously performed here and then discarded.
     """
-    text = request_body.text
-
-    settings = get_system_settings(request_body.company)
-    confidence_threshold = settings["ai_confidence_threshold"]
-    duplicate_sensitivity = settings["duplicate_sensitivity"]
-    enable_auto_resolve = settings["enable_auto_resolve"]
-    
-    # Grab client metadata
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-    origin_host = request.headers.get("origin", "unknown")
-    
-    env_metadata = {
-        "ip": client_ip,
-        "user_agent": user_agent,
-        "origin": origin_host
-    }
-
-    # --- Layer 1: Local OCR (CPU, no API required) ---
-    local_ocr_text = ""
-    if request_body.image_base64 and ocr_service:
-        print("[AI] Extracting text via local OCR...")
-        local_ocr_text = ocr_service.extract_text(request_body.image_base64)
-        if local_ocr_text:
-            text = f"{text} {local_ocr_text}".strip()
-            print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
-
-    # Initalize Timeline
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze")
