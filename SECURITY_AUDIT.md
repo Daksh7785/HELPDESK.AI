@@ -1,6 +1,7 @@
 # Tenant Isolation Security Audit Framework
 
-> Resolves [Issue #1121](https://github.com/ritesh-1918/HELPDESK.AI/issues/1121) — Automated Tenant Isolation Security Audit Framework (Refreshed)
+> Resolves [Issue #1121](https://github.com/ritesh-1918/HELPDESK.AI/issues/1121) —
+> Automated Tenant Isolation Security Audit Framework (Refreshed)
 
 HelpDesk.AI is a multi-tenant SaaS platform. This framework automatically validates
 that tenant boundaries are enforced across every layer of the stack — from database
