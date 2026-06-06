@@ -232,26 +232,42 @@ class DuplicateService:
     # ------------------------------------------------------------------
 
     def save_to_disk(self, ticket_id: str, text: str) -> None:
-        """Append a new ticket entry to the JSON persistence file."""
-        data: list = []
-        try:
-            os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
-            if os.path.exists(self.storage_file):
-                with open(self.storage_file, "r") as f:
-                    try:
-                        data = json.load(f)
-                        if not isinstance(data, list):
+        """Append a new ticket entry to the JSON persistence file (atomic write)."""
+        with self._lock:
+            data: list = []
+            try:
+                os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
+                if os.path.exists(self.storage_file):
+                    with open(self.storage_file, "r") as f:
+                        try:
+                            data = json.load(f)
+                            if not isinstance(data, list):
+                                data = []
+                        except Exception:
                             data = []
-                    except Exception:
-                        data = []
 
-            data.append({"ticket_id": ticket_id, "text": text})
-            data = data[-MAX_CACHE_ENTRIES:]
-            with open(self.storage_file, "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
-        except Exception as exc:
-            print(f"[DuplicateService] Failed to save to disk: {exc}")
+                data.append({"ticket_id": ticket_id, "text": text})
+                data = data[-MAX_CACHE_ENTRIES:]
+                # Atomic write via tempfile + os.replace
+                fd, tmp_path = tempfile.mkstemp(
+                    suffix=".json",
+                    prefix="duplicate_cache_",
+                    dir=os.path.dirname(self.storage_file),
+                )
+                try:
+                    with os.fdopen(fd, "w") as tmp:
+                        json.dump(data, tmp, indent=2)
+                    os.replace(tmp_path, self.storage_file)
+                except Exception:
+                    # Cleanup temp file on failure
+                    try:
+                        os.unlink(tmp_path)
+                    except OSError:
+                        pass
+                    raise
+                logger.info("Indexed ticket %s to case history.", ticket_id)
+            except Exception as exc:
+                logger.error("Failed to save to disk: %s", exc)
 
     def add_ticket(self, ticket_id: str, text: str) -> None:
         """Add a ticket to the in-memory store and persist to disk.
@@ -322,10 +338,6 @@ class DuplicateService:
             dict with duplicate_ticket_id, similarity_score, original_text
             or None if no duplicate found / service unavailable.
         """
-        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
-        if not 0.0 <= active_threshold <= 1.0:
-            raise ValueError("Duplicate similarity threshold must be between 0.0 and 1.0")
-
         self.load()
 
         # Validate the threshold up front so a bad override is reported
@@ -342,9 +354,9 @@ class DuplicateService:
                 "[DuplicateService] DEGRADED: Duplicate check skipped (model not available)"
             )
             return {
-                "duplicate_ticket_id": ticket_id,
-                "similarity_score": round(best_score, 4),
-                "original_text": original_text,
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "similarity": 0.0,
             }
 
         use_default_threshold = threshold is None
