@@ -178,6 +178,55 @@ function SlaBarRow({ entry }) {
     );
 }
 
+// Skeleton view exported just in case it is ever imported or requested
+export const AdminAnalyticsSkeleton = () => (
+    <div
+        style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }}
+        className="space-y-10 -m-6 p-6 md:-m-10 md:p-10 animate-pulse"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        aria-atomic="true"
+    >
+        <span className="sr-only">Loading analytics...</span>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="space-y-3">
+                <div className="h-8 w-40 bg-slate-200 rounded-full" />
+                <div className="h-4 w-56 bg-slate-100 rounded-full" />
+            </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(4)].map((_, index) => (
+                <div key={index} className="bg-white border border-slate-100 rounded-[1.5rem] p-6 shadow-sm space-y-4">
+                    <div className="flex justify-between items-center">
+                        <div className="h-4 w-24 bg-slate-100 rounded-full" />
+                        <div className="w-10 h-10 bg-emerald-100 rounded-xl" />
+                    </div>
+                    <div className="h-8 w-20 bg-slate-200 rounded-full" />
+                    <div className="h-3 w-32 bg-slate-100 rounded-full" />
+                </div>
+            ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            <div className="lg:col-span-8 space-y-10">
+                <div className="bg-white rounded-[20px] border border-emerald-50 p-6 space-y-6">
+                    <div className="h-5 w-48 bg-slate-200 rounded-full" />
+                    <div className="h-[300px] w-full bg-slate-50 rounded-2xl" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="h-64 bg-white rounded-[20px] border border-emerald-50" />
+                    <div className="h-64 bg-white rounded-[20px] border border-emerald-50" />
+                </div>
+            </div>
+            <div className="lg:col-span-4 space-y-6">
+                {[...Array(3)].map((_, index) => (
+                    <div key={index} className="h-32 bg-white rounded-[20px] border border-emerald-50" />
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
 // ─── Main component ───────────────────────────────────────────────────────────
 const AdminAnalytics = () => {
     const { profile } = useAuthStore();
@@ -342,8 +391,11 @@ const AdminAnalytics = () => {
     return { accuracyRate, resolutionSplit, misclassifiedCategories, avgCsatScore };
   }, [tickets]);
 
-  // Removed tab state - moving to single dashboard layout
-  if (loading)
+    // Show initial skeleton loader if data is not loaded yet
+    if (overviewLoading && volumeLoading && slaLoading && tickets.length === 0) {
+        return <AdminAnalyticsSkeleton />;
+    }
+
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="space-y-10 -m-6 p-6 md:-m-10 md:p-10 animate-in fade-in duration-700">
 
@@ -668,7 +720,7 @@ const AdminAnalytics = () => {
                             const badgeText = isResolve ? 'Resolved' : event.type === 'create' ? 'Open' : 'Escalated';
                             return (
                                 <div key={idx} style={{ padding: '10px 20px', borderBottom: '1px solid #f9fafb', display: 'flex', gap: '12px' }}>
-                                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: '#f0fdf4', display: 'flex', alignItems: 'center', justify: 'center', flexShrink: 0 }}>
                                         {event.type === 'create' ? <Inbox size={13} color="#10b981" /> : event.type === 'resolve' ? <ShieldCheck size={13} color="#6366f1" /> : <TrendingUp size={13} color="#f59e0b" />}
                                     </div>
                                     <div className="flex-1 min-w-0">
