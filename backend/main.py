@@ -1210,7 +1210,7 @@ print(f"[startup] CORS allowed origins: {_allowed_origins}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -2223,10 +2223,19 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
     if not request_body.user_id:
         request_body.user_id = auth_user_id
 
+    # Enforce company_id spoofing protection
+    auth_company_id = profile.get("company_id") if 'profile' in locals() else user.get("company_id", user.get("company", ""))
+    if request_body.company_id and str(request_body.company_id) != str(auth_company_id):
+        role = (user.get("user_metadata") or {}).get("role", "") or (user.get("app_metadata") or {}).get("role", "") or user.get("role", "")
+        if role != "master_admin":
+            raise HTTPException(status_code=403, detail="Unauthorized company context")
+
     logger = logging.getLogger(__name__)
 
-
     try:
+        final_data = request_body.dict() if hasattr(request_body, 'dict') else request_body.model_dump()
+        profile = user.get("user_metadata") or user.get("app_metadata") or user
+
         # Backfill company name if missing.
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]

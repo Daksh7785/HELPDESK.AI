@@ -1,15 +1,25 @@
 
 import os
-import psycopg2
 import pytest
+
+try:
+    import psycopg2
+    HAS_PSYCOPG2 = True
+except ImportError:
+    psycopg2 = None  # type: ignore[assignment]
+    HAS_PSYCOPG2 = False
 
 
 @pytest.fixture(scope="module")
 def db_connection():
     """
     PostgreSQL database connection fixture.
-    Skips DB-dependent tests if database is unavailable.
+    Skips DB-dependent tests if psycopg2 is not installed or
+    if the database is unavailable in the current environment.
     """
+
+    if not HAS_PSYCOPG2:
+        pytest.skip("psycopg2 not installed — skipping DB-dependent tests")
 
     try:
         connection = psycopg2.connect(

@@ -13,6 +13,7 @@ import os
 os.environ["SUPABASE_URL"] = "https://mock-project.supabase.co"
 os.environ["SUPABASE_SERVICE_KEY"] = "mock-service-key"
 os.environ["ALLOW_DEGRADED_STARTUP"] = "1"
+os.environ["MOCK_AUTH_ENABLED"] = "true"
 
 # Create mock Supabase client
 class MockResult:
@@ -72,6 +73,11 @@ class MockSupabaseTable:
                 else:
                     resource_company = "companyA"
                 ticket_data = {"id": ticket_id, "company_id": resource_company, "subject": "Ticket"}
+                comp_filter = self.filters.get("company_id")
+                if comp_filter and comp_filter != resource_company:
+                    if self._is_single:
+                        return MockResult(None)
+                    return MockResult([])
                 if self._is_single:
                     return MockResult(ticket_data)
                 return MockResult([ticket_data])
@@ -158,11 +164,13 @@ for module_name in [
 
 import pytest
 from fastapi.testclient import TestClient
-from backend.main import app, classifier_service, ner_service
+from backend.main import app, classifier_service, ner_service, duplicate_service, rag_service
 
-# Mock classifier and ner services as loaded for ready checks
+# Mock classifier, ner, duplicate and rag services as loaded for ready checks
 classifier_service._loaded = True
 ner_service._loaded = True
+duplicate_service._loaded = True
+rag_service._loaded = True
 
 # Dependency Override for get_current_user to support mock tokens
 from backend.auth_cookie import get_current_user
