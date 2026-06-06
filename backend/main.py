@@ -550,7 +550,7 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, request: Request):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -561,15 +561,22 @@ async def save_ticket(request_body: TicketSaveRequest):
     logger = logging.getLogger(__name__)
     try:
         final_data = request_body.dict()
+        current_user = await get_current_user(request)
+        authenticated_user_id = str(current_user.get("id") or "")
+        if not authenticated_user_id:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        if str(request_body.user_id) != authenticated_user_id:
+            raise HTTPException(status_code=403, detail="User id does not match session")
+        final_data["user_id"] = authenticated_user_id
 
         # Resolve tenant linkage from user profile with authorization validation.
         profile = {}
-        if request_body.user_id:
+        if authenticated_user_id:
             try:
                 profile_res = (
                     supabase.table("profiles")
                     .select("company_id, company, email, full_name")
-                    .eq("id", request_body.user_id)
+                    .eq("id", authenticated_user_id)
                     .single()
                     .execute()
                 )
@@ -580,7 +587,7 @@ async def save_ticket(request_body: TicketSaveRequest):
                     prefs_res = (
                         supabase.table("profiles")
                         .select("notification_prefs")
-                        .eq("id", request_body.user_id)
+                        .eq("id", authenticated_user_id)
                         .single()
                         .execute()
                     )
@@ -590,13 +597,13 @@ async def save_ticket(request_body: TicketSaveRequest):
                     profile["notification_prefs"] = {"email_enabled": False}
                     logger.warning(
                         "Notification preference lookup failed for user %s; email notifications disabled for this request: %s",
-                        hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8],
+                        hashlib.sha256(authenticated_user_id.encode()).hexdigest()[:8],
                         prefs_error,
                     )
             except HTTPException:
                 raise
             except Exception as profile_error:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                user_hash = hashlib.sha256(authenticated_user_id.encode()).hexdigest()[:8]
                 logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
                 raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
 
@@ -605,13 +612,13 @@ async def save_ticket(request_body: TicketSaveRequest):
         if final_data.get("company_id"):
             # User provided company_id: verify it matches their profile.
             if profile_company_id and final_data["company_id"] != profile_company_id:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                user_hash = hashlib.sha256(authenticated_user_id.encode()).hexdigest()[:8]
                 logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
                 raise HTTPException(status_code=403, detail="User not authorized for this tenant")
         elif profile_company_id:
             # Backfill company_id from profile.
             final_data["company_id"] = profile_company_id
-        elif request_body.user_id:
+        elif authenticated_user_id:
             # User has no tenant assignment.
             raise HTTPException(status_code=400, detail="User has no tenant assignment")
 
@@ -619,7 +626,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
-        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        user_hash = hashlib.sha256(authenticated_user_id.encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
@@ -666,7 +673,7 @@ async def save_ticket(request_body: TicketSaveRequest):
                 event_type="ticket_created",
                 ticket={**final_data, "id": ticket_id},
                 recipient_email=profile.get("email", ""),
-                recipient_user_id=request_body.user_id,
+                recipient_user_id=authenticated_user_id,
                 recipient_name=profile.get("full_name", ""),
                 notification_prefs=profile.get("notification_prefs"),
             )
@@ -682,6 +689,8 @@ async def save_ticket(request_body: TicketSaveRequest):
             response["duplicate_index_warning"] = duplicate_index_warning
         return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

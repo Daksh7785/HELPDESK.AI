@@ -10,6 +10,7 @@ import { Card, CardContent } from "../../components/ui/card";
 import TicketTimeline from "../components/TicketTimeline";
 import axios from 'axios';
 import { API_CONFIG } from '../../config';
+import { supabase } from '../../lib/supabaseClient';
 
 const TicketTracking = () => {
     const navigate = useNavigate();
@@ -68,7 +69,15 @@ const TicketTracking = () => {
                     routing_confidence: aiTicket.confidence
                 };
 
-                const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload);
+                const { data: { session } } = await supabase.auth.getSession();
+                const accessToken = session?.access_token;
+                if (!accessToken) {
+                    throw new Error("Please sign in again before creating a ticket.");
+                }
+
+                const res = await axios.post(`${API_CONFIG.BACKEND_URL}/tickets/save`, savePayload, {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                });
 
                 if (res.data?.ticket_id) {
                     const newTicket = { ...aiTicket, id: res.data.ticket_id, ticket_id: res.data.ticket_id, status };

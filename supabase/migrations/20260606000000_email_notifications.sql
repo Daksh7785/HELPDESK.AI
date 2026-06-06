@@ -109,6 +109,7 @@ AS $$
     RETURNING *;
 $$;
 
+REVOKE EXECUTE ON FUNCTION claim_pending_email_notifications(integer) FROM PUBLIC, anon, authenticated;
 GRANT ALL ON notifications TO service_role;
 GRANT ALL ON email_logs TO service_role;
 GRANT EXECUTE ON FUNCTION claim_pending_email_notifications(integer) TO service_role;
