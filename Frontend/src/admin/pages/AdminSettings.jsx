@@ -3,10 +3,16 @@ import WebhookSettings from "../../components/shared/WebhookSettings";
 import { API_CONFIG } from "@/config";
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Settings,
-    Cpu,
-    Inbox,
+    Activity,
     Bell,
+    CheckCircle2,
+    Copy,
+    Cpu,
+    Globe2,
+    Inbox,
+    KeyRound,
+    Loader2,
+    Plus,
     Save,
     ShieldCheck,
     Lock,
@@ -30,10 +36,46 @@ import {
 import { Select } from "../../components/ui/select";
 import SSOConfig from '../../pages/AdminSettings/SSOConfig';
 
-/**
- * AdminSettings Page
- * Comprehensive configuration for system parameters, AI thresholds, and notifications.
- */
+const roleOptions = [
+    { value: "user", label: "User" },
+    { value: "admin", label: "Admin" },
+    { value: "super_admin", label: "Super Admin" },
+];
+
+const scopeOptions = [
+    { value: "requester_access", label: "Requester Access" },
+    { value: "ticket_management", label: "Ticket Management" },
+    { value: "directory_admin", label: "Directory Admin" },
+];
+
+const toggleColorClasses = {
+    emerald: 'bg-emerald-600',
+    indigo: 'bg-indigo-600',
+};
+
+const sessionTimeoutOptions = [
+    { value: 60, label: "1 Hour" },
+    { value: 240, label: "4 Hours" },
+    { value: 480, label: "8 Hours" },
+    { value: 720, label: "12 Hours" },
+];
+
+const SectionToggle = ({ title, description, enabled, onToggle, accent = "indigo" }) => (
+    <div className="flex items-center justify-between gap-6 py-4 border-b border-slate-100 last:border-b-0">
+        <div>
+            <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">{title}</h4>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{description}</p>
+        </div>
+        <button
+            type="button"
+            onClick={onToggle}
+            className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${enabled ? (toggleColorClasses[accent] || toggleColorClasses.indigo) : 'bg-slate-200'}`}
+        >
+            <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${enabled ? 'right-1' : 'left-1'}`}></div>
+        </button>
+    </div>
+);
+
 const AdminSettings = () => {
     const { settings, updateSettings } = useAdminStore();
     const { user, profile } = useAuthStore();
@@ -199,9 +241,96 @@ const AdminSettings = () => {
         setRoutingRules(prev => prev.filter(r => r.id !== ruleId));
     };
 
+    const updateEnterpriseConfig = (updater) => {
+        setEnterpriseConfig((current) => (typeof updater === 'function' ? updater(current) : updater));
+        setSSOStatus('');
+    };
+
+    const handleEnterpriseFieldChange = (key, value) => {
+        updateEnterpriseConfig((current) => ({ ...current, [key]: value }));
+    };
+
+    const handleProviderChange = (providerId, key, value) => {
+        updateEnterpriseConfig((current) => ({
+            ...current,
+            providers: current.providers.map((provider) =>
+                provider.id === providerId ? { ...provider, [key]: value } : provider
+            ),
+        }));
+    };
+
+    const handleRoleMappingChange = (mappingId, key, value) => {
+        updateEnterpriseConfig((current) => ({
+            ...current,
+            roleMappings: current.roleMappings.map((mapping) =>
+                mapping.id === mappingId ? { ...mapping, [key]: value } : mapping
+            ),
+        }));
+    };
+
+    const addRoleMapping = () => {
+        updateEnterpriseConfig((current) => ({
+            ...current,
+            roleMappings: [
+                ...current.roleMappings,
+                {
+                    id: `mapping-${Date.now()}`,
+                    externalGroup: '',
+                    role: 'user',
+                    scope: 'requester_access',
+                },
+            ],
+        }));
+    };
+
+    const removeRoleMapping = (mappingId) => {
+        updateEnterpriseConfig((current) => ({
+            ...current,
+            roleMappings: current.roleMappings.filter((mapping) => mapping.id !== mappingId),
+        }));
+    };
+
+    const saveEnterpriseSettings = async () => {
+        setSavingSSO(true);
+        setSSOStatus('');
+        try {
+            const payload = await enterpriseAuthService.saveConfig(companyId, enterpriseConfig, actor);
+            setEnterpriseConfig(payload.config);
+            setAuditEvents(payload.auditEvents || []);
+            setSSOStatus('Enterprise authentication settings saved.');
+        } catch (error) {
+            setSSOStatus(error.message || 'Failed to save enterprise authentication settings.');
+        } finally {
+            setSavingSSO(false);
+        }
+    };
+
+    const runProviderTest = async (providerId) => {
+        setProviderChecks((current) => ({
+            ...current,
+            [providerId]: { status: 'running', message: 'Running diagnostics...', checks: [] },
+        }));
+
+        const result = await enterpriseAuthService.testProvider(companyId, providerId);
+        setProviderChecks((current) => ({
+            ...current,
+            [providerId]: result,
+        }));
+    };
+
+    const copyWebhookSecret = async () => {
+        if (!enterpriseConfig.provisioningWebhookSecret) return;
+        try {
+            await navigator.clipboard.writeText(enterpriseConfig.provisioningWebhookSecret);
+            setCopiedSecret(true);
+            setTimeout(() => setCopiedSecret(false), 1600);
+        } catch {
+            setCopiedSecret(false);
+        }
+    };
+
     return (
-        <div className="max-w-4xl mx-auto py-6 space-y-10 pb-20 animate-in fade-in duration-700">
-            {/* 1. Header Area */}
+        <div className="max-w-5xl mx-auto py-6 space-y-10 pb-20 animate-in fade-in duration-700">
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-black text-slate-900 tracking-tight italic uppercase flex items-center gap-3">
@@ -230,7 +359,6 @@ const AdminSettings = () => {
             </div>
 
             <div className="space-y-8">
-                {/* 2. System Settings (AI Parameters) */}
                 <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
                     <div className="px-8 py-6 bg-slate-900 text-white flex items-center justify-between border-b border-slate-800">
                         <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-3">
@@ -238,7 +366,6 @@ const AdminSettings = () => {
                         </h3>
                     </div>
                     <CardContent className="p-8 space-y-8">
-                        {/* AI Confidence Threshold */}
                         <div className="space-y-4">
                             <div className="flex justify-between items-center">
                                 <label className="text-xs font-black text-slate-700 uppercase tracking-widest">
@@ -259,7 +386,6 @@ const AdminSettings = () => {
                             />
                         </div>
 
-                        {/* Duplicate Detection Sensitivity */}
                         <div className="space-y-4 pt-4 border-t border-slate-100">
                             <div className="flex justify-between items-center">
                                 <label className="text-xs font-black text-slate-700 uppercase tracking-widest">
@@ -280,13 +406,13 @@ const AdminSettings = () => {
                             />
                         </div>
 
-                        {/* Auto Resolve Toggle */}
                         <div className="flex items-center justify-between pt-4 border-t border-slate-100">
                             <div>
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Enable Auto Resolve</h4>
                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Allow AI to close easily solved requests.</p>
                             </div>
                             <button
+                                type="button"
                                 onClick={() => handleChange('enableAutoResolve', !settings.enableAutoResolve)}
                                 className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.enableAutoResolve ? 'bg-indigo-600' : 'bg-slate-200'}`}
                             >
@@ -296,7 +422,6 @@ const AdminSettings = () => {
                     </CardContent>
                 </Card>
 
-                {/* 3. Ticket Settings */}
                 <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
                     <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                         <h3 className="text-sm font-black text-slate-900 uppercase italic tracking-tight flex items-center gap-3">
@@ -396,13 +521,13 @@ const AdminSettings = () => {
                         </h3>
                     </div>
                     <CardContent className="p-8 space-y-6">
-                        {/* Email Notifications toggle */}
                         <div className="flex items-center justify-between pb-4 border-b border-slate-100">
                             <div>
                                 <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Email Notifications</h4>
                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Receive daily system digests via email.</p>
                             </div>
                             <button
+                                type="button"
                                 onClick={() => handleChange('emailNotifications', !settings.emailNotifications)}
                                 className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.emailNotifications ? 'bg-amber-500' : 'bg-slate-200'}`}
                             >
@@ -433,6 +558,7 @@ const AdminSettings = () => {
                                 <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Push notifications for Priority 1 system events.</p>
                             </div>
                             <button
+                                type="button"
                                 onClick={() => handleChange('adminAlerts', !settings.adminAlerts)}
                                 className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.adminAlerts ? 'bg-amber-500' : 'bg-slate-200'}`}
                             >

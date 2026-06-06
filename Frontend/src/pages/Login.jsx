@@ -72,6 +72,36 @@ function Login() {
     }
   }, [user, profile, navigate]);
 
+  useEffect(() => {
+    let ignore = false;
+
+    const loadProviders = async () => {
+      const providers = await enterpriseAuthService.getLoginProviders("default-company");
+      if (!ignore) {
+        setEnterpriseProviders(providers);
+        setLoadingEnterpriseProviders(false);
+      }
+    };
+
+    loadProviders();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  const visibleEnterpriseProviders = useMemo(() => {
+    const emailDomain = email.includes("@") ? email.split("@")[1].trim().toLowerCase() : "";
+    if (!emailDomain) return enterpriseProviders;
+
+    const matching = enterpriseProviders.filter((provider) => {
+      const hint = (provider.domainHint || "").trim().toLowerCase();
+      return hint && emailDomain.includes(hint);
+    });
+
+    return matching.length > 0 ? matching : enterpriseProviders;
+  }, [email, enterpriseProviders]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
