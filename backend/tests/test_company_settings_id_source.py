@@ -14,4 +14,14 @@ def test_settings_lookups_use_company_id_helper():
     assert "def get_request_company_id" in SOURCE
     assert "request_body.company_id or resolve_company_name_to_id(request_body.company)" in SOURCE
     assert "get_system_settings(request_body.company)" not in SOURCE
+    assert "await analyze_only(request_body, settings=settings)" in SOURCE
+    assert "if settings is None:" in SOURCE
     assert SOURCE.count("get_system_settings(get_request_company_id(request_body))") == 3
+
+
+def test_company_name_lookup_does_not_swallow_ambiguous_results():
+    resolver_block = SOURCE.split("def resolve_company_name_to_id", 1)[1].split("def get_request_company_id", 1)[0]
+
+    assert ".single().execute()" not in resolver_block
+    assert "raise ValueError" in resolver_block
+    assert "except Exception" not in resolver_block

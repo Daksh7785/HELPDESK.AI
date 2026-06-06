@@ -85,12 +85,13 @@ def get_system_settings(company_id: str) -> dict:
 def resolve_company_name_to_id(company_name: str | None) -> str | None:
     if not supabase or not company_name:
         return None
-    try:
-        res = supabase.table("companies").select("id").eq("name", company_name).single().execute()
-        return res.data.get("id") if res.data else None
-    except Exception as e:
-        print(f"[WARNING] Could not resolve company name={company_name} to id: {e}")
-    return None
+    res = supabase.table("companies").select("id").eq("name", company_name).execute()
+    rows = res.data or []
+    if not rows:
+        return None
+    if len(rows) > 1:
+        raise ValueError(f"Multiple companies found for name={company_name!r}; pass company_id instead")
+    return rows[0].get("id")
 
 def get_request_company_id(request_body: "TicketRequest") -> str | None:
     return request_body.company_id or resolve_company_name_to_id(request_body.company)
@@ -743,10 +744,10 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
     # Initalize Timeline
-    return await analyze_only(request_body)
+    return await analyze_only(request_body, settings=settings)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+async def analyze_only(request_body: TicketRequest, settings: dict | None = None):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -754,7 +755,8 @@ async def analyze_only(request_body: TicketRequest):
     """
     text = request_body.text
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(get_request_company_id(request_body))
+    if settings is None:
+        settings = get_system_settings(get_request_company_id(request_body))
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
