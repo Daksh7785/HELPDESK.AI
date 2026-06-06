@@ -12,9 +12,11 @@ We strongly encourage all users to upgrade to the latest version to receive secu
 
 ## Reporting a Vulnerability
 
-We take the security of HELPDESK.AI seriously. If you believe you have found a security vulnerability, please report it to us by following these steps:
+We take the security of HELPDESK.AI seriously. If you believe you have found a
+security vulnerability, please report it to us by following these steps:
 
-1. **Do not open a public issue.** This helps prevent the vulnerability from being exploited before a fix is available.
+1. **Do not open a public issue.** This helps prevent the vulnerability from
+   being exploited before a fix is available.
 2. Send an email to **flyingskyinthehouse@gmail.com** with the subject "Security Vulnerability Report".
 3. Include as much detail as possible:
     - Description of the vulnerability.

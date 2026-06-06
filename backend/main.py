@@ -2167,7 +2167,6 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
     Raises:
         HTTPException: 500 if the Supabase database connection is unavailable.
     """
-    request_body.user_id = user.get("id", request_body.user_id) # Enforce IDOR protection
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
