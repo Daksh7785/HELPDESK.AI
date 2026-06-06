@@ -1,5 +1,6 @@
 
 import json
+import logging
 import uuid
 import datetime
 import traceback
@@ -19,6 +20,8 @@ from backend.models import (
     TroubleshootRequest, TroubleshootResponse,
     BugReportAnalysisRequest, BugReportAnalysisResponse
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -489,5 +492,6 @@ async def analyze_ticket_v2(request: TicketRequest):
             "confidence": prediction["category"]["confidence"]
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error("AI ticket analysis failed", exc_info=e)
+        raise HTTPException(status_code=500, detail="Ticket analysis failed. Please try again later.")
 
