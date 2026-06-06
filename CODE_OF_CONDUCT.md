@@ -29,7 +29,28 @@ Examples of unacceptable behavior by participants include:
 * Publishing others' private information, such as a physical or electronic
   address, without explicit permission
 * Other conduct which could reasonably be considered inappropriate in a
-  professional setting
+  professional open-source setting
+
+---
+
+## GSSoC 2026 — Specific Expectations
+
+HELPDESK.AI participates in **GirlScript Summer of Code 2026**. Contributors participating
+under GSSoC agree to additional expectations:
+
+* **Work on assigned issues only.** Do not open PRs for issues assigned to another contributor
+  without coordination.
+* **Communicate early.** If you are stuck or will miss a deadline, post a comment on the issue
+  so the mentor can reassign or extend.
+* **No plagiarism.** PRs must represent your own original work. Copying another contributor's
+  PR — even with modifications — is grounds for immediate disqualification.
+* **Use AI tools responsibly.** You may use AI coding assistants, but you are responsible for
+  understanding, testing, and owning every line you submit. "The AI wrote it" is not an
+  acceptable explanation for a failing test or broken feature.
+* **Respect the review process.** Maintainers and mentors volunteer their time. Respond to
+  review feedback within 72 hours or the PR may be closed.
+
+---
 
 ## Our Responsibilities
 
@@ -43,6 +64,8 @@ that are not aligned to this Code of Conduct, or to ban temporarily or
 permanently any contributor for other behaviors that they deem inappropriate,
 threatening, offensive, or harmful.
 
+---
+
 ## Scope
 
 This Code of Conduct applies both within project spaces and in public spaces
@@ -52,7 +75,17 @@ address, posting via an official social media account, or acting as an appointed
 representative at an online or offline event. Representation of a project may be
 further defined and clarified by project maintainers.
 
-## Enforcement
+* This GitHub repository (issues, PRs, discussions, code reviews, commit messages)
+* The project Discord/Slack server (if applicable)
+* Any official social media accounts or mailing lists
+* In-person or virtual events where contributors represent HELPDESK.AI
+
+This Code of Conduct also applies when an individual is officially representing
+the community in public spaces.
+
+---
+
+## Reporting
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported by contacting the project team at flyingskyinthehouse@gmail.com. All
@@ -65,10 +98,17 @@ Project maintainers who do not follow or enforce the Code of Conduct in good
 faith may face temporary or permanent repercussions as determined by other
 members of the project's leadership.
 
+**GSSoC impact**: Disqualification from all GSSoC programs and escalation to
+GSSoC organizers.
+
+---
+
 ## Attribution
 
 This Code of Conduct is adapted from the [Contributor Covenant][homepage],
 version 1.4, available at https://www.contributor-covenant.org/version/1/4/code-of-conduct.html
+
+GSSoC-specific clauses are original additions for this project.
 
 [homepage]: https://www.contributor-covenant.org
 
