@@ -1475,6 +1475,7 @@ async def root():
     """
 
 
+@limiter.limit("60/minute")
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Return a lightweight status payload showing whether core models are loaded."""
