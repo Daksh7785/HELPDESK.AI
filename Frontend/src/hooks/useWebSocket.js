@@ -1,273 +1,275 @@
+import { useEffect, useRef, useCallback } from 'react';
+import { supabase } from '../lib/supabaseClient';
+import useConnectionStore from '../store/connectionStore';
+
 /**
- * useWebSocket — auto-reconnecting WebSocket hook with bidirectional heartbeat.
- *
- * Authenticates via a Supabase access token passed as a query parameter
- * so the server can validate the session before accepting the connection.
- *
- * Heartbeat protocol (client-initiated):
- *   Client sends  {"type": "ping"}  every PING_INTERVAL_MS.
- *   Server echoes {"type": "pong"}  immediately.
- *   If no pong arrives within PONG_TIMEOUT_MS the hook treats the connection
- *   as dead and triggers exponential-backoff reconnection.
- *
- * Heartbeat protocol (server-initiated):
- *   Server sends  {"type": "ping"}  every ~30 s.
- *   Client echoes {"type": "pong"}  immediately.
- *   If the server receives no pong it disconnects the client.
- *
- * Usage:
- *   const { isConnected, sendMessage, lastMessage, connectionError } =
- *     useWebSocket(companyId, accessToken);
- *
- *   useEffect(() => {
- *     if (lastMessage?.type === "ticket_update") {
- *       store.addTicket(lastMessage.ticket);
- *     }
- *   }, [lastMessage]);
+ * Configuration for Supabase reconnection behavior.
+ * Supabase JS client v2.x has built-in reconnect but doesn't surface
+ * connection state changes to the UI. This hook wraps Supabase channels
+ * with explicit reconnection tracking, exponential backoff, and a
+ * fallback that surfaces the connection status to the global store.
  */
+const RECONNECT_CONFIG = {
+  INITIAL_DELAY: 1000,      // 1 second
+  MAX_DELAY: 30000,         // 30 seconds
+  MAX_RETRIES: 10,          // max consecutive reconnect attempts
+  JITTER: 0.3,              // ±30% jitter factor
+};
 
-import { useEffect, useRef, useState, useCallback } from "react";
+/**
+ * Calculate exponential backoff with jitter.
+ * Returns delay in milliseconds.
+ */
+const getBackoffDelay = (attempt) => {
+  const exponential = Math.min(
+    RECONNECT_CONFIG.INITIAL_DELAY * Math.pow(2, attempt),
+    RECONNECT_CONFIG.MAX_DELAY
+  );
+  const jitter = 1 + (Math.random() - 0.5) * 2 * RECONNECT_CONFIG.JITTER;
+  return Math.round(exponential * jitter);
+};
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
+/**
+ * Custom hook that subscribes to a Supabase channel with automatic
+ * reconnection, exponential backoff, and connection status reporting.
+ *
+ * @param {string} channelName - Unique name for this channel
+ * @param {Array<{event: string, schema: string, table: string, filter?: string, handler: Function}>} subscriptions
+ * @param {Object} options
+ * @param {boolean} options.enabled - Whether to subscribe (default: true)
+ * @param {Function} options.onPollFallback - Fallback HTTP poll when disconnected
+ * @param {number} options.pollInterval - Poll interval in ms (default: 30000)
+ */
+const useSupabaseRealtime = (
+  channelName,
+  subscriptions = [],
+  options = {}
+) => {
+  const {
+    enabled = true,
+    onPollFallback = null,
+    pollInterval = 30000,
+  } = options;
 
-const WS_BASE_URL = import.meta.env.VITE_WS_URL || "ws://localhost:7860";
-const PING_INTERVAL_MS = 25_000;     // slightly < server-side 30 s so pong arrives first
-const PONG_TIMEOUT_MS = 12_000;      // if no pong within 12 s, treat connection as dead
-const MAX_RECONNECT_DELAY_MS = 30_000;
-const INITIAL_RECONNECT_DELAY_MS = 1_000;
-
-// ---------------------------------------------------------------------------
-// Hook
-// ---------------------------------------------------------------------------
-
-export default function useWebSocket(companyId, accessToken) {
-  const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState(null);
-  const [connectionError, setConnectionError] = useState(null);
-
-  const wsRef = useRef(null);
-  const pingTimerRef = useRef(null);
-  const pongTimeoutRef = useRef(null);  // armed after each outgoing ping, cancelled on pong
-  const reconnectTimerRef = useRef(null);
-  const reconnectAttemptRef = useRef(0);
+  const channelRef = useRef(null);
+  const retryCountRef = useRef(0);
+  const backoffTimerRef = useRef(null);
+  const pollTimerRef = useRef(null);
   const mountedRef = useRef(true);
-  const companyIdRef = useRef(companyId);
-  const tokenRef = useRef(accessToken);
+  const lastPongRef = useRef(Date.now());
+  const pingTimerRef = useRef(null);
 
-  // ---- Cleanup helpers ---------------------------------------------------
+  const { setConnected, setReconnecting, setDisconnected } = useConnectionStore.getState();
 
-  const clearTimers = useCallback(() => {
+  /**
+   * Polling fallback when WebSocket is down after all retries.
+   */
+  const startPollFallback = useCallback(() => {
+    if (!onPollFallback || pollTimerRef.current) return;
+
+    setDisconnected(`Fell back to HTTP polling (every ${pollInterval / 1000}s)`);
+
+    pollTimerRef.current = setInterval(async () => {
+      if (!mountedRef.current) return;
+      try {
+        await onPollFallback();
+      } catch (err) {
+        // Poll errors are expected when network is down; swallow silently.
+      }
+    }, pollInterval);
+  }, [onPollFallback, pollInterval, setDisconnected]);
+
+  const stopPollFallback = useCallback(() => {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Heartbeat check: if we haven't received anything from Supabase
+   * in a while, consider the connection dead.
+   */
+  const startHeartbeat = useCallback(() => {
+    const check = () => {
+      if (!mountedRef.current) return;
+      const elapsed = Date.now() - lastPongRef.current;
+      // If no pong/message for 30 seconds, assume disconnect
+      if (elapsed > 30000) {
+        scheduleReconnect();
+      }
+    };
+    pingTimerRef.current = setInterval(check, 15000);
+  }, []);
+
+  const stopHeartbeat = useCallback(() => {
     if (pingTimerRef.current) {
       clearInterval(pingTimerRef.current);
       pingTimerRef.current = null;
     }
-    if (pongTimeoutRef.current) {
-      clearTimeout(pongTimeoutRef.current);
-      pongTimeoutRef.current = null;
-    }
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
   }, []);
-
-  const cleanup = useCallback(() => {
-    clearTimers();
-    if (wsRef.current) {
-      wsRef.current.onopen = null;
-      wsRef.current.onclose = null;
-      wsRef.current.onmessage = null;
-      wsRef.current.onerror = null;
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-  }, [clearTimers]);
-
-  // ---- Start heartbeat timers (called after connect) --------------------
-
-  const startHeartbeat = useCallback(() => {
-    // Clear any existing timers first to prevent duplicates on reconnect
-    clearTimers();
-
-    // Periodic pings
-    pingTimerRef.current = setInterval(() => {
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({ type: "ping" }));
-      }
-    }, PING_INTERVAL_MS);
-  }, [clearTimers]);
-
-  // ---- WebSocket lifecycle & Reconnection ---------------------------------
-
-  const connectRef = useRef(null);
-
-  const scheduleReconnect = useCallback(() => {
-    if (!mountedRef.current || !companyIdRef.current) return;
-
-    const attempt = reconnectAttemptRef.current;
-    const delay = Math.min(
-      INITIAL_RECONNECT_DELAY_MS * Math.pow(2, attempt),
-      MAX_RECONNECT_DELAY_MS
-    );
-    reconnectAttemptRef.current = attempt + 1;
-
-    setConnectionError(`Reconnecting in ${Math.round(delay / 1000)}s…`);
-
-    reconnectTimerRef.current = setTimeout(() => {
-      if (mountedRef.current && connectRef.current) connectRef.current();
-    }, delay);
-  }, []);
-
-  // ---- Heartbeat ---------------------------------------------------------
 
   /**
-   * Start the client-side heartbeat loop.
-   *
-   * Every PING_INTERVAL_MS:
-   *  1. Send {"type": "ping"} to the server.
-   *  2. Arm a PONG_TIMEOUT_MS deadline timer.
-   *  3. When the server echoes {"type": "pong"} (handled in onmessage),
-   *     the deadline is cancelled.
-   *  4. If the deadline fires, the connection is dead — force a reconnect.
+   * Schedule a reconnect attempt with exponential backoff.
    */
-  const startHeartbeat = useCallback((socket) => {
-    pingTimerRef.current = setInterval(() => {
-      if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  const scheduleReconnect = useCallback(() => {
+    if (!mountedRef.current) return;
 
-      // Send the keepalive ping
-      socket.send(JSON.stringify({ type: "ping" }));
+    retryCountRef.current += 1;
 
-      // Arm the pong deadline
-      if (pongTimeoutRef.current) {
-        clearTimeout(pongTimeoutRef.current);
-      }
-      pongTimeoutRef.current = setTimeout(() => {
-        // No pong received within PONG_TIMEOUT_MS — connection is silently dead
-        pongTimeoutRef.current = null;
-        if (mountedRef.current) {
-          setIsConnected(false);
-          clearTimers();
-          if (socket) {
-            socket.onclose = null; // prevent double-reconnect from onclose
-            socket.close();
-          }
-          scheduleReconnect();
-        }
-      }, PONG_TIMEOUT_MS);
-    }, PING_INTERVAL_MS);
-  }, [clearTimers, scheduleReconnect]);
-
-  // ---- WebSocket lifecycle -----------------------------------------------
-
-  const connectRef = useRef(null);
-
-  const connect = useCallback(() => {
-    cleanup();
-
-    const cid = companyIdRef.current;
-    if (!cid) return;
-
-    const tok = tokenRef.current;
-    const url = tok
-      ? `${WS_BASE_URL}/ws/${encodeURIComponent(cid)}?token=${encodeURIComponent(tok)}`
-      : `${WS_BASE_URL}/ws/${encodeURIComponent(cid)}`;
-    setConnectionError(null);
-
-    let socket;
-    try {
-      socket = new WebSocket(url);
-    } catch (err) {
-      setConnectionError(err.message || "Failed to create WebSocket");
-      scheduleReconnect();
+    if (retryCountRef.current > RECONNECT_CONFIG.MAX_RETRIES) {
+      // Max retries exceeded — fall back to HTTP polling
+      setDisconnected(
+        `Disconnected — fell back to HTTP polling (every ${pollInterval / 1000}s)`
+      );
+      stopHeartbeat();
+      startPollFallback();
       return;
     }
-    wsRef.current = socket;
 
-    socket.onopen = () => {
-      if (!mountedRef.current) return;
-      setIsConnected(true);
-      setConnectionError(null);
-      reconnectAttemptRef.current = 0;
-      startHeartbeat(socket);
-    };
+    const delay = getBackoffDelay(retryCountRef.current);
+    setReconnecting(
+      retryCountRef.current,
+      `Reconnecting (attempt ${retryCountRef.current}/${RECONNECT_CONFIG.MAX_RETRIES})…`
+    );
 
-    socket.onmessage = (event) => {
+    backoffTimerRef.current = setTimeout(() => {
       if (!mountedRef.current) return;
-      let data;
+      subscribe();
+    }, delay);
+  }, [pollInterval, setDisconnected, setReconnecting, startPollFallback, stopHeartbeat]);
+
+  /**
+   * Subscribe (or resubscribe) to the Supabase channel.
+   */
+  const subscribe = useCallback(() => {
+    if (!mountedRef.current) return;
+
+    // Clean up existing channel
+    if (channelRef.current) {
       try {
-        data = JSON.parse(event.data);
+        supabase.removeChannel(channelRef.current);
       } catch {
-        return; // ignore malformed frames
+        // Channel might already be in a bad state
       }
-
-      // Server echoes our ping — cancel the pong deadline timer
-      if (data.type === "pong") {
-        if (pongTimeoutRef.current) {
-          clearTimeout(pongTimeoutRef.current);
-          pongTimeoutRef.current = null;
-        }
-        return;
-      }
-
-      // Server-initiated ping — echo back immediately so server records liveness
-      if (data.type === "ping") {
-        if (socket.readyState === WebSocket.OPEN) {
-          socket.send(JSON.stringify({ type: "pong" }));
-        }
-        return;
-      }
-
-      setLastMessage(data);
-    };
-
-    socket.onclose = (event) => {
-      if (!mountedRef.current) return;
-      setIsConnected(false);
-      clearTimers();
-
-      // Don't reconnect on clean closes (1000 = normal, 400x = intentional server policy)
-      if (event.code === 1000 || (event.code >= 4000 && event.code < 5000)) {
-        return;
-      }
-
-      scheduleReconnect();
-    };
-
-    socket.onerror = () => {
-      // onclose fires immediately after onerror; reconnect is handled there
-    };
-  }, [cleanup, clearTimers, startHeartbeat, scheduleReconnect]);
-
-  useEffect(() => {
-    connectRef.current = connect;
-  }, [connect]);
-
-  // ---- Send helper -------------------------------------------------------
-
-  const sendMessage = useCallback((msg) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(typeof msg === "string" ? msg : JSON.stringify(msg));
+      channelRef.current = null;
     }
-  }, []);
 
-  // ---- Main effect -------------------------------------------------------
+    stopHeartbeat();
+    stopPollFallback();
+
+    if (!enabled || subscriptions.length === 0) return;
+
+    lastPongRef.current = Date.now();
+
+    let channel = supabase.channel(channelName);
+
+    for (const sub of subscriptions) {
+      channel = channel.on(
+        'postgres_changes',
+        {
+          event: sub.event,
+          schema: sub.schema || 'public',
+          table: sub.table,
+          ...(sub.filter ? { filter: sub.filter } : {}),
+        },
+        (payload) => {
+          // Reset pong timestamp on any message
+          lastPongRef.current = Date.now();
+          lastPongRef.current = Date.now();
+
+          // If we were reconnecting, we're now connected
+          if (retryCountRef.current > 0) {
+            retryCountRef.current = 0;
+            setConnected();
+          }
+
+          sub.handler(payload);
+        }
+      );
+    }
+
+    channel.subscribe((status) => {
+      if (!mountedRef.current) return;
+
+      switch (status) {
+        case 'SUBSCRIBED':
+          retryCountRef.current = 0;
+          setConnected();
+          stopPollFallback();
+          startHeartbeat();
+          break;
+        case 'CHANNEL_ERROR':
+        case 'TIMED_OUT':
+          scheduleReconnect();
+          break;
+        case 'CLOSED':
+          // Only try to reconnect if we didn't intentionally close
+          if (mountedRef.current && channelRef.current) {
+            scheduleReconnect();
+          }
+          break;
+        default:
+          break;
+      }
+    });
+
+    channelRef.current = channel;
+  }, [
+    channelName,
+    subscriptions,
+    enabled,
+    setConnected,
+    setReconnecting,
+    setDisconnected,
+    scheduleReconnect,
+    startHeartbeat,
+    stopHeartbeat,
+    stopPollFallback,
+    startPollFallback,
+  ]);
+
+  /**
+   * Manual reconnect trigger (for the "Reconnect" button).
+   */
+  const manualReconnect = useCallback(() => {
+    retryCountRef.current = 0;
+    stopPollFallback();
+    subscribe();
+  }, [subscribe, stopPollFallback]);
 
   useEffect(() => {
     mountedRef.current = true;
-    companyIdRef.current = companyId;
-    tokenRef.current = accessToken;
 
-    if (companyId) {
-      connect();
+    if (enabled && subscriptions.length > 0) {
+      subscribe();
     }
 
     return () => {
       mountedRef.current = false;
-      cleanup();
-    };
-  }, [companyId, accessToken, connect, cleanup]);
 
-  return { isConnected, lastMessage, connectionError, sendMessage };
-}
+      if (backoffTimerRef.current) {
+        clearTimeout(backoffTimerRef.current);
+        backoffTimerRef.current = null;
+      }
+
+      stopHeartbeat();
+      stopPollFallback();
+
+      if (channelRef.current) {
+        try {
+          supabase.removeChannel(channelRef.current);
+        } catch {
+          // Ignore cleanup errors
+        }
+        channelRef.current = null;
+      }
+
+      useConnectionStore.getState().reset();
+    };
+  }, [enabled, subscribe, stopHeartbeat, stopPollFallback]);
+
+  return { manualReconnect, retryCount: retryCountRef.current };
+};
+
+export default useSupabaseRealtime;
