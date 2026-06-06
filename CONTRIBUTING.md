@@ -66,10 +66,53 @@ We welcome ideas that improve the AI's precision or user experience.
 
 We are proudly participating in **GSSoC 2026**! If you are a contributor from GSSoC, please ensure you follow these steps so that your PR is scored correctly:
 1. **Target Branch Requirement (CRITICAL) 🚨**: You MUST target and submit all of your Pull Requests to the `gssoc` branch, **NOT** to the `main` branch. The `main` branch is our production-ready release branch and is strictly protected. Any Pull Request opened directly against `main` will be automatically rejected.
-2. **Approval Label**: Once your PR is reviewed and approved, we will add the `gssoc:approved` label. 
+2. **Approval Label**: Once your PR is reviewed and approved, we will add the `gssoc:approved` label.
 3. **Difficulty Level**: We will assign a difficulty label (`level:beginner`, `level:intermediate`, `level:advanced`, `level:critical`).
 4. **Mentor Assignment**: We will add the `mentor:ritesh-1918` label to track review points.
 5. Make sure your PR resolves an assigned issue and is linked properly in the PR description (e.g. `Fixes #28`).
+
+---
+
+## 🔐 GSSoC Integration Security Guide
+
+Integration work touches third-party services, user data, and deployment secrets. Treat every integration PR as security-sensitive, even when the change looks like a small provider, webhook, email, storage, or analytics update.
+
+### Required Security Checks
+
+Before opening an integration PR, verify the following:
+
+*   **No secrets in code:** Never commit API keys, webhook secrets, OAuth client secrets, private URLs, `.env` files, or real tokens. Use environment variables and update `.env.example` with placeholder names only.
+*   **Server-side trust boundary:** Keep privileged provider calls in the backend. Frontend code must not receive service-role keys, unrestricted provider tokens, or direct database write credentials.
+*   **Webhook validation:** Webhook endpoints must verify signatures or shared secrets, reject missing/invalid signatures, and avoid logging raw payload secrets.
+*   **OAuth and redirect safety:** OAuth callbacks must validate state/nonce values, use allowlisted redirect URLs, and avoid open redirects.
+*   **CORS and origin scope:** Do not widen CORS to `*` for authenticated routes. Document any new allowed origin and why it is needed.
+*   **Rate limits and retries:** Add rate limiting, timeout, and retry behavior for external APIs so a failing provider cannot exhaust backend resources.
+*   **PII minimization:** Log request IDs and provider status, not passwords, tokens, email bodies, chat transcripts, or full customer records.
+*   **Failure mode:** Integrations should fail closed for auth/security errors and return clear, non-sensitive error messages.
+
+### PR Evidence Checklist
+
+Include this evidence in the PR description for integration-security changes:
+
+*   The new environment variables, with safe placeholder examples.
+*   The trust boundary: browser, backend, provider, database, and webhook flow.
+*   Validation steps for valid and invalid credentials or signatures.
+*   Screenshots or logs with secrets redacted.
+*   Any required deployment configuration changes for Vercel, Supabase, or backend hosting.
+
+### Escalation Template
+
+If you find a leaked credential, auth bypass, webhook spoofing issue, or unsafe direct database access, do not post exploit details publicly. Use this template in the issue or PR with sensitive values redacted:
+
+```text
+Security integration concern
+
+Area: <provider/webhook/OAuth/storage/email/analytics>
+Impact: <what user data or system capability could be exposed>
+Evidence: <redacted logs, file paths, or reproduction summary>
+Suggested fix: <high-level mitigation without secrets>
+Needs maintainer action: <yes/no, and why>
+```
 
 ---
 
