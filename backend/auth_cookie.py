@@ -198,6 +198,7 @@ class SignupBody(BaseModel):
 @router.post("/login")
 @limiter.limit("5/minute")
 async def auth_login(request: Request, body: LoginBody, response: Response):
+    """Log in a user using email and password, setting HttpOnly session cookies."""
     try:
         client = _anon_supabase()
         result = client.auth.sign_in_with_password(
@@ -219,6 +220,7 @@ async def auth_login(request: Request, body: LoginBody, response: Response):
 @router.post("/signup")
 @limiter.limit("5/minute")
 async def auth_signup(request: Request, body: SignupBody, response: Response):
+    """Sign up a new user, setting HttpOnly session cookies upon success."""
     metadata: dict[str, str] = {}
     if body.full_name:
         metadata["full_name"] = body.full_name
@@ -285,6 +287,7 @@ async def auth_logout(request: Request, response: Response):
 @router.get("/me")
 @limiter.limit("60/minute")
 async def auth_me(request: Request, user: dict = Depends(get_current_user)):
+    """Return the profile data of the currently authenticated user session."""
     return {"user": user}
 
 

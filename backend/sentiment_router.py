@@ -51,6 +51,7 @@ class AnalyzeRequest(BaseModel):
 
 @router.post("/analyze")
 async def analyze_ticket_sentiment(req: AnalyzeRequest, authorization: Optional[str] = Header(None)):
+    """Analyze and persist the sentiment of a support ticket based on its content."""
     _require_auth(authorization)
     result = analyze_and_save(req.ticket_id, req.ticket_title, req.ticket_body, req.current_priority)
     return {"success": True, "ticket_id": req.ticket_id, **result}
@@ -58,6 +59,7 @@ async def analyze_ticket_sentiment(req: AnalyzeRequest, authorization: Optional[
 
 @router.get("/ticket/{ticket_id}")
 async def get_ticket_sentiment(ticket_id: str, authorization: Optional[str] = Header(None)):
+    """Retrieve the analyzed sentiment fields for a specific ticket by its ID."""
     _require_auth(authorization)
     sb = _get_sb()
     if sb is None:
@@ -82,6 +84,7 @@ async def get_ticket_sentiment(ticket_id: str, authorization: Optional[str] = He
 
 @router.get("/heatmap/{company_id}")
 async def frustration_heatmap(company_id: str, authorization: Optional[str] = Header(None)):
+    """Generate a CSAT frustration heatmap for a company's support tickets."""
     _require_auth(authorization)
     if not company_id or len(company_id) > 100:
         raise HTTPException(status_code=400, detail="Invalid company_id")

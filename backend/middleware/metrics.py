@@ -119,6 +119,7 @@ def setup_metrics(app: FastAPI) -> None:
 
     @app.get("/metrics", include_in_schema=False, response_class=PlainTextResponse)
     async def metrics_endpoint(request: Request) -> Response:
+        """Expose Prometheus scrape metrics, checking token or IP authorization."""
         if not _is_authorized(request):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
