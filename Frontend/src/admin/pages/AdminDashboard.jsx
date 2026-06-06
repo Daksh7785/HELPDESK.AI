@@ -428,22 +428,45 @@ const AdminDashboard = () => {
                             <span style={{ fontSize: '10px', fontWeight: 700, color: wsConnected ? '#15803d' : '#c2410c' }}>{wsConnected ? 'WS CONNECTED' : 'RECONNECTING'}</span>
                         </div>
                     </div>
-                    <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', padding: '24px' }}>
-                        <div className="space-y-4">
-                            {aiSubsystems.map((sub, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 transition-all cursor-default hover:bg-white hover:border-green-100" style={{ background: '#f8faf9' }}>
-                                    <div className="flex items-center gap-3">
-                                        <div style={{ background: aiIconMap[idx].bg, color: aiIconMap[idx].color, width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                            {aiIconMap[idx].icon}
+
+                    {/* AI System Health */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className="px-2 flex items-center justify-between">
+                            <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                                AI Status
+                            </h2>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '100px', padding: '3px 10px' }}>
+                                <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#22c55e', display: 'inline-block', animation: 'pulse-dot 2s infinite' }}></span>
+                                <span style={{ fontSize: '10px', fontWeight: 700, color: '#15803d' }}>LIVE SYNC</span>
+                            </div>
+                        </div>
+                        <div style={{ background: '#fff', borderRadius: '20px', border: '1px solid #f0fdf4', padding: '24px' }}>
+                            <div className="space-y-4">
+                                {aiSubsystems.map((sub, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-4 rounded-2xl border border-gray-100 transition-all cursor-default hover:bg-white hover:border-green-100" style={{ background: '#f8faf9' }}>
+                                        <div className="flex items-center gap-3">
+                                            <div style={{ background: aiIconMap[idx].bg, color: aiIconMap[idx].color, width: 36, height: 36, borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                {aiIconMap[idx].icon}
+                                            </div>
+                                            <div>
+                                                <p style={{ fontSize: '13px', fontWeight: 600, color: '#111827', margin: 0 }}>{sub.name}</p>
+                                                <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '1px' }}>Status: {sub.latency}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p style={{ fontSize: '13px', fontWeight: 600, color: '#111827', margin: 0 }}>{sub.name}</p>
-                                            <p style={{ fontSize: '11px', color: '#6b7280', marginTop: '1px' }}>Status: {sub.latency}</p>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 10px', background: sub.status === 'Active' ? '#dcfce7' : '#f3f4f6', color: sub.status === 'Active' ? '#15803d' : '#6b7280', border: sub.status === 'Active' ? '1px solid #bbf7d0' : '1px solid #e5e7eb', borderRadius: '100px' }}>
+                                            <div style={{ width: 5, height: 5, borderRadius: '50%', background: sub.status === 'Active' ? '#22c55e' : '#9ca3af' }}></div>
+                                            <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>{sub.status}</span>
                                         </div>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '3px 10px', background: sub.status === 'Active' ? '#dcfce7' : '#f3f4f6', color: sub.status === 'Active' ? '#15803d' : '#6b7280', border: sub.status === 'Active' ? '1px solid #bbf7d0' : '1px solid #e5e7eb', borderRadius: '100px' }}>
-                                        <div style={{ width: 5, height: 5, borderRadius: '50%', background: sub.status === 'Active' ? '#22c55e' : '#9ca3af' }}></div>
-                                        <span style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase' }}>{sub.status}</span>
+                                ))}
+                                <div className="pt-4 mt-4 border-t border-gray-100 flex flex-col items-center gap-2">
+                                    <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.14em', fontWeight: 600, textTransform: 'uppercase' }}>All systems operating normally</p>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '4px 10px', background: '#f8faf9', borderRadius: '100px', border: '1px solid #e5e7eb' }}>
+                                        <Activity size={10} color="#9ca3af" />
+                                        <span style={{ fontSize: '9px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                                            Last Synced: {formatTimelineDate(new Date())}
+                                        </span>
                                     </div>
                                 </div>
                             ))}

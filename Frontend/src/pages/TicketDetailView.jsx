@@ -106,6 +106,23 @@ function TicketDetailView() {
                                             <div className={`w-2 h-2 rounded-full ${isResolved ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
                                             <span>{ticket.status}</span>
                                         </div>
+                                        <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1">
+        SLA Risk
+    </label>
+
+    <div
+        className={`font-bold ${
+            (ticket.slaRisk || 0) >= 70
+                ? 'text-red-600'
+                : (ticket.slaRisk || 0) >= 40
+                ? 'text-amber-600'
+                : 'text-emerald-600'
+        }`}
+    >
+        {ticket.slaRisk || 0}% Risk
+    </div>
+</div>
                                     </div>
                                 </div>
                             </CardContent>
