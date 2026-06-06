@@ -388,9 +388,9 @@ class DuplicateService:
                 "[DuplicateService] DEGRADED: Duplicate check skipped (model not available)"
             )
             return {
-                "is_duplicate": False,
-                "duplicate_ticket_id": None,
-                "similarity": 0.0,
+                "is_duplicate": True,
+                "duplicate_ticket_id": best_id,
+                "similarity": round(best_score_val, 4),
             }
 
         use_default_threshold = threshold is None
