@@ -1,4 +1,5 @@
 import React, { useState, useCallback } from 'react';
+import secureStorage from '../../utils/secureStorage';
 import Joyride, { ACTIONS, EVENTS, STATUS } from 'react-joyride';
 
 const TOUR_KEY = 'userTourCompleted';
@@ -123,7 +124,7 @@ function EmeraldTooltip({
 // ─── Main Component ─────────────────────────────────────────────────────────────
 const UserTour = () => {
     const [run, setRun] = useState(() => {
-        return localStorage.getItem(TOUR_KEY) !== 'true';
+        return secureStorage.getItem(TOUR_KEY) !== 'true';
     });
 
     const handleCallback = useCallback((data) => {
@@ -134,7 +135,7 @@ const UserTour = () => {
         const isClosed = action === ACTIONS.CLOSE && type === EVENTS.STEP_AFTER;
 
         if (isFinished || isSkipped || isClosed) {
-            localStorage.setItem(TOUR_KEY, 'true');
+            secureStorage.setItem(TOUR_KEY, 'true');
             setRun(false);
         }
     }, []);

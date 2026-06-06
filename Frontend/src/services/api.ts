@@ -3,6 +3,7 @@ import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
 import useToastStore from '../store/toastStore';
 import logger from '../utils/logger';
+import secureStorage from '../utils/secureStorage';
 
 const USE_MOCK = true;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
@@ -39,7 +40,7 @@ axios.interceptors.response.use(
 // Safe helper to get data from storage or default
 const getStorage = (key, defaultData) => {
   try {
-    const stored = localStorage.getItem(key);
+    const stored = secureStorage.getItem(key);
     if (!stored) {
       setStorage(key, defaultData);
       return defaultData;
@@ -54,7 +55,7 @@ const getStorage = (key, defaultData) => {
 // Safe helper to set data and handle QuotaExceeded
 const setStorage = (key, data) => {
   try {
-    localStorage.setItem(key, JSON.stringify(data));
+    secureStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
     logger.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
     // If quota exceeded, we could trim the data, but for now we fail gracefully.

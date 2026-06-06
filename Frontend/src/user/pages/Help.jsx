@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import secureStorage from '../../utils/secureStorage';
 import { HelpCircle, Mail, MessageSquare, Book, ChevronRight, ChevronDown, Video, PlayCircle, Filter, Search, LifeBuoy } from 'lucide-react';
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { YOUTUBE_RESOURCES, VIDEO_CATEGORIES } from '../../data/youtubeResources';
@@ -66,8 +67,8 @@ ${fullName}`;
             const cacheTimeKey = `yt_videos_time_v3_${activeTab}_${debouncedSearch}`;
             
             try {
-                const cachedData = localStorage.getItem(cacheKey);
-                const cacheTimestamp = localStorage.getItem(cacheTimeKey);
+                const cachedData = secureStorage.getItem(cacheKey);
+                const cacheTimestamp = secureStorage.getItem(cacheTimeKey);
                 
                 // Cache valid for 24 hours to prevent API quota exhaustion
                 if (cachedData && cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < 86400000) {
@@ -109,8 +110,8 @@ ${fullName}`;
                     thumbnail_url: item.snippet.thumbnails?.high?.url || item.snippet.thumbnails?.default?.url
                 }));
 
-                localStorage.setItem(cacheKey, JSON.stringify(fetchedVideos));
-                localStorage.setItem(cacheTimeKey, Date.now().toString());
+                secureStorage.setItem(cacheKey, JSON.stringify(fetchedVideos));
+                secureStorage.setItem(cacheTimeKey, Date.now().toString());
                 
                 setVideos(fetchedVideos);
             } catch (error) {

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import secureStorage from '../../utils/secureStorage';
 import { Table, Card, Button, Tag, Space, Input } from "antd";
 import { DeleteOutlined, SearchOutlined } from "@ant-design/icons";
 
@@ -9,7 +10,7 @@ function History() {
   // Load tickets from localStorage
   useEffect(() => {
     const storedTickets =
-      JSON.parse(localStorage.getItem("tickets")) || [];
+      JSON.parse(secureStorage.getItem("tickets")) || [];
  
      
     setTickets(storedTickets);
@@ -17,7 +18,7 @@ function History() {
 
   // Clear all tickets
   const clearAllTickets = () => {
-    localStorage.removeItem("tickets");
+    secureStorage.removeItem("tickets");
     setTickets([]);
   };
 

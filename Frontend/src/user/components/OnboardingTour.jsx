@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import secureStorage from '../../utils/secureStorage';
 import Joyride, { STATUS } from 'react-joyride';
 
 const OnboardingTour = () => {
     const [run, setRun] = useState(false);
 
     useEffect(() => {
-        const isComplete = localStorage.getItem('emerald_onboarding_complete');
+        const isComplete = secureStorage.getItem('emerald_onboarding_complete');
         if (!isComplete) {
             // Small delay to ensure DOM is ready
             const timer = setTimeout(() => {
@@ -45,7 +46,7 @@ const OnboardingTour = () => {
 
         if (finishedStatuses.includes(status)) {
             setRun(false);
-            localStorage.setItem('emerald_onboarding_complete', 'true');
+            secureStorage.setItem('emerald_onboarding_complete', 'true');
         }
     };
 
