@@ -15,6 +15,10 @@
     },
     "preview": {
       "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "REPLACE_WITH_SUPABASE_URL",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "REPLACE_WITH_ANON_KEY"
+      },
       "android": {
         "buildType": "app-bundle"
       },
