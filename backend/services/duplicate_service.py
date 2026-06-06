@@ -48,7 +48,7 @@ def _cosine_similarity_numpy(query: "np.ndarray", matrix: "np.ndarray") -> "np.n
     reduces to a simple dot product.  Falls back to a manual loop when
     the matrix contains zero-norm rows.
     """
-    # query @ matrix.T  →  shape (n,)
+    # query @ matrix.T  ->  shape (n,)
     return matrix @ query
 
 
@@ -319,32 +319,26 @@ class DuplicateService:
             threshold: Optional override for the similarity threshold.
 
         Returns:
-            dict with duplicate_ticket_id, similarity_score, original_text
-            or None if no duplicate found / service unavailable.
+            dict with is_duplicate, duplicate_ticket_id, similarity.
         """
-        active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
-        if not 0.0 <= active_threshold <= 1.0:
-            raise ValueError("Duplicate similarity threshold must be between 0.0 and 1.0")
-
         self.load()
 
-        # Validate the threshold up front so a bad override is reported
-        # even when the model is unavailable (degraded mode).
         active_threshold = threshold if threshold is not None else SIMILARITY_THRESHOLD
-        if active_threshold is not None and not (0.0 <= active_threshold <= 1.0):
+        if not 0.0 <= active_threshold <= 1.0:
             raise ValueError(
-                f"threshold must be between 0.0 and 1.0, got {active_threshold!r}"
+                f"Duplicate similarity threshold must be between 0.0 and 1.0, "
+                f"got {active_threshold!r}"
             )
 
         # If model is not available, return no duplicate found
         if not self.is_available():
-            print(
+            logger.warning(
                 "[DuplicateService] DEGRADED: Duplicate check skipped (model not available)"
             )
             return {
-                "duplicate_ticket_id": ticket_id,
-                "similarity_score": round(best_score, 4),
-                "original_text": original_text,
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "similarity": 0.0,
             }
 
         use_default_threshold = threshold is None
@@ -362,6 +356,15 @@ class DuplicateService:
             except Exception:
                 pass
 
+        # Compute query embedding (with Redis caching)
+        query_embedding = self._encode_with_cache(text)
+        if query_embedding is None:
+            return {
+                "is_duplicate": False,
+                "duplicate_ticket_id": None,
+                "similarity": 0.0,
+            }
+
         # Take a consistent snapshot under the same lock used by add_ticket().
         # The matrix and ticket ID list must be derived from that same snapshot;
         # using the mutable service-level matrix here can race with concurrent
@@ -376,37 +379,16 @@ class DuplicateService:
                 "similarity": 0.0,
             }
 
-        query_embedding = self._encode_with_cache(text)
-        if query_embedding is None:
-            return {
-                "is_duplicate": False,
-                "duplicate_ticket_id": None,
-                "similarity": 0.0,
-            }
-
         # --- Vectorized cosine similarity (NumPy path) ---
         if _HAS_NUMPY:
-            assert np is not None
             ticket_ids_snapshot = [tid for tid, _, _ in tickets_snapshot]
             embeddings_snapshot = [emb for _, emb, _ in tickets_snapshot]
             matrix_snapshot = np.vstack(embeddings_snapshot).astype(np.float32)
-            if matrix_snapshot is not None and len(ticket_ids_snapshot) > 0:
-                # query (d,) @ matrix.T (d, n) → similarities (n,)
-                similarities = _cosine_similarity_numpy(
-                    query_embedding, matrix_snapshot
-                )
-                best_index = int(np.argmax(similarities))
-                best_score = float(similarities[best_index])
-                best_id = ticket_ids_snapshot[best_index]
-            else:
-                # Fallback: loop
-                best_score = -1.0
-                best_id = None
-                for tid, stored_emb, _ in tickets_snapshot:
-                    score = float(np.dot(query_embedding, stored_emb))
-                    if score > best_score:
-                        best_score = score
-                        best_id = tid
+            # query (d,) @ matrix.T (d, n) -> similarities (n,)
+            similarities = _cosine_similarity_numpy(query_embedding, matrix_snapshot)
+            best_index = int(np.argmax(similarities))
+            best_score = float(similarities[best_index])
+            best_id = ticket_ids_snapshot[best_index]
 
         # --- Fallback: torch path ---
         elif _HAS_SENTENCE:
