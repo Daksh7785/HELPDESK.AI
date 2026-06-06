@@ -244,6 +244,23 @@ class TestClassifierPredict:
         with pytest.raises(ValueError, match="Classifier input text must not be empty"):
             predict(text)
 
+    def test_predict_oversized_text(self, predict_fixture):
+        """predict() handles very long input without crashing."""
+        svc, predict = predict_fixture
+        svc.id2label = {"0": "Software | Bug"}
+        long_text = "error " * 5000
+        result = predict(long_text.strip(), confidence_val=0.85)
+        assert result["category"] == "Software"
+        assert 0 <= result["confidence"] <= 1
+
+    def test_predict_non_string_type_raises(self, predict_fixture):
+        """predict() raises error for non-string input types."""
+        _svc, predict = predict_fixture
+        with pytest.raises((TypeError, ValueError)):
+            predict(12345)
+        with pytest.raises((TypeError, ValueError)):
+            predict(["hello", "world"])
+
     def test_predict_auto_resolve_subcategories(self, predict_fixture):
         """predict() marks auto_resolve=True for known simple issues."""
         svc, make_pred = predict_fixture
