@@ -262,10 +262,27 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+tags_metadata = [
+    {"name": "AI",      "description": "Ticket analysis, image OCR, and troubleshooting endpoints"},
+    {"name": "Tickets", "description": "CRUD operations for support tickets"},
+    {"name": "Auth",    "description": "User authentication and session management"},
+    {"name": "Health",  "description": "Service readiness and liveness probes"},
+]
+
 app = FastAPI(
-    title="AI Helpdesk Backend",
-    description="Ticket classification, entity extraction, and duplicate detection",
-    version="1.0.0",
+    title="HELPDESK.AI API",
+    description="AI-powered helpdesk: ticket classification, NER, duplicate detection, RAG knowledge base.",
+    version="3.0.0-PRO",
+    contact={"name": "HELPDESK.AI Team", "url": "https://github.com/ritesh-1918/HELPDESK.AI"},
+    license_info={"name": "MIT"},
+    openapi_tags=tags_metadata,
+    swagger_ui_parameters={
+        "defaultModelsExpandDepth": -1,
+        "syntaxHighlight.theme": "monokai",
+        "docExpansion": "list",
+        "filter": True,
+        "tryItOutEnabled": True,
+    },
     lifespan=lifespan,
 )
 
@@ -292,7 +309,9 @@ app.add_middleware(
 # Root & Health check
 # ---------------------------------------------------------------------------
 @app.get("/", response_class=HTMLResponse)
-async def root():
+@limiter.limit("30/minute")
+async def root(request: Request):
+    """Root landing page with API status and navigation links."""
     return """
     <!DOCTYPE html>
     <html lang="en">
@@ -374,7 +393,9 @@ async def root():
 
 
 @app.get("/health", response_model=HealthResponse)
-async def health_check():
+@limiter.limit("30/minute")
+async def health_check(request: Request):
+    """Health check endpoint returning service status and AI model loading states."""
     return HealthResponse(
         status="ok",
         classifier_loaded=classifier_service._loaded,
@@ -383,7 +404,9 @@ async def health_check():
 
 
 @app.get("/ready", response_model=ReadinessResponse)
-async def readiness_check():
+@limiter.limit("30/minute")
+async def readiness_check(request: Request):
+    """Readiness probe returning detailed service check results."""
     require_supabase = os.environ.get("REQUIRE_SUPABASE", "false").lower() == "true"
     allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
     
@@ -426,7 +449,8 @@ class TroubleshootResponse(BaseModel):
     is_final: bool
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
-async def troubleshoot(request: TroubleshootRequest):
+@limiter.limit("10/minute")
+async def troubleshoot(request: Request, req: TroubleshootRequest):
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
         return TroubleshootResponse(
@@ -436,9 +460,9 @@ async def troubleshoot(request: TroubleshootRequest):
         )
     
     result = gemini_service.get_troubleshooting_step(
-        request.text,
-        request.history,
-        request.category
+        req.text,
+        req.history,
+        req.category
     )
     return TroubleshootResponse(**result)
 
@@ -453,7 +477,8 @@ class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
-async def analyze_bug(request: BugReportAnalysisRequest):
+@limiter.limit("10/minute")
+async def analyze_bug(request: Request, req: BugReportAnalysisRequest):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
         return BugReportAnalysisResponse(
@@ -461,10 +486,10 @@ async def analyze_bug(request: BugReportAnalysisRequest):
         )
     
     cause = gemini_service.analyze_bug_report(
-        request.bug_title,
-        request.description,
-        request.steps_to_reproduce,
-        request.console_errors
+        req.bug_title,
+        req.description,
+        req.steps_to_reproduce,
+        req.console_errors
     )
     return BugReportAnalysisResponse(probable_cause=cause)
 
@@ -475,7 +500,8 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
+@limiter.limit("20/minute")
+async def log_correction(request: Request, raw_request: Request):
     """Log an admin correction when the AI prediction differs from the human decision."""
     try:
         body = await raw_request.json()
@@ -536,7 +562,8 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+@limiter.limit("20/minute")
+async def get_tickets(request: Request, company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -549,7 +576,8 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+@limiter.limit("20/minute")
+async def save_ticket(request: Request, request_body: TicketSaveRequest):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -652,7 +680,8 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+@limiter.limit("30/minute")
+async def get_ticket_by_id(ticket_id: str, request: Request):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -664,7 +693,8 @@ async def get_ticket_by_id(ticket_id: str):
 
 
 @app.post("/tickets", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+@limiter.limit("30/minute")
+async def create_ticket(request: Request, ticket: TicketRecord):
     """Save a new ticket into the system."""
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
@@ -677,7 +707,8 @@ async def create_ticket(ticket: TicketRecord):
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+@limiter.limit("30/minute")
+async def update_ticket(ticket_id: str, updates: dict, request: Request):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
@@ -731,7 +762,8 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def analyze_only(request: Request, request_body: TicketRequest):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -892,7 +924,8 @@ async def analyze_only(request_body: TicketRequest):
     )
 
 @app.post("/ai/analyze_stream")
-async def analyze_stream(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def analyze_stream(request: Request, request_body: TicketRequest):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
     """
@@ -1044,7 +1077,8 @@ async def analyze_stream(request_body: TicketRequest):
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
 @app.post("/ai/analyze_ticket/legacy")
-async def legacy_analyze_and_save(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def legacy_analyze_and_save(request: Request, request_body: TicketRequest):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
     Does NOT persist to DB to avoid foreign key violations.
@@ -1052,8 +1086,10 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze-v2")
-async def analyze_ticket_v2(request: TicketRequest):
-    text = request.text
+@limiter.limit("10/minute")
+async def analyze_ticket_v2(request: Request, req_body: TicketRequest):
+    """Analyze a ticket using the V2 classifier model (legacy endpoint for backward compatibility)."""
+    text = req_body.text
     try:
         prediction = classifier_v2.predict(text)
         return {
@@ -1151,7 +1187,9 @@ class SignupBody(BaseModel):
     company: str | None = None
 
 @app.post("/auth/login")
-async def auth_login(body: LoginBody, response: Response):
+@limiter.limit("5/minute")
+async def auth_login(request: Request, body: LoginBody, response: Response):
+    """Authenticate a user via email/password and set session cookies."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     try:
@@ -1171,7 +1209,9 @@ async def auth_login(body: LoginBody, response: Response):
     return {"user": user_payload, "message": "Session cookies set"}
 
 @app.post("/auth/signup")
-async def auth_signup(body: SignupBody, response: Response):
+@limiter.limit("5/minute")
+async def auth_signup(request: Request, body: SignupBody, response: Response):
+    """Register a new user account with optional profile metadata and set session cookies."""
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
     metadata = {}
@@ -1201,11 +1241,15 @@ async def auth_signup(body: SignupBody, response: Response):
     return {"user": user_payload, "message": "Signup complete"}
 
 @app.post("/auth/logout")
-async def auth_logout(response: Response):
+@limiter.limit("20/minute")
+async def auth_logout(request: Request, response: Response):
+    """Clear session cookies and log the user out."""
     _clear_session_cookies(response)
     return {"ok": True}
 
 @app.get("/auth/me")
-async def auth_me(user: dict = Depends(get_current_user)):
+@limiter.limit("20/minute")
+async def auth_me(request: Request, user: dict = Depends(get_current_user)):
+    """Return the currently authenticated user profile."""
     return {"user": user}
 
