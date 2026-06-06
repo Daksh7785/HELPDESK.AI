@@ -28,9 +28,9 @@ import contextlib
 from logging.handlers import RotatingFileHandler
 
 # Suppress harmless PyTorch CPU pin_memory warning
-from encryption import encrypt_pii, decrypt_pii, is_encrypted
+from backend.encryption import encrypt_pii, decrypt_pii, is_encrypted
 from services.encryption_service import encrypt_ticket_pii, decrypt_ticket_pii
-from pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
+from backend.pii_redaction import redact_pii, redact_pii_dict, set_pii_redaction_enabled, is_pii_redaction_enabled
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
@@ -4093,7 +4093,7 @@ async def scan_text_for_pii(
     if not text:
         return {"findings": {}, "message": "No text provided"}
 
-    from pii_redaction import scan_pii
+    from backend.pii_redaction import scan_pii
     findings = scan_pii(text)
     return {
         "findings": findings,
