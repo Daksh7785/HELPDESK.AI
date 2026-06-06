@@ -95,49 +95,6 @@ const PrivacyPolicy = lazy(() => import('./pages/legal/PrivacyPolicy'));
 const Security = lazy(() => import('./pages/legal/Security'));
 const CookiePolicy = lazy(() => import('./pages/legal/CookiePolicy'));
 
-// Tenant Core Workspace Layout Shells
-const UserLayout = lazy(() => import('./user/UserLayout'));
-const AdminLayout = lazy(() => import('./admin/layout/AdminLayout'));
-const MasterAdminLayout = lazy(() => import('./master-admin/layout/MasterAdminLayout'));
-
-// User Telemetry Target Node Matrix
-const Dashboard = lazy(() => import('./user/pages/Dashboard'));
-const CreateTicket = lazy(() => import('./user/pages/CreateTicket'));
-const MyTickets = lazy(() => import('./user/pages/MyTickets'));
-const TicketResult = lazy(() => import('./user/pages/TicketResult'));
-const Profile = lazy(() => import('./user/pages/Profile'));
-const TicketDetail = lazy(() => import('./user/pages/TicketDetail'));
-const AIProcessing = lazy(() => import('./user/pages/AIProcessing'));
-const AIUnderstanding = lazy(() => import('./user/pages/AIUnderstanding'));
-const Notifications = lazy(() => import('./user/pages/Notifications'));
-const Help = lazy(() => import('./user/pages/Help'));
-const DuplicateDetection = lazy(() => import('./user/pages/DuplicateDetection'));
-const AutoResolveChat = lazy(() => import('./user/pages/AutoResolveChat'));
-const Resolved = lazy(() => import('./user/pages/Resolved'));
-const TicketTracking = lazy(() => import('./user/pages/TicketTracking'));
-
-// Operational Support Admin Nodes
-const AdminDashboard = lazy(() => import('./admin/pages/AdminDashboard'));
-const AdminTickets = lazy(() => import('./admin/pages/AdminTickets'));
-const AdminTicketDetail = lazy(() => import('./admin/pages/AdminTicketDetail'));
-const AdminUsers = lazy(() => import('./admin/pages/AdminUsers'));
-const AdminAnalytics = lazy(() => import('./admin/pages/AdminAnalytics'));
-const AdminProfile = lazy(() => import('./admin/pages/AdminProfile'));
-const AdminSettings = lazy(() => import('./admin/pages/AdminSettings'));
-const AdminScorecard = lazy(() => import('./admin/pages/AdminScorecard'));
-const SLAPage = lazy(() => import('./admin/pages/SLAPage'));
-
-// Master Root Governance Matrix
-const MasterAdminLogin = lazy(() => import('./pages/MasterAdminLogin'));
-const MasterAdminDashboard = lazy(() => import('./master-admin/pages/MasterAdminDashboard'));
-const PendingAdminRequests = lazy(() => import('./master-admin/pages/PendingAdminRequests'));
-const AllCompanies = lazy(() => import('./master-admin/pages/AllCompanies'));
-const AllAdmins = lazy(() => import('./master-admin/pages/AllAdmins'));
-const MasterBugReports = lazy(() => import('./master-admin/pages/MasterBugReports'));
-
-// Dynamic Inline Fallbacks
-const NotFoundPage = lazy(() => import('./components/ui/not-found-2').then((module) => ({ default: module.NotFound })));
-
 function TitleUpdater() {
   const location = useLocation();
   useEffect(() => {
@@ -214,7 +171,6 @@ class ErrorBoundary extends React.Component {
 function AppContent() {
   const { profile } = useAuthStore();
   const [showShortcuts, setShowShortcuts] = useState(false);
-  useRealtimeNotifications();
 
   const { shortcuts } = useKeyboardShortcuts(
     profile?.role === 'admin'
@@ -357,32 +313,16 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <ScrollToTop />
-        <Toaster />
-        <BugReportWidget />
-        <BackToTopButton />
-        <Routes>
-          <Route path='/' element={<DocsPortal />} />
-          <Route path='/docs' element={<Navigate to='/' replace />} />
-          <Route path='/api-reference' element={<ApiReference />} />
-          <Route path='/changelog' element={<Changelog />} />
-          <Route path='/status' element={<StatusPage />} />
-          <Route path='*' element={<DocsPortal />} />
-        </Routes>
+        <ErrorBoundary>
+          <Suspense fallback={<PageSkeleton />}>
+            <AppContent />
+            <Toaster />
+            <BugReportWidget />
+            <ScrollToTopButton />
+            <BackToTop />
+          </Suspense>
+        </ErrorBoundary>
       </BrowserRouter>
-    );
-
-  return (
-    <BrowserRouter>
-      <ScrollToTop />
-      <ErrorBoundary>
-        <Suspense fallback={<PageSkeleton />}>
-          <AppContent />
-          <Toaster />
-          <BugReportWidget />
-          <ScrollToTopButton />
-          <BackToTop />
-        </Suspense>
-      </ErrorBoundary>
-    </BrowserRouter>
+    </ThemeProvider>
   );
 }
