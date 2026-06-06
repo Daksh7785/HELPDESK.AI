@@ -129,7 +129,7 @@ class DuplicateService:
     # Matrix management
     # ------------------------------------------------------------------
 
-    def _rebuild_embedding_matrix(self) -> None:
+    def _rebuild_embedding_matrix_unlocked(self) -> None:
         """Rebuild the stacked embedding matrix from the ticket list.
 
         This enables vectorized cosine similarity computation by stacking all
@@ -142,9 +142,8 @@ class DuplicateService:
             self._embedding_matrix_dirty = False
             return
 
-        tickets = list(self._tickets)  # consistent snapshot
-        self._ticket_ids = [tid for tid, _, _ in tickets]
-        embeddings = [emb for _, emb, _ in tickets]
+        self._ticket_ids = [tid for tid, _, _ in self._tickets]
+        embeddings = [emb for _, emb, _ in self._tickets]
 
         if _HAS_NUMPY:
             self._embedding_matrix = np.vstack(embeddings).astype(np.float32)
@@ -157,8 +156,9 @@ class DuplicateService:
 
     def _ensure_matrix(self) -> None:
         """Rebuild the embedding matrix if it is dirty."""
-        if self._embedding_matrix_dirty or self._embedding_matrix is None:
-            self._rebuild_embedding_matrix()
+        with self._lock:
+            if self._embedding_matrix_dirty or self._embedding_matrix is None:
+                self._rebuild_embedding_matrix_unlocked()
 
     # ------------------------------------------------------------------
     # Model loading
@@ -170,28 +170,10 @@ class DuplicateService:
         if self._loaded or self._load_failed:
             return
 
-        print("[DuplicateService] Loading model...")
-        if not _HAS_SENTENCE:
-            allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
-            self._load_failed = True
-            print("[DuplicateService] sentence-transformers not installed")
-            if allow_degraded:
-                print(
-                    "[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)"
-                )
-                self.model = None
-                self._loaded = False
+        with self._lock:
+            # Double check under lock
+            if self._loaded or self._load_failed:
                 return
-            else:
-                raise ImportError("sentence-transformers is required for DuplicateService")
-        try:
-            model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
-            if model_path and os.path.exists(model_path):
-                logger.info("[DuplicateService] Loading from local path: %s", model_path)
-                self.model = SentenceTransformer(model_path)
-            else:
-                self.model = SentenceTransformer("all-MiniLM-L6-v2")
-            self._loaded = True
 
             if os.path.exists(self.storage_file):
                 print(
@@ -212,20 +194,54 @@ class DuplicateService:
                         "[DuplicateService] Loaded %d tickets from storage.",
                         len(self._tickets),
                     )
-                except Exception as e:
-                    logger.error("[DuplicateService] Error loading storage: %s", e)
-        except Exception as e:
-            allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
-            self._load_failed = True
-            logger.error("[DuplicateService] Failed to load model: %s", e)
-            if allow_degraded:
-                logger.warning(
-                    "[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)"
-                )
-                self.model = None
-                self._loaded = False
-            else:
-                raise
+                    self.model = None
+                    self._loaded = False
+                    return
+                else:
+                    raise ImportError("sentence-transformers is required for DuplicateService")
+            try:
+                model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
+                if model_path and os.path.exists(model_path):
+                    logger.info("[DuplicateService] Loading from local path: %s", model_path)
+                    self.model = SentenceTransformer(model_path)
+                else:
+                    self.model = SentenceTransformer("all-MiniLM-L6-v2")
+                self._loaded = True
+
+                if os.path.exists(self.storage_file):
+                    print(
+                        f"[DuplicateService] Syncing ticket history from {self.storage_file}..."
+                    )
+                    try:
+                        data = []
+                        if os.path.getsize(self.storage_file) > 0:
+                            with open(self.storage_file, "r") as f:
+                                data = json.load(f)
+                        if not isinstance(data, list):
+                            data = []
+                        for item in data:
+                            text = item["text"]
+                            embedding = self._encode(text)
+                            self._tickets.append((item["ticket_id"], embedding, text))
+                        self._embedding_matrix_dirty = True
+                        logger.info(
+                            "[DuplicateService] Loaded %d tickets from storage.",
+                            len(self._tickets),
+                        )
+                    except Exception as e:
+                        logger.error("[DuplicateService] Error loading storage: %s", e)
+            except Exception as e:
+                allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+                self._load_failed = True
+                logger.error("[DuplicateService] Failed to load model: %s", e)
+                if allow_degraded:
+                    logger.warning(
+                        "[DuplicateService] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)"
+                    )
+                    self.model = None
+                    self._loaded = False
+                else:
+                    raise
 
     # ------------------------------------------------------------------
     # Public interface
@@ -233,16 +249,20 @@ class DuplicateService:
 
     def save_to_disk(self, ticket_id: str, text: str) -> None:
         """Append a new ticket entry to the JSON persistence file."""
-        data: list = []
-        try:
-            os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
-            if os.path.exists(self.storage_file):
-                with open(self.storage_file, "r") as f:
-                    try:
-                        data = json.load(f)
-                        if not isinstance(data, list):
-                            data = []
-                    except Exception:
+        with self._lock:
+            data: list = []
+            try:
+                os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
+                if os.path.exists(self.storage_file):
+                    if os.path.getsize(self.storage_file) > 0:
+                        with open(self.storage_file, "r") as f:
+                            try:
+                                data = json.load(f)
+                                if not isinstance(data, list):
+                                    data = []
+                            except Exception:
+                                data = []
+                    else:
                         data = []
 
             data.append({"ticket_id": ticket_id, "text": text})
@@ -430,3 +450,4 @@ class DuplicateService:
                 pass
 
         return result
+

@@ -1,1 +1,227 @@
-IiIiClVuaXQgdGVzdHMgZm9yIER1cGxpY2F0ZVNlcnZpY2UubG9hZCgpIG1ldGhvZCAoYmFja2VuZC9zZXJ2aWNlcy9kdXBsaWNhdGVfc2VydmljZS5weSkuCgpDb3ZlcnM6Ci0gTW9kZWwgbG9hZGluZyBmcm9tIGxvY2FsIHBhdGggKFNFTlRFTkNFX1RSQU5TRk9STUVSX01PREVMX1BBVEgpCi0gSHVnZ2luZ0ZhY2UgZmFsbGJhY2sgd2hlbiBubyBsb2NhbCBwYXRoCi0gQUxMT1dfREVHUkFERURfU1RBUlRVUD0xIGdyYWNlZnVsIGRlZ3JhZGF0aW9uIHdoZW4gc2VudGVuY2UtdHJhbnNmb3JtZXJzIG1pc3NpbmcKLSBJbXBvcnRFcnJvciB3aGVuIHNlbnRlbmNlLXRyYW5zZm9ybWVycyBtaXNzaW5nIGFuZCBBTExPV19ERUdSQURFRF9TVEFSVFVQPTAKLSBUaHJlYWQtc2FmZXR5OiBsb2FkKCkgaXMgaWRlbXBvdGVudAotIFN0b3JhZ2UgZmlsZSBsb2FkaW5nIG9uIHN0YXJ0dXAKIiIiCgppbXBvcnQgb3MKaW1wb3J0IGpzb24KaW1wb3J0IHB5dGVzdApmcm9tIHVuaXR0ZXN0Lm1vY2sgaW1wb3J0IE1hZ2ljTW9jaywgcGF0Y2gsIG1vY2tfb3BlbgoKCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMgRml4dHVyZXMKIyAtLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KCkBweXRlc3QuZml4dHVyZShhdXRvdXNlPVRydWUpCmRlZiBjbGVhbl9lbnYoKToKICAgICIiIkVuc3VyZSBjbGVhbiBlbnZpcm9ubWVudCBmb3IgZWFjaCB0ZXN0LiIiIgogICAgZW52X3ZhcnMgPSBbCiAgICAgICAgIlNFTlRFTkNFX1RSQU5TRk9STUVSX01PREVMX1BBVEgiLAogICAgICAgICJBTExPV19ERUdSQURFRF9TVEFSVFVQIiwKICAgICAgICAiRFVQTElDQVRFX0NBQ0hFX01BWCIsCiAgICBdCiAgICBmb3IgdmFyIGluIGVudl92YXJzOgogICAgICAgIG9zLmVudmlyb24ucG9wKHZhciwgTm9uZSkKICAgIHlpZWxkCiAgICBmb3IgdmFyIGluIGVudl92YXJzOgogICAgICAgIG9zLmVudmlyb24ucG9wKHZhciwgTm9uZSkKCgpAcHl0ZXN0LmZpeHR1cmUKZGVmIG1vY2tfc2VudGVuY2VfdHJhbnNmb3JtZXJzKCk6CiAgICAiIiJNb2NrIHRoZSBzZW50ZW5jZV90cmFuc2Zvcm1lcnMgbW9kdWxlLiIiIgogICAgbW9ja19zdCA9IE1hZ2ljTW9jaygpCiAgICBtb2NrX21vZGVsID0gTWFnaWNNb2NrKCkKICAgIG1vY2tfc3QuU2VudGVuY2VUcmFuc2Zvcm1lci5yZXR1cm5fdmFsdWUgPSBtb2NrX21vZGVsCiAgICByZXR1cm4gbW9ja19zdCwgbW9ja19tb2RlbAoKCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiMgbG9hZCgpIOKAlCBtb2RlbCBsb2FkaW5nCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgpjbGFzcyBUZXN0RHVwbGljYXRlU2VydmljZUxvYWQ6CiAgICAiIiJUZXN0cyBmb3IgRHVwbGljYXRlU2VydmljZS5sb2FkKCkuIiIiCgogICAgQHBhdGNoKCJzZXJ2aWNlcy5kdXBsaWNhdGVfc2VydmljZS5fSEFTX1NFTlRFTkNFIiwgVHJ1ZSkKICAgIEBwYXRjaCgic2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UuU2VudGVuY2VUcmFuc2Zvcm1lciIpCiAgICBkZWYgdGVzdF9sb2Fkc19mcm9tX2xvY2FsX3BhdGhfd2hlbl9zZXQoc2VsZiwgbW9ja19TVCwgbW9ja19zZW50ZW5jZV90cmFuc2Zvcm1lcnMpOgogICAgICAgIG9zLmVudmlyb25bIlNFTlRFTkNFX1RSQU5TRk9STUVSX01PREVMX1BBVEgiXSA9ICIvdG1wL215LW1vZGVsIgogICAgICAgIHdpdGggcGF0Y2goIm9zLnBhdGguZXhpc3RzIiwgcmV0dXJuX3ZhbHVlPVRydWUpOgogICAgICAgICAgICBmcm9tIHNlcnZpY2VzLmR1cGxpY2F0ZV9zZXJ2aWNlIGltcG9ydCBEdXBsaWNhdGVTZXJ2aWNlCiAgICAgICAgICAgIHN2YyA9IER1cGxpY2F0ZVNlcnZpY2UoKQogICAgICAgICAgICBzdmMubG9hZCgpCiAgICAgICAgICAgIG1vY2tfU1QuYXNzZXJ0X2NhbGxlZF93aXRoKCIvdG1wL215LW1vZGVsIikKICAgICAgICAgICAgYXNzZXJ0IHN2Yy5fbG9hZGVkIGlzIFRydWUKCiAgICBAcGF0Y2goInNlcnZpY2VzLmR1cGxpY2F0ZV9zZXJ2aWNlLl9IQVNfU0VOVEVOQ0UiLCBUcnVlKQogICAgQHBhdGNoKCJzZXJ2aWNlcy5kdXBsaWNhdGVfc2VydmljZS5TZW50ZW5jZVRyYW5zZm9ybWVyIikKICAgIGRlZiB0ZXN0X2xvYWRzX2Zyb21faHVnZ2luZ2ZhY2Vfd2hlbl9ub19sb2NhbF9wYXRoKHNlbGYsIG1vY2tfU1QpOgogICAgICAgIGZyb20gc2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UgaW1wb3J0IER1cGxpY2F0ZVNlcnZpY2UKICAgICAgICBzdmMgPSBEdXBsaWNhdGVTZXJ2aWNlKCkKICAgICAgICBzdmMubG9hZCgpCiAgICAgICAgbW9ja19TVC5hc3NlcnRfY2FsbGVkX3dpdGgoImFsbC1NaW5pTE0tTDYtdjIiKQogICAgICAgIGFzc2VydCBzdmMuX2xvYWRlZCBpcyBUcnVlCgogICAgQHBhdGNoKCJzZXJ2aWNlcy5kdXBsaWNhdGVfc2VydmljZS5fSEFTX1NFTlRFTkNFIiwgVHJ1ZSkKICAgIEBwYXRjaCgic2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UuU2VudGVuY2VUcmFuc2Zvcm1lciIpCiAgICBkZWYgdGVzdF9sb2FkX2lzX2lkZW1wb3RlbnQoc2VsZiwgbW9ja19TVCk6CiAgICAgICAgZnJvbSBzZXJ2aWNlcy5kdXBsaWNhdGVfc2VydmljZSBpbXBvcnQgRHVwbGljYXRlU2VydmljZQogICAgICAgIHN2YyA9IER1cGxpY2F0ZVNlcnZpY2UoKQogICAgICAgIHN2Yy5sb2FkKCkKICAgICAgICBzdmMubG9hZCgpICAjIFNlY29uZCBjYWxsIHNob3VsZCBiZSBhIG5vLW9wCiAgICAgICAgYXNzZXJ0IG1vY2tfU1QuY2FsbF9jb3VudCA9PSAxCgogICAgQHBhdGNoKCJzZXJ2aWNlcy5kdXBsaWNhdGVfc2VydmljZS5fSEFTX1NFTlRFTkNFIiwgVHJ1ZSkKICAgIEBwYXRjaCgic2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UuU2VudGVuY2VUcmFuc2Zvcm1lciIpCiAgICBkZWYgdGVzdF9sb2FkX3JlYWRzX3N0b3JhZ2VfZmlsZShzZWxmLCBtb2NrX1NULCB0bXBfcGF0aCk6CiAgICAgICAgc3RvcmFnZV9maWxlID0gdG1wX3BhdGggLyAiY2FzZV9oaXN0b3J5X2NhY2hlLmpzb24iCiAgICAgICAgc3RvcmFnZV9maWxlLndyaXRlX3RleHQoanNvbi5kdW1wcyhbCiAgICAgICAgICAgIHsidGlja2V0X2lkIjogInQxIiwgInRleHQiOiAiaGVsbG8gd29ybGQifSwKICAgICAgICAgICAgeyJ0aWNrZXRfaWQiOiAidDIiLCAidGV4dCI6ICJmb28gYmFyIn0sCiAgICAgICAgXSkpCgogICAgICAgIGZyb20gc2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UgaW1wb3J0IER1cGxpY2F0ZVNlcnZpY2UKICAgICAgICBzdmMgPSBEdXBsaWNhdGVTZXJ2aWNlKCkKICAgICAgICBzdmMuc3RvcmFnZV9maWxlID0gc3RyKHN0b3JhZ2VfZmlsZSkKICAgICAgICBzdmMubG9hZCgpCgogICAgICAgIGFzc2VydCBzdmMuX2xvYWRlZCBpcyBUcnVlCiAgICAgICAgYXNzZXJ0IGxlbihzdmMuX3RpY2tldHMpID09IDIKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQojIGxvYWQoKSDigJQgZGVncmFkZWQgc3RhcnR1cAojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQoKY2xhc3MgVGVzdER1cGxpY2F0ZVNlcnZpY2VEZWdyYWRlZDoKICAgICIiIlRlc3RzIGZvciBBTExPV19ERUdSQURFRF9TVEFSVFVQIGhhbmRsaW5nLiIiIgoKICAgIEBwYXRjaCgic2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UuX0hBU19TRU5URU5DRSIsIEZhbHNlKQogICAgZGVmIHRlc3RfZGVncmFkZWRfbW9kZV93aGVuX25vX3NlbnRlbmNlX3RyYW5zZm9ybWVycyhzZWxmKToKICAgICAgICBvcy5lbnZpcm9uWyJBTExPV19ERUdSQURFRF9TVEFSVFVQIl0gPSAiMSIKICAgICAgICBmcm9tIHNlcnZpY2VzLmR1cGxpY2F0ZV9zZXJ2aWNlIGltcG9ydCBEdXBsaWNhdGVTZXJ2aWNlCiAgICAgICAgc3ZjID0gRHVwbGljYXRlU2VydmljZSgpCiAgICAgICAgc3ZjLmxvYWQoKQogICAgICAgIGFzc2VydCBzdmMuX2xvYWRlZCBpcyBGYWxzZQogICAgICAgIGFzc2VydCBzdmMubW9kZWwgaXMgTm9uZQoKICAgIEBwYXRjaCgic2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UuX0hBU19TRU5URU5DRSIsIEZhbHNlKQogICAgZGVmIHRlc3RfcmFpc2VzX3doZW5fbm9fc2VudGVuY2VfdHJhbnNmb3JtZXJzX2FuZF9ub19kZWdyYWRlZChzZWxmKToKICAgICAgICBmcm9tIHNlcnZpY2VzLmR1cGxpY2F0ZV9zZXJ2aWNlIGltcG9ydCBEdXBsaWNhdGVTZXJ2aWNlCiAgICAgICAgc3ZjID0gRHVwbGljYXRlU2VydmljZSgpCiAgICAgICAgd2l0aCBweXRlc3QucmFpc2VzKEltcG9ydEVycm9yLCBtYXRjaD0ic2VudGVuY2UtdHJhbnNmb3JtZXJzIik6CiAgICAgICAgICAgIHN2Yy5sb2FkKCkKCgojIC0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQojIGlzX2F2YWlsYWJsZSgpCiMgLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCgpjbGFzcyBUZXN0RHVwbGljYXRlU2VydmljZUlzQXZhaWxhYmxlOgogICAgIiIiVGVzdHMgZm9yIGlzX2F2YWlsYWJsZSgpLiIiIgoKICAgIEBwYXRjaCgic2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UuX0hBU19TRU5URU5DRSIsIFRydWUpCiAgICBAcGF0Y2goInNlcnZpY2VzLmR1cGxpY2F0ZV9zZXJ2aWNlLlNlbnRlbmNlVHJhbnNmb3JtZXIiKQogICAgZGVmIHRlc3RfYXZhaWxhYmxlX2FmdGVyX3N1Y2Nlc3NmdWxfbG9hZChzZWxmLCBtb2NrX1NUKToKICAgICAgICBmcm9tIHNlcnZpY2VzLmR1cGxpY2F0ZV9zZXJ2aWNlIGltcG9ydCBEdXBsaWNhdGVTZXJ2aWNlCiAgICAgICAgc3ZjID0gRHVwbGljYXRlU2VydmljZSgpCiAgICAgICAgc3ZjLmxvYWQoKQogICAgICAgIGFzc2VydCBzdmMuaXNfYXZhaWxhYmxlKCkgaXMgVHJ1ZQoKICAgIEBwYXRjaCgic2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UuX0hBU19TRU5URU5DRSIsIEZhbHNlKQogICAgZGVmIHRlc3Rfbm90X2F2YWlsYWJsZV93aGVuX2xvYWRfZmFpbGVkKHNlbGYpOgogICAgICAgIG9zLmVudmlyb25bIkFMTE9XX0RFR1JBREVEX1NUQVJUVVAiXSA9ICIxIgogICAgICAgIGZyb20gc2VydmljZXMuZHVwbGljYXRlX3NlcnZpY2UgaW1wb3J0IER1cGxpY2F0ZVNlcnZpY2UKICAgICAgICBzdmMgPSBEdXBsaWNhdGVTZXJ2aWNlKCkKICAgICAgICBzdmMubG9hZCgpCiAgICAgICAgYXNzZXJ0IHN2Yy5pc19hdmFpbGFibGUoKSBpcyBGYWxzZQo=
+"""
+Unit tests for DuplicateService (backend/services/duplicate_service.py).
+"""
+
+import sys
+import os
+
+# Ensure the backend directory is on the path before importing other modules
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+import json
+import pytest
+from unittest.mock import MagicMock, patch
+import threading
+import time
+
+from services.duplicate_service import DuplicateService
+
+
+# ---------------------------------------------------------------------------
+# Fixtures
+# ---------------------------------------------------------------------------
+
+@pytest.fixture(autouse=True)
+def clean_env():
+    """Ensure clean environment for each test."""
+    env_vars = [
+        "SENTENCE_TRANSFORMER_MODEL_PATH",
+        "ALLOW_DEGRADED_STARTUP",
+        "DUPLICATE_CACHE_MAX",
+    ]
+    for var in env_vars:
+        os.environ.pop(var, None)
+    yield
+    for var in env_vars:
+        os.environ.pop(var, None)
+
+
+@pytest.fixture
+def mock_sentence_transformers():
+    """Mock the sentence_transformers module."""
+    mock_st = MagicMock()
+    mock_model = MagicMock()
+    mock_st.SentenceTransformer.return_value = mock_model
+    return mock_st, mock_model
+
+
+# ---------------------------------------------------------------------------
+# load() — model loading
+# ---------------------------------------------------------------------------
+
+class TestDuplicateServiceLoad:
+    """Tests for DuplicateService.load()."""
+
+    @patch("services.duplicate_service._HAS_SENTENCE", True)
+    @patch("services.duplicate_service.SentenceTransformer")
+    def test_loads_from_local_path_when_set(self, mock_ST):
+        os.environ["SENTENCE_TRANSFORMER_MODEL_PATH"] = "/tmp/my-model"
+        with patch("os.path.exists", return_value=True):
+            svc = DuplicateService()
+            svc.load()
+            mock_ST.assert_called_with("/tmp/my-model")
+            assert svc._loaded is True
+
+    @patch("services.duplicate_service._HAS_SENTENCE", True)
+    @patch("services.duplicate_service.SentenceTransformer")
+    def test_loads_from_huggingface_when_no_local_path(self, mock_ST):
+        svc = DuplicateService()
+        svc.load()
+        mock_ST.assert_called_with("all-MiniLM-L6-v2")
+        assert svc._loaded is True
+
+    @patch("services.duplicate_service._HAS_SENTENCE", True)
+    @patch("services.duplicate_service.SentenceTransformer")
+    def test_load_is_idempotent(self, mock_ST):
+        svc = DuplicateService()
+        svc.load()
+        svc.load()  # Second call should be a no-op
+        assert mock_ST.call_count == 1
+
+    @patch("services.duplicate_service._HAS_SENTENCE", True)
+    @patch("services.duplicate_service.SentenceTransformer")
+    def test_load_reads_storage_file(self, mock_ST, tmp_path):
+        storage_file = tmp_path / "case_history_cache.json"
+        storage_file.write_text(json.dumps([
+            {"ticket_id": "t1", "text": "hello world"},
+            {"ticket_id": "t2", "text": "foo bar"},
+        ]))
+
+        svc = DuplicateService()
+        svc.storage_file = str(storage_file)
+        svc.load()
+
+        assert svc._loaded is True
+        assert len(svc._tickets) == 2
+
+
+# ---------------------------------------------------------------------------
+# load() — degraded startup
+# ---------------------------------------------------------------------------
+
+class TestDuplicateServiceDegraded:
+    """Tests for ALLOW_DEGRADED_STARTUP handling."""
+
+    @patch("services.duplicate_service._HAS_SENTENCE", False)
+    def test_degraded_mode_when_no_sentence_transformers(self):
+        os.environ["ALLOW_DEGRADED_STARTUP"] = "1"
+        svc = DuplicateService()
+        svc.load()
+        assert svc._loaded is False
+        assert svc.model is None
+
+    @patch("services.duplicate_service._HAS_SENTENCE", False)
+    def test_raises_when_no_sentence_transformers_and_no_degraded(self):
+        svc = DuplicateService()
+        with pytest.raises(ImportError, match="sentence-transformers"):
+            svc.load()
+
+
+# ---------------------------------------------------------------------------
+# is_available()
+# ---------------------------------------------------------------------------
+
+class TestDuplicateServiceIsAvailable:
+    """Tests for is_available()."""
+
+    @patch("services.duplicate_service._HAS_SENTENCE", True)
+    @patch("services.duplicate_service.SentenceTransformer")
+    def test_available_after_successful_load(self, mock_ST):
+        svc = DuplicateService()
+        svc.load()
+        assert svc.is_available() is True
+
+    @patch("services.duplicate_service._HAS_SENTENCE", False)
+    def test_not_available_when_load_failed(self):
+        os.environ["ALLOW_DEGRADED_STARTUP"] = "1"
+        svc = DuplicateService()
+        svc.load()
+        assert svc.is_available() is False
+
+
+# ---------------------------------------------------------------------------
+# save_to_disk & add_ticket thread safety & empty files
+# ---------------------------------------------------------------------------
+
+class TestDuplicateServiceThreadSafety:
+    """Tests for DuplicateService thread-safety and empty file handling."""
+
+    @patch("services.duplicate_service._HAS_SENTENCE", True)
+    @patch("services.duplicate_service.SentenceTransformer")
+    def test_empty_json_file_does_not_crash(self, mock_ST, tmp_path):
+        # Create empty cache file
+        storage_file = tmp_path / "case_history_cache.json"
+        storage_file.write_text("")
+
+        svc = DuplicateService()
+        svc.storage_file = str(storage_file)
+        
+        # load() should not crash on empty file
+        svc.load()
+        assert len(svc._tickets) == 0
+
+    @patch("services.duplicate_service._HAS_SENTENCE", True)
+    @patch("services.duplicate_service.SentenceTransformer")
+    def test_corrupt_json_file_handles_gracefully(self, mock_ST, tmp_path):
+        # Create corrupt cache file
+        storage_file = tmp_path / "case_history_cache.json"
+        storage_file.write_text("invalid json content")
+
+        svc = DuplicateService()
+        svc.storage_file = str(storage_file)
+        
+        # load() should handle it gracefully and log error without crash
+        svc.load()
+        assert len(svc._tickets) == 0
+
+    @patch("services.duplicate_service._HAS_SENTENCE", True)
+    @patch("services.duplicate_service.SentenceTransformer")
+    def test_save_to_disk_acquires_lock(self, mock_ST, tmp_path):
+        storage_file = tmp_path / "case_history_cache.json"
+        svc = DuplicateService()
+        svc.storage_file = str(storage_file)
+
+        # Acquire lock in main thread
+        svc._lock.acquire()
+        
+        blocker_ran = False
+        def blocker():
+            nonlocal blocker_ran
+            svc.save_to_disk("t1", "hello")
+            blocker_ran = True
+
+        t = threading.Thread(target=blocker)
+        t.start()
+        
+        # Give it a tiny bit of time
+        time.sleep(0.1)
+        assert blocker_ran is False  # Must be blocked since lock is held by us
+        
+        svc._lock.release()
+        t.join()
+        assert blocker_ran is True  # Now it should finish
+
+    @patch("services.duplicate_service._HAS_SENTENCE", True)
+    @patch("services.duplicate_service.SentenceTransformer")
+    def test_concurrent_adds_and_checks(self, mock_ST, tmp_path):
+        storage_file = tmp_path / "case_history_cache.json"
+        svc = DuplicateService()
+        svc.storage_file = str(storage_file)
+        
+        mock_model = MagicMock()
+        mock_model.encode.return_value = MagicMock()
+        svc.model = mock_model
+        svc._loaded = True
+
+        # Run multiple threads adding tickets concurrently
+        threads = []
+        for i in range(10):
+            t = threading.Thread(target=svc.add_ticket, args=(f"t-{i}", f"text-{i}"))
+            threads.append(t)
+            t.start()
+
+        for t in threads:
+            t.join()
+
+        # Check total tickets added
+        assert len(svc._tickets) == 10
