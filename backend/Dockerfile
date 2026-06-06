@@ -29,6 +29,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # Copy requirements first for layer caching
 COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Install Python dependencies into a virtualenv for clean copy to production stage
 RUN python -m venv /opt/venv && \
