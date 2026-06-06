@@ -528,6 +528,10 @@ def mock_ai_services(request):
         "test_notification_routing.py",
         "test_notification_routing_push.py",
         "test_notification_routing_admin_alert.py",
+        "test_duplicate_service.py",
+        "test_gemini_security.py",
+        "test_gemini_service.py",
+        "test_gemini_image_validation.py",
     }:
         yield
         return
