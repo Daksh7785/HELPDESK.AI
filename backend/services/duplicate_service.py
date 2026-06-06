@@ -17,6 +17,11 @@ import threading
 from typing import Any, Dict, List, Optional, Tuple
 
 try:
+    import fcntl
+except Exception:  # pragma: no cover - unavailable on Windows
+    fcntl = None  # type: ignore[assignment]
+
+try:
     import numpy as np
 
     _HAS_NUMPY = True
@@ -69,6 +74,7 @@ class DuplicateService:
         self._embedding_matrix_dirty: bool = True
         # Thread-safe access to _tickets and storage_file
         self._lock = threading.Lock()
+        self._file_lock = threading.Lock()
         self._indexing: bool = False
 
     # ------------------------------------------------------------------
