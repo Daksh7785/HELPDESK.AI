@@ -7,7 +7,7 @@ import {
 import { useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { COLORS, SHADOWS } from '../../styles/theme';
-import { Mail, Lock, User, Building2, Search, ChevronDown, Eye, EyeOff, ArrowRight, CheckCircle2, X } from 'lucide-react-native';
+import { Mail, Lock, User, Building2, Search, ChevronDown, Eye, EyeOff, ArrowRight, ArrowLeft, CheckCircle2, X } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useNotification } from '../../components/NotificationProvider';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -71,6 +71,11 @@ const SignupScreen = () => {
     const q = companySearch.toLowerCase().trim();
     setFilteredCompanies(q ? companies.filter(c => c.name.toLowerCase().includes(q)) : companies);
   }, [companySearch, companies]);
+
+  const goHome = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    navigation.navigate('Onboarding');
+  };
 
   const handleSignup = async () => {
     if (!fullName || !email || !password || !confirmPassword) {
@@ -163,8 +168,12 @@ const SignupScreen = () => {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: Math.max(insets.top + 16, 70) }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-          {/* Header */}
-          <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <Animated.View style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}> 
+            <TouchableOpacity style={styles.homeLinkRow} onPress={goHome} activeOpacity={0.7}>
+              <ArrowLeft size={18} color="rgba(255,255,255,0.75)" />
+              <Text style={styles.homeLinkText}>Back to Home</Text>
+            </TouchableOpacity>
+
             <Text style={styles.title}>Create Account</Text>
             <Text style={styles.subtitle}>Start automating your IT support today</Text>
           </Animated.View>
@@ -342,6 +351,13 @@ const styles = StyleSheet.create({
   footer: { flexDirection: 'row', justifyContent: 'center', marginTop: 24 },
   footerText: { color: 'rgba(255,255,255,0.45)', fontSize: 14 },
   footerLink: { color: COLORS.primary, fontSize: 14, fontWeight: '800' },
+  homeLinkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  homeLinkText: { color: 'rgba(255,255,255,0.85)', fontSize: 14, fontWeight: '700' },
   // Success state
   successWrap: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40, gap: 20 },
   successIcon: { width: 100, height: 100, borderRadius: 30, backgroundColor: COLORS.primary + '20', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: COLORS.primary + '50' },

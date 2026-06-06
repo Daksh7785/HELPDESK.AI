@@ -342,11 +342,14 @@ const AppContent = () => {
     <NotificationProvider topInset={insets.top}>
       <NavigationContainer>
         <StatusBar style={isAuthenticated && isActive ? 'dark' : 'light'} />
-        <Stack.Navigator screenOptions={{ headerShown: false, animation: 'fade' }}>
+        <Stack.Navigator
+          initialRouteName={showOnboarding ? 'Onboarding' : 'Login'}
+          screenOptions={{ headerShown: false, animation: 'fade' }}
+        >
           {!isAuthenticated ? (
             // ─── Unauthenticated ───
             <>
-              {showOnboarding && <Stack.Screen name="Onboarding" component={OnboardingScreen} />}
+              <Stack.Screen name="Onboarding" component={OnboardingScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Signup" component={SignupScreen} options={{ animation: 'slide_from_right' }} />
               <Stack.Screen name="AdminSignup" component={AdminSignupScreen} options={{ animation: 'slide_from_right' }} />
