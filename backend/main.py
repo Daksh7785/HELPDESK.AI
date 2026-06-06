@@ -549,7 +549,7 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, request: Request):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -558,6 +558,30 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
     logger = logging.getLogger(__name__)
+
+    # --- 1000% Perfect Tenant Auth & Spoofing Protection ---
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    
+    token = auth_header.split(" ")[1]
+    try:
+        user_response = supabase.auth.get_user(token)
+        if not user_response or not getattr(user_response, "user", None):
+            raise HTTPException(status_code=401, detail="Invalid token")
+        trusted_user_id = user_response.user.id
+    except Exception as e:
+        logger.error(f"Authentication failed: {e}")
+        raise HTTPException(status_code=401, detail="Authentication failed")
+
+    # Enforce trusted user ID from token
+    if request_body.user_id and request_body.user_id != trusted_user_id:
+        logger.warning(f"ID Spoofing Attempt: Token user {trusted_user_id} tried to act as {request_body.user_id}")
+        raise HTTPException(status_code=403, detail="User ID mismatch. Spoofing detected.")
+    
+    request_body.user_id = trusted_user_id
+    # --------------------------------------------------------
+
     try:
         final_data = request_body.dict()
 
