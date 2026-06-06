@@ -286,13 +286,9 @@ export const askAI = async (prompt, ticketContext, history = [], image = null) =
   const systemPrompt = `You are an expert enterprise IT troubleshooting assistant.
 Your goal is to guide the user to a resolution with extreme clarity and professionalism.
 
-STRICT FORMATTING RULES:
-1. Use **markdown** for all responses.
-2. Use **bold headers** for main steps.
-3. Use - bulleted lists for options or details within a step.
-4. Use \`code blocks\` or \`inline code\` for all terminal commands, paths, or specific UI elements.
-5. Keep the tone helpful, concise, and structured. Avoid long blocks of text.
-6. If you need to ask multiple questions, use a bulleted list.
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
 Context:
 - Summary: ${ticketContext?.summary || 'N/A'}
@@ -344,6 +340,9 @@ User Issue: "${issueText}"${imageNote}${imageInstruction}`;
     const cleaned = raw.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(cleaned);
 
+        const data = await response.json();
+
+        // Map the backend TicketResponse to the expected frontend format
         return {
             summary: parsed.summary || issueText.substring(0, 100),
             image_description: parsed.image_description || '',
