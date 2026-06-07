@@ -2087,7 +2087,7 @@ class TroubleshootResponse(BaseModel):
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
 @limiter.limit("10/minute")
-async def troubleshoot(request: Request, request_body: TroubleshootRequest):
+async def troubleshoot(request: Request, request_body: TroubleshootRequest, current_user: dict = Depends(get_current_user)):
     """Get the next dynamic troubleshooting step from Gemini given the user's
     ticket text, predicted category, and the conversation history so far.
     Returns the next ``step_text``, suggested ``options``, and an ``is_final``
@@ -2117,7 +2117,8 @@ class AIChatResponse(BaseModel):
     response: str
 
 @app.post("/ai/chat", response_model=AIChatResponse)
-async def ai_chat(request: AIChatRequest):
+@limiter.limit("10/minute")
+async def ai_chat(request: AIChatRequest, current_user: dict = Depends(get_current_user)):
     """Raw AI chat for troubleshooting directly replacing the frontend."""
     if not gemini_service or not gemini_service._initialized:
         return AIChatResponse(response="AI Chat is currently unavailable.")
@@ -2140,10 +2141,9 @@ class BugReportAnalysisRequest(BaseModel):
 class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
-@limiter.limit("10/minute")
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 @limiter.limit("10/minute")
-async def analyze_bug(request: Request, request_body: BugReportAnalysisRequest):
+async def analyze_bug(request: Request, request_body: BugReportAnalysisRequest, current_user: dict = Depends(get_current_user)):
     """Analyze a structured bug report (title, description, repro steps, and any
     captured console errors) using Gemini and return a short ``probable_cause``
     explanation that frontends can show to the reporter."""
@@ -3684,7 +3684,7 @@ async def analyze_only(request_body: TicketRequest, request: Request, current_us
 
 @app.post("/ai/analyze_stream")
 @limiter.limit("10/minute")
-async def analyze_stream(request: Request, request_body: TicketRequest):
+async def analyze_stream(request: Request, request_body: TicketRequest, current_user: dict = Depends(get_current_user)):
     """
     Streams AI analysis progress in real-time using Server-Sent Events (SSE).
     

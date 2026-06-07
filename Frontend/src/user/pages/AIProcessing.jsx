@@ -127,12 +127,16 @@ const AIProcessing = () => {
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 6000);
 
+                const { data: { session } } = await supabase.auth.getSession();
+                const token = session?.access_token;
+
                 const response = await fetch(
                     `${API_CONFIG.BACKEND_URL}/ai/analyze_stream`,
                     {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json'
+                            'Content-Type': 'application/json',
+                            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                         },
                         body: JSON.stringify(payload),
                         signal: controller.signal

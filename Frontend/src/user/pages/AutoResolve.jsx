@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Bot, User, CheckCircle2, XCircle, Send, RefreshCcw, ShieldCheck } from 'lucide-react';
 import useTicketStore from '../../store/ticketStore';
+import { supabase } from '../../lib/supabaseClient';
 
 function AutoResolve() {
   const { aiTicket } = useTicketStore();
@@ -16,9 +17,15 @@ function AutoResolve() {
   const fetchNextStep = async (history = []) => {
     setIsThinking(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const response = await fetch('http://127.0.0.1:8000/ai/troubleshoot', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           text: aiTicket.summary,
           category: aiTicket.category,
