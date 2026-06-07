@@ -569,13 +569,33 @@ async def get_tickets(
     if not user_client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    auth_header = request.headers.get("Authorization")
+    token = auth_header.split(" ")[1]
+    try:
+        user_response = user_client.auth.get_user(token)
+        trusted_user_id = user_response.user.id
+    except Exception:
+        raise HTTPException(status_code=401, detail="Authentication failed")
+
+    # Fetch user's company_id to enforce tenant isolation
+    try:
+        profile_res = user_client.table("profiles").select("company_id").eq("id", trusted_user_id).single().execute()
+        user_company_id = profile_res.data.get("company_id") if profile_res.data else None
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to fetch user profile")
+
+    if not user_company_id:
+        raise HTTPException(status_code=403, detail="User is not assigned to a tenant company")
+
+    if company_id and company_id != user_company_id:
+        raise HTTPException(status_code=403, detail="Cross-tenant access denied")
+
     # Prevent excessive limit values
     if limit > 100:
         limit = 100
         
-    query = user_client.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
+    # Force the query to be isolated to the user's company
+    query = user_client.table("tickets").select("*").eq("company_id", user_company_id).order("created_at", desc=True)
         
     # Apply pagination
     query = query.range(offset, offset + limit - 1)
