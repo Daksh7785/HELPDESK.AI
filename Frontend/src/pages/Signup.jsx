@@ -66,13 +66,14 @@ function Signup() {
   // Handle clicks outside dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
+      if (isLoadingCompanies) return; // Prevent closing dropdown on outside click during loading
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isLoadingCompanies]);
 
   // Filter companies
   useEffect(() => {
@@ -261,12 +262,17 @@ function Signup() {
             {/* Company Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <label className="block mb-2" style={labelStyle}>Company</label>
-              <div onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              <div onClick={() => { if (isLoadingCompanies) { setIsDropdownOpen(true); } else { setIsDropdownOpen(!isDropdownOpen); } }}
                 style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: isDropdownOpen ? '#22c55e' : '#e5e7eb', boxShadow: isDropdownOpen ? '0 0 0 3px rgba(34,160,69,0.1)' : 'none' }}>
                 {selectedCompany ? (
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: '#f0fdf4' }}><Building2 className="w-3.5 h-3.5" style={{ color: '#16a34a' }} /></div>
                     <span style={{ fontWeight: 600, color: '#111827' }}>{selectedCompany.name}</span>
+                  </div>
+                ) : isLoadingCompanies ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+                    <span style={{ color: '#9ca3af', fontWeight: 500 }}>Loading companies...</span>
                   </div>
                 ) : (<span style={{ color: '#9ca3af', fontWeight: 500 }}>Select your company...</span>)}
                 <ChevronDown className={`w-5 h-5 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} style={{ color: '#9ca3af' }} />
