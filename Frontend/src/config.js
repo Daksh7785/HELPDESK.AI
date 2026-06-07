@@ -4,14 +4,11 @@
 
 const getBackendUrl = () => {
     const envUrl = import.meta.env.VITE_BACKEND_URL;
-    if (envUrl) return envUrl.trim().replace(/\/$/, '');
-
-    // Dynamically deduce backend URL if running locally or on custom domain
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:8000';
+    if (!envUrl) {
+        console.error("CRITICAL: VITE_BACKEND_URL environment variable is missing. The frontend may not be able to communicate with the backend.");
+        return '';
     }
-    // Default to the live Hugging Face Space for stability in production deployment
-    return 'https://ritesh19180-ai-helpdesk-api.hf.space';
+    return envUrl.trim().replace(/\/$/, '');
 };
 
 export const API_CONFIG = {
