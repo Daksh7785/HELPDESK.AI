@@ -14,10 +14,27 @@ sys.modules['torch.nn.functional'] = MockModule()
 sys.modules['transformers'] = MockModule()
 sys.modules['easyocr'] = MockModule()
 
-# Mock Redis module
+# Mock Redis module and its exceptions
+class MockRedisError(Exception):
+    pass
+
+class MockConnectionError(MockRedisError):
+    pass
+
+class MockTimeoutError(MockRedisError):
+    pass
+
 mock_redis_mod = MockModule()
 mock_redis_client = MagicMock()
 mock_redis_mod.from_url.return_value = mock_redis_client
+
+mock_exceptions = MockModule()
+mock_exceptions.RedisError = MockRedisError
+mock_exceptions.ConnectionError = MockConnectionError
+mock_exceptions.TimeoutError = MockTimeoutError
+sys.modules['redis.exceptions'] = mock_exceptions
+mock_redis_mod.exceptions = mock_exceptions
+
 sys.modules['redis'] = mock_redis_mod
 
 # Mock FastAPI & slowapi dependencies
@@ -351,6 +368,194 @@ class TestRedisCaching(unittest.TestCase):
         # Verify redis cache invalidation called
         self.mock_redis.delete.assert_any_call("tickets:detail:ticket_123")
         self.mock_redis.delete.assert_any_call("tickets:list:all", "tickets:list:comp_123")
+
+    def test_get_system_settings_graceful_fallback_on_redis_connection_error(self):
+        import redis
+        self.mock_redis.get.side_effect = redis.exceptions.ConnectionError("Connection refused")
+        
+        # Supabase response mock
+        mock_response = MagicMock()
+        mock_response.data = {
+            "ai_confidence_threshold": 0.7,
+            "duplicate_sensitivity": 0.6,
+            "enable_auto_resolve": False
+        }
+        
+        table_mock = MagicMock()
+        select_mock = MagicMock()
+        eq_mock = MagicMock()
+        single_mock = MagicMock()
+        
+        self.mock_supabase.table.return_value = table_mock
+        table_mock.select.return_value = select_mock
+        select_mock.eq.return_value = eq_mock
+        eq_mock.single.return_value = single_mock
+        single_mock.execute.return_value = mock_response
+        
+        res = main.get_system_settings("comp_123")
+        
+        self.assertEqual(res["ai_confidence_threshold"], 0.7)
+        self.mock_redis.get.assert_called_once_with("system_settings:comp_123")
+
+    def test_get_system_settings_graceful_fallback_on_redis_write_error(self):
+        import redis
+        self.mock_redis.get.return_value = None
+        self.mock_redis.setex.side_effect = redis.exceptions.ConnectionError("Connection refused")
+        
+        # Supabase response mock
+        mock_response = MagicMock()
+        mock_response.data = {
+            "ai_confidence_threshold": 0.7,
+            "duplicate_sensitivity": 0.6,
+            "enable_auto_resolve": False
+        }
+        
+        table_mock = MagicMock()
+        select_mock = MagicMock()
+        eq_mock = MagicMock()
+        single_mock = MagicMock()
+        
+        self.mock_supabase.table.return_value = table_mock
+        table_mock.select.return_value = select_mock
+        select_mock.eq.return_value = eq_mock
+        eq_mock.single.return_value = single_mock
+        single_mock.execute.return_value = mock_response
+        
+        res = main.get_system_settings("comp_123")
+        
+        self.assertEqual(res["ai_confidence_threshold"], 0.7)
+        self.mock_redis.get.assert_called_once_with("system_settings:comp_123")
+        self.mock_redis.setex.assert_called_once()
+
+    def test_get_tickets_graceful_fallback_on_redis_connection_error(self):
+        import redis
+        self.mock_redis.get.side_effect = redis.exceptions.ConnectionError("Connection refused")
+        
+        mock_response = MagicMock()
+        mock_response.data = [{"id": "t1", "subject": "Test ticket"}]
+        
+        table_mock = MagicMock()
+        select_mock = MagicMock()
+        order_mock = MagicMock()
+        eq_mock = MagicMock()
+        
+        self.mock_supabase.table.return_value = table_mock
+        table_mock.select.return_value = select_mock
+        select_mock.order.return_value = order_mock
+        order_mock.eq.return_value = eq_mock
+        eq_mock.execute.return_value = mock_response
+        
+        res = asyncio.run(main.get_tickets("comp_123"))
+        
+        self.assertEqual(len(res), 1)
+        self.assertEqual(res[0]["id"], "t1")
+        self.mock_redis.get.assert_called_once_with("tickets:list:comp_123")
+
+    def test_get_ticket_by_id_graceful_fallback_on_redis_connection_error(self):
+        import redis
+        self.mock_redis.get.side_effect = redis.exceptions.ConnectionError("Connection refused")
+        
+        mock_response = MagicMock()
+        mock_response.data = {"id": "t1", "subject": "Test ticket"}
+        
+        table_mock = MagicMock()
+        select_mock = MagicMock()
+        eq_mock = MagicMock()
+        single_mock = MagicMock()
+        
+        self.mock_supabase.table.return_value = table_mock
+        table_mock.select.return_value = select_mock
+        select_mock.eq.return_value = eq_mock
+        eq_mock.single.return_value = single_mock
+        single_mock.execute.return_value = mock_response
+        
+        res = asyncio.run(main.get_ticket_by_id("t1"))
+        
+        self.assertEqual(res["id"], "t1")
+        self.mock_redis.get.assert_called_once_with("tickets:detail:t1")
+
+    def test_save_ticket_graceful_fallback_on_redis_connection_error(self):
+        import redis
+        self.mock_redis.delete.side_effect = redis.exceptions.ConnectionError("Connection refused")
+        
+        from backend.main import TicketSaveRequest
+        payload = TicketSaveRequest(
+            user_id="843dfe99-70dd-4283-8eaf-c1bc70047b59",
+            subject="Test Subject",
+            description="Test Description",
+            category="Software",
+            subcategory="General",
+            priority="Low",
+            assigned_team="Software Team",
+            status="pending",
+            auto_resolve=False,
+            is_duplicate=False,
+            confidence=0.95,
+            company="RITESH PVT LTD",
+            company_id="76d16bf6-2ee9-44ad-b64e-ad5ecf0a079b",
+            is_potential_duplicate=False,
+            parent_ticket_id=None,
+            sla_breach_at="2026-06-01T00:00:00Z",
+            routing_confidence=0.95,
+            metadata={}
+        )
+        
+        profile_res = MagicMock()
+        profile_res.data = {"company_id": "76d16bf6-2ee9-44ad-b64e-ad5ecf0a079b", "company": "RITESH PVT LTD"}
+        
+        ticket_insert_res = MagicMock()
+        ticket_insert_res.data = [{"id": "ticket_new_123"}]
+        
+        msg_insert_res = MagicMock()
+        msg_insert_res.data = [{"id": "msg_123"}]
+        
+        def table_side_effect(name):
+            mock_table_obj = MagicMock()
+            if name == "profiles":
+                mock_table_obj.select.return_value.eq.return_value.single.return_value.execute.return_value = profile_res
+            elif name == "tickets":
+                mock_table_obj.insert.return_value.execute.return_value = ticket_insert_res
+            elif name == "ticket_messages":
+                mock_table_obj.insert.return_value.execute.return_value = msg_insert_res
+            return mock_table_obj
+            
+        self.mock_supabase.table.side_effect = table_side_effect
+        
+        res = asyncio.run(main.save_ticket(payload))
+        
+        self.assertEqual(res["status"], "success")
+        self.assertEqual(res["ticket_id"], "ticket_new_123")
+        self.mock_redis.delete.assert_called_once_with("tickets:list:all", "tickets:list:76d16bf6-2ee9-44ad-b64e-ad5ecf0a079b")
+
+    def test_update_ticket_graceful_fallback_on_redis_connection_error(self):
+        import redis
+        self.mock_redis.delete.side_effect = redis.exceptions.ConnectionError("Connection refused")
+        
+        from backend.main import TicketRecord
+        test_ticket = TicketRecord(
+            ticket_id="ticket_123",
+            owner_id="owner_1",
+            company_id="comp_123",
+            subject="Original Subject",
+            description="Desc",
+            category="Software",
+            subcategory="General",
+            priority="Low",
+            assigned_team="Software Team",
+            status="pending",
+            auto_resolve=False,
+            is_duplicate=False,
+            confidence=0.95,
+            sla_breach_at="2026-06-01T00:00:00Z",
+            routing_confidence=0.95,
+            metadata={}
+        )
+        main.TICKETS_DB.append(test_ticket)
+        
+        res = asyncio.run(main.update_ticket("ticket_123", {"status": "resolved"}))
+        
+        self.assertEqual(res.status, "resolved")
+        self.mock_redis.delete.assert_any_call("tickets:detail:ticket_123")
 
 if __name__ == "__main__":
     unittest.main()
