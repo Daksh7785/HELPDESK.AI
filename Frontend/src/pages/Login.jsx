@@ -327,6 +327,7 @@ function Login() {
               <button
                 type="submit"
                 disabled={loading}
+                disabled={loading}
                 className="w-full flex items-center justify-center gap-2 active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
                 style={{
                   background: 'linear-gradient(135deg, #16a34a, #22c55e)',
