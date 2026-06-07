@@ -495,8 +495,31 @@ CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 corrections_log_lock = asyncio.Lock()
 
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
+async def log_correction(raw_request: Request, user_client = Depends(get_user_supabase)):
     """Log an admin correction when the AI prediction differs from the human decision."""
+    
+    # Authenticate and Verify Admin Role
+    try:
+        auth_header = raw_request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+        token = auth_header.split(" ")[1]
+        user_response = user_client.auth.get_user(token)
+        trusted_user_id = user_response.user.id
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=401, detail="Authentication failed")
+
+    try:
+        profile_res = user_client.table("profiles").select("role").eq("id", trusted_user_id).single().execute()
+        if not profile_res.data or profile_res.data.get("role") not in ["admin", "master_admin"]:
+            raise HTTPException(status_code=403, detail="Only admins can log corrections")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to verify user role")
+
     try:
         body = await raw_request.json()
     except Exception as e:
