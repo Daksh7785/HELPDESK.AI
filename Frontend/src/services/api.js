@@ -27,8 +27,8 @@ const setStorage = (key, data) => {
   try {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
-    console.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
-    // If quota exceeded, we could trim the data, but for now we fail gracefully.
+    console.error(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
+    throw new Error("Local storage quota exceeded. Unable to save data. Please clear your browser cache.");
   }
 };
 
