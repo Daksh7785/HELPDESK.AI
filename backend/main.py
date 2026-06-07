@@ -1602,7 +1602,7 @@ print(f"[startup] CORS allowed origins: {allowed_cors_origins}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_allowed_origins,
+    allow_origins=allowed_cors_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-API-Key", "X-CSRF-Token"],
