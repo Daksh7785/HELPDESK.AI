@@ -60,15 +60,19 @@ pinned: false
 
 <br/>
 
-<div align="center">
+## Table of Contents
 
-## 📖 Navigation Hub
+- [Neural System Orchestrator](#-neural-system-orchestrator-)
+- [🎯 Why Helpdesk.AI?](#-why-helpdeskai)
+- [💎 The Enterprise Evolution](#-the-enterprise-evolution)
+- [🏗️ System Architecture](#%EF%B8%8F-system-architecture)
+- [🧠 The AI Neural Pipeline](#-the-ai-neural-pipeline)
+- [🚀 Deployment & Operations](#-deployment--operations)
+- [🗺️ Roadmap](#%EF%B8%8F-roadmap)
+- [📱 Mobile Ecosystem (V1)](#-mobile-ecosystem-v1)
+- [👥 Contributors](#-contributors)
 
-| 🧩 **Platform Vision** | 🏗️ **Under the Hood** | 🚀 **Next Steps** |
-| :--- | :--- | :--- |
-| ➧ [Why Helpdesk.AI?](#why-helpdeskai)<br>➧ [The Enterprise Evolution](#the-enterprise-evolution) | ➧ [System Architecture](#system-architecture)<br>➧ [The AI Neural Pipeline](#the-ai-neural-pipeline) | ➧ [Deployment / Setup](#deploy)<br>➧ [Future Roadmap](#roadmap) |
-
-</div>
+---
 
 <br/>
 
@@ -184,6 +188,17 @@ Helpdesk.ai is now available as a native Android application. It features a comp
 [**📥 Download HelpDesk.ai V1 APK**](./MobileApp/application-2d277b36-4dbd-41c8-806d-cb2f19acf38a.apk)
 
 ---
+
+## 👥 Contributors
+
+Thanks to all contributors ❤️
+
+<a href="https://github.com/ritesh-1918/HELPDESK.AI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ritesh-1918/HELPDESK.AI" />
+</a>
+
+---
+
 
 <div align="center">
 Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team. 
