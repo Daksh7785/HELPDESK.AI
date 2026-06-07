@@ -1,5 +1,6 @@
-import { serve } from "https://deno.land/std@0.177.0/http/server.ts"
+import "https://deno.land/std@0.177.0/http/server.ts"
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0"
+import { corsHeaders, handleCors } from "../_shared/cors.ts"
 
 // Standard Supabase Secrets
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
@@ -9,7 +10,11 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "HELPDESK.AI <noreply@helpdesk.ai>";
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request) => {
+  // Handle CORS via shared utility
+  const corsResp = handleCors(req);
+  if (corsResp) return corsResp;
+
   try {
     if (!RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
 
@@ -160,9 +165,15 @@ serve(async (req: Request) => {
     });
 
     const data = await resendRes.json();
-    return new Response(JSON.stringify(data), { status: resendRes.status });
+    return new Response(JSON.stringify(data), {
+      status: resendRes.status,
+      headers: { ...corsHeaders(), "Content-Type": "application/json" },
+    });
 
   } catch (err: any) {
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 500,
+      headers: { ...corsHeaders(), "Content-Type": "application/json" },
+    });
   }
 });
