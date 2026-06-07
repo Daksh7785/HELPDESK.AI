@@ -16,7 +16,15 @@ function TicketDetailView() {
     const [ticket, setTicket] = useState(null);
     const [newMessage, setNewMessage] = useState('');
     const [isSending, setIsSending] = useState(false);
+    const [ticketsLoaded, setTicketsLoaded] = useState(false);
     const messagesEndRef = useRef(null);
+
+    // Track when tickets have been populated at least once
+    useEffect(() => {
+        if (tickets.length > 0) {
+            setTicketsLoaded(true);
+        }
+    }, [tickets.length]);
 
     // Force refresh when window gains focus to ensure latest data from Admin updates
     useEffect(() => {
@@ -33,8 +41,8 @@ function TicketDetailView() {
         const foundTicket = tickets.find(t => t.ticket_id.toString() === ticket_id);
 
         if (!foundTicket) {
-            // Only navigate if we've already loaded tickets and still don't find it
-            if (tickets.length > 0) {
+            // Only navigate if we've loaded tickets and still cannot find the ticket
+            if (ticketsLoaded && tickets.length > 0) {
                 navigate('/my-tickets');
             }
             return;
@@ -57,7 +65,36 @@ function TicketDetailView() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [ticket?.messages]);
 
-    if (!ticket) return null;
+    if (!ticket) {
+        // Show loading state while tickets are being fetched
+        if (!ticketsLoaded) {
+            return (
+                <main className="flex-1 w-full max-w-[1100px] mx-auto px-4 md:px-6 py-6 md:py-10">
+                    <div className="animate-pulse space-y-4">
+                        <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                        <div className="h-32 bg-gray-200 rounded mt-6"></div>
+                    </div>
+                </main>
+            );
+        }
+        // Show not-found state if tickets loaded but ticket_id doesn't match
+        return (
+            <main className="flex-1 w-full max-w-[1100px] mx-auto px-4 md:px-6 py-6 md:py-10">
+                <button
+                    onClick={() => navigate('/my-tickets')}
+                    className="flex items-center gap-2 text-gray-500 hover:text-emerald-700 font-bold mb-6 transition-colors"
+                >
+                    <ArrowLeft size={18} /> Back to My Tickets
+                </button>
+                <div className="text-center py-12">
+                    <FileText className="w-12 h-12 mx-auto text-gray-300 mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-600">Ticket not found</h3>
+                    <p className="text-gray-400 mt-1">This ticket may have been removed or you do not have access.</p>
+                </div>
+            </main>
+        );
+    };
 
     const isResolved = ticket.status === 'Resolved by Human Support';
     const isReopened = ticket.reopened_at && !isResolved;
