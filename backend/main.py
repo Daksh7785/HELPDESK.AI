@@ -13,6 +13,7 @@ import traceback
 import warnings
 import logging
 import hashlib
+import functools
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -512,17 +513,22 @@ async def log_correction(raw_request: Request):
         "timestamp": datetime.datetime.utcnow().isoformat() + "Z"
     }
 
-    try:
+    loop = asyncio.get_event_loop()
+
+    def _read_or_init_logs():
         if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
             with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-        else:
-            logs = []
+                return json.load(f)
+        return []
 
-        logs.append(entry)
-
+    def _write_logs(logs):
         with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
             json.dump(logs, f, indent=2)
+
+    try:
+        logs = await loop.run_in_executor(None, _read_or_init_logs)
+        logs.append(entry)
+        await loop.run_in_executor(None, functools.partial(_write_logs, logs))
 
         print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
         return {"status": "saved", "changed_fields": changed_fields}
