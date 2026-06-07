@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -533,23 +533,128 @@ async def log_correction(raw_request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
+# ---------------------------------------------------------------------------
+ACCESS_COOKIE = "access_token"
+REFRESH_COOKIE = "refresh_token"
+ACCESS_MAX_AGE = 60 * 60
+REFRESH_MAX_AGE = 60 * 60 * 24 * 7
+
+def _cookie_kwargs() -> dict:
+    secure = os.getenv("ENV", "production").lower() != "development"
+    return {
+        "httponly": True,
+        "secure": secure,
+        "samesite": "strict",
+        "path": "/",
+    }
+
+def extract_token(request: Request) -> str | None:
+    cookie_token = request.cookies.get(ACCESS_COOKIE)
+    if cookie_token:
+        return cookie_token
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip() or None
+    return None
+
+def _set_session_cookies(response: Response, session) -> None:
+    if not session or not getattr(session, "access_token", None):
+        return
+    response.set_cookie(
+        ACCESS_COOKIE,
+        session.access_token,
+        max_age=ACCESS_MAX_AGE,
+        **_cookie_kwargs(),
+    )
+    refresh = getattr(session, "refresh_token", None)
+    if refresh:
+        response.set_cookie(
+            REFRESH_COOKIE,
+            refresh,
+            max_age=REFRESH_MAX_AGE,
+            **_cookie_kwargs(),
+        )
+
+def _clear_session_cookies(response: Response) -> None:
+    kwargs = _cookie_kwargs()
+    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
+    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+
+async def get_current_user(request: Request) -> dict:
+    token = extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid session: {exc}",
+        ) from exc
+    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    if hasattr(user, "model_dump"):
+        return user.model_dump()
+    if hasattr(user, "dict"):
+        return user.dict()
+    return dict(user)
+
+
+# ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
+def _get_user_profile(user_id: str | None) -> dict:
+    """Helper to retrieve company_id, company name, and role from profiles table."""
+    if not user_id or not supabase:
+        return {}
+    try:
+        res = (
+            supabase.table("profiles")
+            .select("company_id, company, role")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        return res.data or {}
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to fetch profile for user {user_id}: {e}")
+        return {}
+
+
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(company_id: str | None = None, current_user: dict = Depends(get_current_user)):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    user_id = current_user.get("id") or current_user.get("sub")
+    profile = _get_user_profile(user_id)
+    user_role = profile.get("role", "user")
+    user_company_id = profile.get("company_id")
+
+    # Enforce company scope: only master_admin can bypass their own company scope.
+    if user_role != "master_admin":
+        if not user_company_id:
+            raise HTTPException(status_code=403, detail="User tenant is not configured")
+        if company_id and company_id != user_company_id:
+            raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+        company_id = user_company_id
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
     if company_id:
         query = query.eq("company_id", company_id)
-        
+
     res = query.execute()
     return res.data
 
+
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, current_user: dict = Depends(get_current_user)):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -561,7 +666,27 @@ async def save_ticket(request_body: TicketSaveRequest):
     try:
         final_data = request_body.dict()
 
-        # Resolve tenant linkage from user profile with authorization validation.
+        caller_id = current_user.get("id") or current_user.get("sub")
+        caller_profile = _get_user_profile(caller_id)
+        caller_role = caller_profile.get("role", "user")
+        caller_company_id = caller_profile.get("company_id")
+
+        if caller_role != "master_admin":
+            # Prevent user_id and company_id spoofing
+            if request_body.user_id and str(request_body.user_id) != str(caller_id):
+                raise HTTPException(status_code=403, detail="User not authorized to save tickets for other users")
+            if final_data.get("company_id") and str(final_data["company_id"]) != str(caller_company_id):
+                raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+            
+            request_body.user_id = caller_id
+            final_data["user_id"] = caller_id
+            final_data["company_id"] = caller_company_id
+        else:
+            if not request_body.user_id:
+                request_body.user_id = caller_id
+                final_data["user_id"] = caller_id
+
+        # Resolve tenant linkage from target user profile with authorization validation.
         profile = {}
         if request_body.user_id:
             try:
@@ -606,10 +731,10 @@ async def save_ticket(request_body: TicketSaveRequest):
 
 
         res = supabase.table("tickets").insert(final_data).execute()
-        
+
         if not res.data:
             raise Exception("Failed to insert ticket into database.")
-            
+
         ticket_id = res.data[0]["id"]
 
         duplicate_indexed = True
@@ -628,7 +753,7 @@ async def save_ticket(request_body: TicketSaveRequest):
             duplicate_indexed = False
             duplicate_index_warning = "Duplicate index update skipped: no description or subject text was provided."
             print(f"[WARNING] {duplicate_index_warning}")
-        
+
         # Add initial system diagnostic message
         msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
         if final_data["auto_resolve"]:
@@ -641,53 +766,84 @@ async def save_ticket(request_body: TicketSaveRequest):
             "sender_role": "admin",
             "message": msg
         }).execute()
-        
+
         response = {"status": "success", "ticket_id": ticket_id, "duplicate_indexed": duplicate_indexed}
         if duplicate_index_warning:
             response["duplicate_index_warning"] = duplicate_index_warning
         return response
 
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, current_user: dict = Depends(get_current_user)):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    user_id = current_user.get("id") or current_user.get("sub")
+    profile = _get_user_profile(user_id)
+    user_role = profile.get("role", "user")
+    user_company_id = profile.get("company_id")
+
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return res.data
+
+    ticket = res.data
+    if user_role != "master_admin":
+        if not user_company_id or ticket.get("company_id") != user_company_id:
+            raise HTTPException(status_code=403, detail="User not authorized for this tenant")
+
+    return ticket
 
 
 @app.post("/tickets", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+async def create_ticket(ticket: TicketRecord, current_user: dict = Depends(get_current_user)):
     """Save a new ticket into the system."""
+    caller_id = current_user.get("id") or current_user.get("sub")
+    caller_profile = _get_user_profile(caller_id)
+    caller_role = caller_profile.get("role", "user")
+    caller_company_id = caller_profile.get("company_id")
+
+    if caller_role != "master_admin":
+        if ticket.owner_id and str(ticket.owner_id) != str(caller_id):
+            raise HTTPException(status_code=403, detail="User not authorized to create tickets for other users")
+        ticket.owner_id = caller_id
+
     # Check for duplicates before adding
     existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
     if existing:
         return existing
-        
+
     TICKETS_DB.append(ticket)
     print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
     return ticket
 
 
 @app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
-async def update_ticket(ticket_id: str, updates: dict):
+async def update_ticket(ticket_id: str, updates: dict, current_user: dict = Depends(get_current_user)):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
+    caller_id = current_user.get("id") or current_user.get("sub")
+    caller_profile = _get_user_profile(caller_id)
+    caller_role = caller_profile.get("role", "user")
+
     for i, ticket in enumerate(TICKETS_DB):
         if str(ticket.ticket_id) == str(ticket_id):
+            if caller_role != "master_admin" and str(ticket.owner_id) != str(caller_id):
+                raise HTTPException(status_code=403, detail="User not authorized to update this ticket")
+
             # Convert to dict, update, then back to model
             ticket_dict = ticket.dict()
             ticket_dict.update(updates)
             updated_ticket = TicketRecord(**ticket_dict)
             TICKETS_DB[i] = updated_ticket
             return updated_ticket
-    
+
     raise HTTPException(status_code=404, detail="Ticket not found")
 
 
@@ -1068,76 +1224,7 @@ async def analyze_ticket_v2(request: TicketRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-# ---------------------------------------------------------------------------
-# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
-# ---------------------------------------------------------------------------
-ACCESS_COOKIE = "access_token"
-REFRESH_COOKIE = "refresh_token"
-ACCESS_MAX_AGE = 60 * 60
-REFRESH_MAX_AGE = 60 * 60 * 24 * 7
-
-def _cookie_kwargs() -> dict:
-    secure = os.getenv("ENV", "production").lower() != "development"
-    return {
-        "httponly": True,
-        "secure": secure,
-        "samesite": "strict",
-        "path": "/",
-    }
-
-def extract_token(request: Request) -> str | None:
-    cookie_token = request.cookies.get(ACCESS_COOKIE)
-    if cookie_token:
-        return cookie_token
-    auth = request.headers.get("authorization") or request.headers.get("Authorization")
-    if auth and auth.lower().startswith("bearer "):
-        return auth.split(" ", 1)[1].strip() or None
-    return None
-
-def _set_session_cookies(response: Response, session) -> None:
-    if not session or not getattr(session, "access_token", None):
-        return
-    response.set_cookie(
-        ACCESS_COOKIE,
-        session.access_token,
-        max_age=ACCESS_MAX_AGE,
-        **_cookie_kwargs(),
-    )
-    refresh = getattr(session, "refresh_token", None)
-    if refresh:
-        response.set_cookie(
-            REFRESH_COOKIE,
-            refresh,
-            max_age=REFRESH_MAX_AGE,
-            **_cookie_kwargs(),
-        )
-
-def _clear_session_cookies(response: Response) -> None:
-    kwargs = _cookie_kwargs()
-    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
-    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
-
-async def get_current_user(request: Request) -> dict:
-    token = extract_token(request)
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not supabase:
-        raise HTTPException(status_code=503, detail="Database connection offline")
-    try:
-        result = supabase.auth.get_user(token)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=401,
-            detail=f"Invalid session: {exc}",
-        ) from exc
-    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    if hasattr(user, "model_dump"):
-        return user.model_dump()
-    if hasattr(user, "dict"):
-        return user.dict()
-    return dict(user)
+# (Relocated auth helper functions to before ticket operations)
 
 class LoginBody(BaseModel):
     email: str
