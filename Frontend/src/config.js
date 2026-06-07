@@ -5,8 +5,7 @@
 const getBackendUrl = () => {
     const envUrl = import.meta.env.VITE_BACKEND_URL;
     if (!envUrl) {
-        console.error("CRITICAL: VITE_BACKEND_URL environment variable is missing. The frontend may not be able to communicate with the backend.");
-        return '';
+        throw new Error("CRITICAL: VITE_BACKEND_URL environment variable is missing. The frontend cannot communicate with the backend.");
     }
     return envUrl.trim().replace(/\/$/, '');
 };
