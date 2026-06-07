@@ -5,9 +5,14 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
+import json
 from sentence_transformers import SentenceTransformer, util
 
 SIMILARITY_THRESHOLD = 0.70
+
+# Performance limits: prevent unbounded memory growth and O(n) scan degradation
+MAX_CACHE_SIZE = int(os.environ.get("DUPLICATE_MAX_CACHE_SIZE", "10000"))
+MAX_SEARCH_WINDOW = int(os.environ.get("DUPLICATE_MAX_SEARCH_WINDOW", "500"))
 
 
 class DuplicateService:
@@ -15,8 +20,9 @@ class DuplicateService:
         self.model = None
         self._loaded = False
         self._load_failed = False
-        # In-memory store: list of (ticket_id, embedding, text)
-        self._tickets: list[tuple[str, object, str]] = []
+        # In-memory store: list of (ticket_id, embedding, text, timestamp)
+        # Oldest entries are trimmed when MAX_CACHE_SIZE is exceeded
+        self._tickets: list[tuple[str, object, str, float]] = []
         self.storage_file = os.path.join(os.path.dirname(__file__), "..", "data", "case_history_cache.json")
         os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
 
@@ -43,14 +49,16 @@ class DuplicateService:
             
             if os.path.exists(self.storage_file):
                 print(f"[DuplicateService] Syncing previous ticket history from {self.storage_file}...")
-                import json
                 try:
                     with open(self.storage_file, "r") as f:
                         data = json.load(f)
-                        for item in data:
-                            text = item["text"]
-                            embedding = self.model.encode(text, convert_to_tensor=True)
-                            self._tickets.append((item["ticket_id"], embedding, text))
+                        if isinstance(data, list):
+                            # Load only the most recent MAX_CACHE_SIZE tickets
+                            data = data[-MAX_CACHE_SIZE:]
+                            for item in data:
+                                text = item["text"]
+                                embedding = self.model.encode(text, convert_to_tensor=True)
+                                self._tickets.append((item["ticket_id"], embedding, text, item.get("timestamp", 0.0)))
                     print(f"[DuplicateService] Loaded {len(self._tickets)} tickets.")
                 except Exception as e:
                     print(f"[DuplicateService] Error loading storage: {e}")
@@ -66,8 +74,8 @@ class DuplicateService:
                 raise
 
     def save_to_disk(self, ticket_id: str, text: str):
-        """Append a new ticket to the JSON storage."""
-        import json
+        """Append a new ticket to the JSON storage. Keeps only the last MAX_CACHE_SIZE entries."""
+        import time
         data = []
         try:
             os.makedirs(os.path.dirname(self.storage_file), exist_ok=True)
@@ -80,12 +88,22 @@ class DuplicateService:
                     except:
                         data = []
             
-            data.append({"ticket_id": ticket_id, "text": text})
+            entry = {"ticket_id": ticket_id, "text": text, "timestamp": time.time()}
+            data.append(entry)
+            # Keep on-disk storage bounded as well
+            if len(data) > MAX_CACHE_SIZE:
+                data = data[-MAX_CACHE_SIZE:]
             with open(self.storage_file, "w") as f:
                 json.dump(data, f, indent=2)
             print(f"[DuplicateService] Indexed ticket {ticket_id} to case history.")
         except Exception as e:
             print(f"[DuplicateService] Failed to save to disk: {e}")
+
+    def _trim_cache(self):
+        """Trim the in-memory cache to MAX_CACHE_SIZE by removing oldest entries."""
+        if len(self._tickets) > MAX_CACHE_SIZE:
+            self._tickets = self._tickets[-MAX_CACHE_SIZE:]
+            print(f"[DuplicateService] Trimmed cache to {len(self._tickets)} entries.")
 
     def add_ticket(self, ticket_id: str, text: str):
         """Add a ticket to the in-memory store and persist to disk."""
@@ -93,8 +111,10 @@ class DuplicateService:
         if not self.is_available():
             print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
+        import time
         embedding = self.model.encode(text, convert_to_tensor=True)
-        self._tickets.append((ticket_id, embedding, text))
+        self._tickets.append((ticket_id, embedding, text, time.time()))
+        self._trim_cache()
         self.save_to_disk(ticket_id, text)
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
@@ -138,7 +158,9 @@ class DuplicateService:
         best_score = 0.0
         best_id = None
 
-        for ticket_id, stored_emb, _ in self._tickets:
+        # Search only the most recent MAX_SEARCH_WINDOW tickets for performance
+        search_window = self._tickets[-MAX_SEARCH_WINDOW:]
+        for ticket_id, stored_emb, _, _ in search_window:
             score = util.cos_sim(query_embedding, stored_emb).item()
             if score > best_score:
                 best_score = score
