@@ -288,8 +288,15 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Rate limiter — 10 AI requests per minute per IP (free tier protection)
-limiter = Limiter(key_func=get_remote_address)
+# Rate limiter — Prevent IP Spoofing by preferring authenticated user tokens
+def get_rate_limit_key(request: Request) -> str:
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.split(" ")[1]
+        return hashlib.sha256(token.encode()).hexdigest()
+    return get_remote_address(request)
+
+limiter = Limiter(key_func=get_rate_limit_key)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
