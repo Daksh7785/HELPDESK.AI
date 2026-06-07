@@ -2,10 +2,40 @@ import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
 
-const USE_MOCK = true;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// Mock mode: env var overrides, else auto-detect via health probe
+let USE_MOCK = null;
+
+const checkBackendHealth = async () => {
+  try {
+    const resp = await axios.get(`${API_BASE_URL}/health`, { timeout: 3000 });
+    return resp.status === 200;
+  } catch {
+    return false;
+  }
+};
+
+const shouldUseMock = async () => {
+  const envOverride = import.meta.env.VITE_USE_MOCK;
+  if (envOverride !== undefined && envOverride !== '') {
+    return envOverride === 'true' || envOverride === '1';
+  }
+  const healthy = await checkBackendHealth();
+  return !healthy;
+};
+
+const resolveMockMode = async () => {
+  if (USE_MOCK === null) {
+    USE_MOCK = await shouldUseMock();
+    if (USE_MOCK) {
+      console.info('[API] Backend unreachable — using mock data');
+    } else {
+      console.info('[API] Backend reachable — using live API');
+    }
+  }
+  return USE_MOCK;
+};
 
 // Safe helper to get data from storage or default
 const getStorage = (key, defaultData) => {
@@ -28,25 +58,27 @@ const setStorage = (key, data) => {
     localStorage.setItem(key, JSON.stringify(data));
   } catch (error) {
     console.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
-    // If quota exceeded, we could trim the data, but for now we fail gracefully.
   }
 };
 
 export const api = {
   // Login and Signup have been fully migrated to Supabase via authStore.js
-  // Ensure that no component tries to use api.login or api.signup anymore.
-
 
   getTickets: async () => {
-    if (USE_MOCK) {
-      await delay(500);
+    if (await resolveMockMode()) {
+      return getStorage('tickets', MOCK_TICKETS);
+    }
+    try {
+      const resp = await axios.get(`${API_BASE_URL}/tickets`);
+      return resp.data;
+    } catch (error) {
+      console.error('[API] Failed to fetch tickets, falling back to mock:', error);
       return getStorage('tickets', MOCK_TICKETS);
     }
   },
 
   createTicket: async (ticketData) => {
-    if (USE_MOCK) {
-      await delay(800);
+    if (await resolveMockMode()) {
       const tickets = getStorage('tickets', MOCK_TICKETS);
       const newTicket = {
         ticket_id: "TCKT-" + Math.floor(Math.random() * 10000),
@@ -61,15 +93,21 @@ export const api = {
           }
         ]
       };
-      tickets.unshift(newTicket); // Add to beginning
+      tickets.unshift(newTicket);
       setStorage('tickets', tickets);
       return { data: newTicket };
+    }
+    try {
+      const resp = await axios.post(`${API_BASE_URL}/tickets`, ticketData);
+      return resp.data;
+    } catch (error) {
+      console.error('[API] Failed to create ticket, falling back to mock:', error);
+      return { data: { ...ticketData, ticket_id: "TCKT-" + Math.floor(Math.random() * 10000) } };
     }
   },
 
   predictTicket: async (issueText, imageBase64 = "") => {
     try {
-      // ALWAYS call the real backend for prediction if possible
       const response = await axios.post(`${API_BASE_URL}/ai/analyze_ticket`, {
         text: issueText,
         image_base64: imageBase64,
@@ -78,7 +116,6 @@ export const api = {
 
       const result = response.data;
 
-      // Map backend response to frontend format
       return {
         data: {
           ticket_id: "TCKT-" + Math.floor(Math.random() * 10000),
@@ -100,8 +137,6 @@ export const api = {
       };
     } catch (error) {
       console.error("AI Backend Error, falling back to mock:", error);
-      // Fallback to mock logic if backend fails
-      await delay(1000);
       return {
         data: {
           ticket_id: "TCKT-MOCK-" + Math.floor(Math.random() * 10000),
@@ -122,7 +157,6 @@ export const api = {
     try {
       await axios.post(`${API_BASE_URL}/ai/log_correction`, correctionPayload);
     } catch (error) {
-      // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);
     }
   }
