@@ -660,46 +660,6 @@ limiter = Limiter(key_func=get_remote_address)
 ML_HEAVY_LIMIT  = "10/minute"   # NLP, OCR, Gemini — GPU/CPU intensive
 ML_LIGHT_LIMIT  = "30/minute"   # Similar incident search — lighter
 
-app = FastAPI(title="AI Helpdesk Ticket Analyzer")
-
-# ── Apply to FastAPI app ──────────────────────────────────────────────────────
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-app.add_middleware(SlowAPIMiddleware)
-
-# Hard request body size cap — rejects oversized payloads before any JSON parsing
-# or Pydantic validation runs, preventing memory exhaustion from multi-MB uploads.
-# Default: 20 MB to accommodate the 14 MB image_base64 limit plus JSON overhead.
-_MAX_REQUEST_BODY_BYTES = int(os.getenv("MAX_REQUEST_BODY_BYTES", str(20 * 1024 * 1024)))
-
-
-@app.middleware("http")
-async def request_body_size_guard(request: Request, call_next):
-    """Reject requests whose body exceeds _MAX_REQUEST_BODY_BYTES.
-
-    The Content-Length header is checked first (fast path); bodies sent with
-    chunked transfer encoding are read and measured before they reach any
-    endpoint handler.
-    """
-    content_length = request.headers.get("content-length")
-    if content_length:
-        try:
-            cl = int(content_length)
-            if cl > _MAX_REQUEST_BODY_BYTES:
-                return JSONResponse(
-                    status_code=413,
-                    content={
-                        "detail": (
-                            f"Request body too large ({cl:,} bytes). "
-                            f"Maximum allowed size is {_MAX_REQUEST_BODY_BYTES:,} bytes."
-                        )
-                    },
-                )
-        except ValueError:
-            pass  # malformed Content-Length — let downstream handle it
-
-    return await call_next(request)
-
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
@@ -1571,6 +1531,7 @@ body { background: var(--hd-bg); color: var(--hd-text); font-family: 'Inter', sy
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 from backend.services.rate_limit_config import limiter, RATE_LIMIT_AI
 app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
 
 
