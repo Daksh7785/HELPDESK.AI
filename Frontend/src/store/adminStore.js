@@ -13,8 +13,15 @@ const useAdminStore = create(
                 lastLogin: "",
                 region: ""
             },
+
+            /**
+             * Update admin profile fields.
+             * @param {object} updates - Fields to update
+             */
             updateProfile: (updates) => set((state) => ({
-                adminProfile: { ...state.adminProfile, ...updates }
+                adminProfile: state.adminProfile
+                    ? { ...state.adminProfile, ...updates }
+                    : null
             })),
         })
     )
