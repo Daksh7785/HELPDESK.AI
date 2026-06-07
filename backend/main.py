@@ -445,7 +445,8 @@ class TroubleshootResponse(BaseModel):
     is_final: bool
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
-async def troubleshoot(request: TroubleshootRequest):
+@limiter.limit("5/minute")
+async def troubleshoot(request_body: TroubleshootRequest, request: Request, user_client = Depends(get_user_supabase)):
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
         return TroubleshootResponse(
@@ -455,9 +456,9 @@ async def troubleshoot(request: TroubleshootRequest):
         )
     
     result = gemini_service.get_troubleshooting_step(
-        request.text,
-        request.history,
-        request.category
+        request_body.text,
+        request_body.history,
+        request_body.category
     )
     return TroubleshootResponse(**result)
 
@@ -472,7 +473,8 @@ class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
-async def analyze_bug(request: BugReportAnalysisRequest):
+@limiter.limit("5/minute")
+async def analyze_bug(request_body: BugReportAnalysisRequest, request: Request, user_client = Depends(get_user_supabase)):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
         return BugReportAnalysisResponse(
@@ -480,10 +482,10 @@ async def analyze_bug(request: BugReportAnalysisRequest):
         )
     
     cause = gemini_service.analyze_bug_report(
-        request.bug_title,
-        request.description,
-        request.steps_to_reproduce,
-        request.console_errors
+        request_body.bug_title,
+        request_body.description,
+        request_body.steps_to_reproduce,
+        request_body.console_errors
     )
     return BugReportAnalysisResponse(probable_cause=cause)
 
