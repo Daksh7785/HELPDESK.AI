@@ -2592,15 +2592,6 @@ def trigger_webhook_for_new_ticket(company_id: str, ticket: dict) -> None:
     if priority not in ("critical", "high"):
         return
 
-    # Clamp per_page to prevent abuse
-    per_page = min(max(int(per_page), 1), 100)
-    offset = (max(int(page), 1) - 1) * per_page
-
-    # Parse comma-separated filter lists
-    status_list: list[str] | None = [s.strip() for s in status.split(",") if s.strip()] if status else None
-    priority_list: list[str] | None = [p.strip() for p in priority.split(",") if p.strip()] if priority else None
-    category_list: list[str] | None = [c.strip() for c in category.split(",") if c.strip()] if category else None
-
     try:
         # Fetch webhook settings for the company
         res = supabase.table("webhook_settings").select("webhook_url, is_enabled").eq("company_id", company_id).maybeSingle().execute()
