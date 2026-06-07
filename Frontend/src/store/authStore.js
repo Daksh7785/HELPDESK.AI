@@ -10,6 +10,8 @@ const useAuthStore = create(
             user: null,
             profile: null,
             loading: false,
+            // Rate limiting for magic link requests
+            magicLinkLastAttempt: null,
 
             // --- SUPABASE AUTH METHODS ---
 
@@ -135,7 +137,15 @@ const useAuthStore = create(
             },
 
             signInWithMagicLink: async (email) => {
-                set({ loading: true });
+                // Client-side rate limiting: 30-second cooldown between magic link requests
+                const lastAttempt = get().magicLinkLastAttempt;
+                const now = Date.now();
+                if (lastAttempt && now - lastAttempt < 30000) {
+                    const remaining = Math.ceil((30000 - (now - lastAttempt)) / 1000);
+                    throw new Error(`Please wait ${remaining}s before requesting another magic link.`);
+                }
+
+                set({ loading: true, magicLinkLastAttempt: now });
                 console.log("Attempting magic link / OTP login for:", email);
                 try {
                     const { error } = await supabase.auth.signInWithOtp({
@@ -145,7 +155,13 @@ const useAuthStore = create(
                         }
                     });
 
-                    if (error) throw error;
+                    if (error) {
+                        // If it's a rate limit error from Supabase, surface it to the user
+                        if (error.message?.toLowerCase().includes('rate') || error.status === 429) {
+                            throw new Error('Too many requests. Please wait a few minutes and try again.');
+                        }
+                        throw error;
+                    }
                     return true;
                 } catch (error) {
                     console.error("Magic link operation failed:", error.message);
