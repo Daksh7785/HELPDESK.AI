@@ -49,12 +49,18 @@ class NotificationRoutingMiddleware:
 # the new schema. The database table and column names are `system_settings`,
 # `email_notifications`, and `admin_alerts`.
 
-    def __init__(self):
-        """Initialize the notification routing middleware."""
-        self.supabase = create_client(
+    def __init__(self, supabase_client=None):
+        """Initialize the notification routing middleware.
+
+        Args:
+            supabase_client: Optional pre-configured Supabase client to reuse.
+                             If None, creates a new client (legacy behavior).
+        """
+        self.supabase = supabase_client or create_client(
             os.getenv("SUPABASE_URL"),
             os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         )
+        self._owns_client = supabase_client is None
         self._settings_cache: Dict[str, Dict] = {}
         self.log_level = os.getenv("NOTIFICATION_ROUTING_LOG_LEVEL", "info").lower()
 
@@ -229,12 +235,23 @@ class NotificationRoutingMiddleware:
 _instance: Optional[NotificationRoutingMiddleware] = None
 
 
-def load():
-    """Load and return singleton instance of NotificationRoutingMiddleware."""
+def load(supabase_client=None):
+    """Load and return singleton instance of NotificationRoutingMiddleware.
+
+    Args:
+        supabase_client: Optional pre-configured Supabase client to reuse.
+                         Pass the shared client from main.py to avoid
+                         creating duplicate connections.
+    """
     global _instance
     if _instance is None:
-        _instance = NotificationRoutingMiddleware()
+        _instance = NotificationRoutingMiddleware(supabase_client=supabase_client)
         logger.info("NotificationRoutingMiddleware loaded")
+    elif supabase_client and _instance._owns_client:
+        # Upgrade: replace the self-created client with a shared one
+        _instance.supabase = supabase_client
+        _instance._owns_client = False
+        logger.info("NotificationRoutingMiddleware: upgraded to shared client")
     return _instance
 
 
