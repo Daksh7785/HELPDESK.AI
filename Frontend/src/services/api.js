@@ -2,10 +2,29 @@ import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
 
+// Centralized API Error Handling Interceptor
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response) {
+      if (error.response.status === 401) {
+        console.error('[API Error] 401 Unauthorized. Session may have expired.');
+      } else if (error.response.status >= 500) {
+        console.error('[API Error] 500 Server Error. Backend failure.', error.response.data);
+      } else {
+        console.error(`[API Error] ${error.response.status}:`, error.response.data);
+      }
+    } else if (error.request) {
+      console.error('[API Error] No response received. Network issue or backend is down.');
+    } else {
+      console.error('[API Error] Setup error:', error.message);
+    }
+    return Promise.reject(error);
+  }
+);
+
 const USE_MOCK = false;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
-
-
 // Safe helper to get data from storage or default
 const getStorage = (key, defaultData) => {
   try {
