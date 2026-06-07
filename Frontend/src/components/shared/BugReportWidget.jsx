@@ -323,9 +323,15 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
       // 1. Call AI Diagnostics
       let probableCause = 'Not analyzed';
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
         const aiResponse = await fetch(`${API_CONFIG.BACKEND_URL}/ai/analyze_bug`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({
             bug_title: formData.bug_title,
             description: formData.description,
