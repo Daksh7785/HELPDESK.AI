@@ -5,7 +5,6 @@ import { API_CONFIG } from '../config';
 const USE_MOCK = true;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Safe helper to get data from storage or default
 const getStorage = (key, defaultData) => {
@@ -39,14 +38,12 @@ export const api = {
 
   getTickets: async () => {
     if (USE_MOCK) {
-      await delay(500);
       return getStorage('tickets', MOCK_TICKETS);
     }
   },
 
   createTicket: async (ticketData) => {
     if (USE_MOCK) {
-      await delay(800);
       const tickets = getStorage('tickets', MOCK_TICKETS);
       const newTicket = {
         ticket_id: "TCKT-" + Math.floor(Math.random() * 10000),
