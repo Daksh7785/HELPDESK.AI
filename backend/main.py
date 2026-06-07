@@ -181,7 +181,7 @@ class TicketRequest(BaseModel):
     duplicate_sensitivity: float = 0.85
 
 class TicketSaveRequest(BaseModel):
-    user_id: str
+    # user_id is NOT accepted from the caller — derived from JWT token
     subject: str
     description: str
     category: str
