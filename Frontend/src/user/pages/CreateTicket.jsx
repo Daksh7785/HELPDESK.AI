@@ -238,14 +238,6 @@ const CreateTicket = () => {
     const toggleMic = () => {
         if (isListening) {
             stopListening();
-        } else {
-            startListening();
-        }
-    };
-
-    const toggleMic = () => {
-        if (isListening) {
-            stopListening();
             return;
         }
         startListening();
@@ -367,32 +359,6 @@ const CreateTicket = () => {
     const handleCancelVoice = () => {
         stopListening();
         setShowVoiceModal(false);
-    };
-
-    const handleFileChange = (e) => {
-        const selected = e.target.files?.[0];
-        if (selected && (selected.type === 'image/png' || selected.type === 'image/jpeg')) {
-            if (imagePreview) URL.revokeObjectURL(imagePreview);
-            setFile(selected);
-            setImagePreview(URL.createObjectURL(selected));
-            setError('');
-            processOCR(selected);
-        } else if (selected) {
-            setError('Please upload only PNG or JPG images.');
-        }
-    };
-
-    const removeFile = () => {
-        setFile(null);
-        setExtractedOCR('');
-        if (imagePreview) URL.revokeObjectURL(imagePreview);
-        setImagePreview(null);
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
     };
 
     // ── Smart Template handlers (v2: highlight → activate → dismiss) ──
@@ -865,116 +831,6 @@ const CreateTicket = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-
-                  {/* Screenshot Upload */}
-                  <div className='space-y-2'>
-                    <label className='text-sm font-bold text-gray-700'>Screenshot (Optional)</label>
-
-                    <AnimatePresence mode='wait'>
-                      {!imagePreview ? (
-                        <motion.div
-                          key='dropzone'
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          onDragOver={handleDragOver}
-                          onDrop={handleDrop}
-                          onClick={() => fileInputRef.current?.click()}
-                          className='group relative h-40 border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/50 hover:bg-emerald-50 hover:border-emerald-200 transition-all cursor-pointer flex flex-col items-center justify-center p-6'
-                        >
-                          <input
-                            type='file'
-                            ref={fileInputRef}
-                            onChange={handleFileChange}
-                            accept='image/png, image/jpeg, application/pdf'
-                            className='hidden'
-                          />
-                          <div className='w-12 h-12 bg-white rounded-xl shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform'>
-                            <Upload className='text-emerald-500' size={20} />
-                          </div>
-                          <p className='text-sm font-semibold text-gray-600'>
-                            Drag and drop or click to upload
-                          </p>
-                          <p className='text-xs text-gray-400 mt-1'>PNG, JPG, or PDF up to 5MB</p>
-                        </motion.div>
-                      ) : (
-                        <motion.div
-                          key='preview'
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className='relative rounded-2xl border border-gray-100 overflow-hidden bg-white p-4 items-center flex'
-                        >
-                          <div className='flex items-center gap-4 w-full'>
-                            <div className='w-20 h-20 rounded-xl overflow-hidden border border-gray-50 shadow-inner shrink-0 flex items-center justify-center'>
-                              {file?.type === 'application/pdf' ? (
-                                <FileText className='text-emerald-500' size={36} />
-                              ) : (
-                                <img
-                                  src={imagePreview}
-                                  alt='Preview'
-                                  className='w-full h-full object-cover'
-                                />
-                              )}
-                            </div>
-                            <div className='flex-1 min-w-0'>
-                              <p className='text-sm font-bold text-gray-900 truncate'>
-                                {file?.name}
-                              </p>
-                              <p className='text-sm font-medium text-gray-600 mt-1'>
-                                {(file?.size / 1024 / 1024).toFixed(2)} MB
-                                {isOcrLoading && ' • Extracting text...'}
-                                {!isOcrLoading && extractedOCR && ' • Text extracted'}
-                              </p>
-                            </div>
-                            <Button
-                              type='button'
-                              variant='ghost'
-                              size='icon'
-                              onClick={removeFile}
-                              className='text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full shrink-0'
-                            >
-                              <X size={18} />
-                            </Button>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  {/* Error Message */}
-                  {error && (
-                    <div className='p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-sm font-medium'>
-                      <AlertCircle size={16} />
-                      {error}
-                    </div>
-                  )}
-
-                  {/* Primary Submit Button */}
-                  <Button
-                    type='submit'
-                    disabled={isLoading || isOcrLoading || isTranslating || !issue.trim()}
-                    className='w-full h-14 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-lg rounded-2xl flex items-center justify-center gap-2 transition-all border-none shadow-emerald-200/50 shadow-lg hover:shadow-xl active:scale-[0.98] disabled:opacity-50'
-                  >
-                    {isLoading || isTranslating ? (
-                      <>
-                        <div className='w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin' />
-                        {isTranslating ? 'Translating...' : 'Submitting issue...'}
-                      </>
-                    ) : (
-                      <>
-                        Submit Ticket
-                        <ArrowRight size={20} />
-                      </>
-                    )}
-                  </Button>
-                  <div className='flex items-center justify-center gap-2 text-xs text-gray-400 font-medium'>
-                    <BrainCircuit size={14} />
-                    Powered by HelpDesk.ai Routing
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </motion.div>
         </div>
     );
 };

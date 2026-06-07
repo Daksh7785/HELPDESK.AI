@@ -98,6 +98,11 @@ def _validate_b64(image_base64: str) -> tuple[str | None, str | None]:
 class OCRService:
     def __init__(self):
         self._semaphore = asyncio.Semaphore(MAX_CONCURRENT_OCR)
+        self.last_warning: str = ""
+        """Human-readable warning from the most recent extract_text call. Reset on each call."""
+
+    def _clear_warning(self) -> None:
+        self.last_warning = ""
 
     # ── internal: synchronous OCR run (called via executor) ──────────────────
     def _run_ocr(self, image_bytes: bytes) -> list[str]:
@@ -109,11 +114,13 @@ class OCRService:
         """Extract text from a PDF using PyMuPDF (fitz)."""
         if not _HAS_PDF_SUPPORT:
             logger.warning("[OCRService] PDF support not available (PyMuPDF not installed). Cannot extract text.")
+            self.last_warning = "PDF text extraction unavailable (PyMuPDF not installed). Falling back to user-provided description."
             return ""
         try:
             doc = fitz.open(stream=pdf_bytes, filetype="pdf")
             if doc.needs_pass:
                 logger.warning("[OCRService] Rejected: password-protected PDF.")
+                self.last_warning = "Password-protected PDF could not be opened. Falling back to user-provided description."
                 doc.close()
                 return ""
             pages = []
@@ -123,10 +130,13 @@ class OCRService:
                     pages.append(text.strip())
             doc.close()
             extracted = "\n".join(pages).strip()
+            if not extracted:
+                self.last_warning = "No extractable text found in the PDF. The file may be a scanned image."
             logger.info("[OCRService] Extracted %d chars from PDF (%d pages).", len(extracted), len(pages))
             return extracted
         except Exception as pdf_err:
             logger.warning("[OCRService] Failed to extract text from PDF: %s", pdf_err)
+            self.last_warning = f"Could not read PDF file ({pdf_err}). Falling back to user-provided description."
             return ""
 
     # ── internal: process an image (non-PDF) payload ─────────────────────────
@@ -142,6 +152,7 @@ class OCRService:
                     "[OCRService] Rejected: decoded size %d exceeds limit %d",
                     len(image_bytes), MAX_DECODED_BYTES,
                 )
+                self.last_warning = "Image too large to process (exceeds 8 MB decoded limit). Falling back to user-provided description."
                 return ""
 
             # ── Image dimension & pixel-count guard (PIL) ─────────────────────
@@ -157,6 +168,7 @@ class OCRService:
                         "[OCRService] Rejected: image dimensions %dx%d exceed limit %d",
                         width, height, MAX_IMAGE_DIMENSION,
                     )
+                    self.last_warning = f"Image dimensions ({width}x{height}) exceed 4096 px limit. Falling back to user-provided description."
                     return ""
 
                 if width * height > MAX_PIXELS:
@@ -164,9 +176,11 @@ class OCRService:
                         "[OCRService] Rejected: pixel count %d exceeds limit %d",
                         width * height, MAX_PIXELS,
                     )
+                    self.last_warning = "Image too large (exceeds 16 MP pixel count). Falling back to user-provided description."
                     return ""
             except Exception as img_err:
                 logger.warning("[OCRService] Rejected: invalid or unreadable image — %s", img_err)
+                self.last_warning = f"Image could not be decoded ({img_err}). Falling back to user-provided description."
                 return ""
 
             # ── OCR with concurrency cap + timeout ────────────────────────────
@@ -182,10 +196,12 @@ class OCRService:
                     return extracted
                 except asyncio.TimeoutError:
                     logger.warning("[OCRService] OCR timed out after %ds", OCR_TIMEOUT_SECONDS)
+                    self.last_warning = f"OCR processing timed out after {OCR_TIMEOUT_SECONDS}s. Falling back to user-provided description."
                     return ""
 
         except Exception as e:
             logger.warning("[OCRService] Error during OCR: %s", e)
+            self.last_warning = f"OCR processing failed ({e}). Falling back to user-provided description."
             return ""
 
     # ── internal: process a PDF payload ─────────────────────────────────────
@@ -199,6 +215,7 @@ class OCRService:
                     "[OCRService] Rejected PDF: decoded size %d exceeds limit %d",
                     len(pdf_bytes), MAX_DECODED_BYTES,
                 )
+                self.last_warning = "PDF too large to process (exceeds 8 MB decoded limit). Falling back to user-provided description."
                 return ""
 
             loop = asyncio.get_event_loop()
@@ -211,9 +228,11 @@ class OCRService:
                     return extracted
                 except asyncio.TimeoutError:
                     logger.warning("[OCRService] PDF extraction timed out after %ds", OCR_TIMEOUT_SECONDS)
+                    self.last_warning = f"PDF extraction timed out after {OCR_TIMEOUT_SECONDS}s. Falling back to user-provided description."
                     return ""
         except Exception as e:
             logger.warning("[OCRService] Error decoding PDF base64: %s", e)
+            self.last_warning = f"Could not decode PDF payload ({e}). Falling back to user-provided description."
             return ""
 
     # ── public API ───────────────────────────────────────────────────────────
@@ -226,11 +245,20 @@ class OCRService:
         CPU starvation and memory exhaustion from malicious payloads.
         Handles corrupted / password-protected PDFs gracefully, returning "".
 
+        Check ``self.last_warning`` after calling to see if extraction succeeded
+        or encountered a non-fatal error.
+
         Returns:
             A single cleaned string of extracted text, or "" on failure.
         """
+        self._clear_warning()
         content_type, b64_payload = _validate_b64(image_base64)
         if b64_payload is None:
+            if content_type:
+                reason = f"Unsupported content type '{content_type}'. "
+            else:
+                reason = "Invalid or empty image payload. "
+            self.last_warning = f"{reason}Falling back to user-provided description."
             return ""
 
         # Route based on content type

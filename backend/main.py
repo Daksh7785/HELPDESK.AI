@@ -995,50 +995,6 @@ class TicketRequest(BaseModel):
             raise ValueError(f"Value must be between 0.0 and 1.0, got {v}")
         return v
 
-    # Guard limits — tune via environment variables in production
-    _MAX_TEXT_LEN: int = int(os.getenv("MAX_TICKET_TEXT_LEN", "50000"))
-    # base64 expands binary by ~4/3, so 10 MB binary ≈ 13.3 MB base64
-    _MAX_IMAGE_BASE64_LEN: int = int(os.getenv("MAX_IMAGE_BASE64_LEN", "14000000"))
-
-    @field_validator("text")
-    @classmethod
-    def validate_text_length(cls, v: str) -> str:
-        max_len = int(os.getenv("MAX_TICKET_TEXT_LEN", "50000"))
-        if len(v) > max_len:
-            raise ValueError(
-                f"Ticket text exceeds maximum length of {max_len:,} characters "
-                f"(got {len(v):,}). Please shorten your description."
-            )
-        return v
-
-    @field_validator("image_base64")
-    @classmethod
-    def validate_image_base64_size(cls, v: str) -> str:
-        """Reject oversized base64 payloads before any decoding or OCR is attempted.
-
-        Raising ValueError here causes Pydantic to return a 422 Unprocessable
-        Entity with a clear error message. A middleware-level 413 guard (via
-        RequestBodySizeLimitMiddleware) acts as the first line of defence so
-        this validator is primarily a safety net for requests that bypass the
-        middleware (e.g. unit tests, internal calls).
-        """
-        if not v:
-            return v
-        max_len = int(os.getenv("MAX_IMAGE_BASE64_LEN", "14000000"))
-        if len(v) > max_len:
-            raise ValueError(
-                f"Image payload exceeds the {max_len // 1_000_000} MB limit. "
-                "Please resize or compress the image before uploading."
-            )
-        return v
-
-    @field_validator("confidence_threshold", "duplicate_sensitivity")
-    @classmethod
-    def validate_threshold_range(cls, v: float) -> float:
-        if not 0.0 <= v <= 1.0:
-            raise ValueError(f"Value must be between 0.0 and 1.0, got {v}")
-        return v
-
 class TicketSaveRequest(BaseModel):
     model_config = {"extra": "allow"}
 
@@ -1113,6 +1069,8 @@ class TicketResponse(BaseModel):
     decision_factors: list[str] = []
     image_description: str = ""
     ocr_text: str = ""
+    ocr_warning: str = ""
+    """Non-fatal warning when OCR/PDF extraction fails; user text is used as fallback."""
     image_url: str | None = None
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
@@ -3478,16 +3436,23 @@ async def analyze_ticket(request_body: TicketRequest, request: Request, current_
 
     # --- Layer 1: Local OCR (CPU, no API required) ---
     local_ocr_text = ""
+    ocr_warning = ""
     if request_body.image_base64 and ocr_service:
         print("[AI] Extracting text via local OCR...")
         local_ocr_text = await ocr_service.extract_text(request_body.image_base64)
+        ocr_warning = ocr_service.last_warning
         if local_ocr_text:
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
+        elif ocr_warning:
+            print(f"[AI] OCR warning: {ocr_warning}")
 
     # Pass OCR-enriched text downstream so the analyze_only endpoint uses it.
     enriched = request_body.model_copy(update={"text": text, "image_text": local_ocr_text})
-    return await analyze_only(enriched, request, current_user)
+    response = await analyze_only(enriched, request, current_user)
+    if ocr_warning and isinstance(response, TicketResponse):
+        response.ocr_warning = ocr_warning
+    return response
 
 @app.post("/ai/analyze")
 @limiter.limit("10/minute")
@@ -4280,7 +4245,6 @@ async def get_knowledge_gaps(current_user: dict = Depends(get_current_user)):
 
 @app.post("/admin/knowledge-gaps/detect", tags=["Admin"])
 @limiter.limit(ADMIN_LIMIT)
-async def detect_knowledge_gaps(
 async def detect_knowledge_gaps(background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     """
     Trigger background detection of knowledge gaps.
@@ -4633,7 +4597,6 @@ async def download_security_report(current_user: dict = Depends(security_manager
 
 @app.post("/api/pii/scan", tags=["Security"])
 @limiter.limit(SECURITY_LIMIT)
-async def pii_scan(
 async def scan_text_for_pii(
     request: Request,
     current_user: dict = Depends(get_current_user),
@@ -4980,7 +4943,6 @@ def _get_token_manager() -> TokenManager:
 @app.post("/api-tokens", tags=["API Tokens"], summary="Create a new API token")
 @limiter.limit(API_TOKEN_LIMIT)
 async def create_api_token(
-async def create_api_token(
     body: APITokenCreateRequest,
     request: Request,
     user: dict = Depends(get_current_user),
@@ -5033,7 +4995,6 @@ async def revoke_api_token(
 
 @app.post("/api-tokens/{token_id}/rotate", tags=["API Tokens"], summary="Rotate a token")
 @limiter.limit(API_TOKEN_LIMIT)
-async def rotate_api_token(
 async def rotate_api_token(
     token_id: str,
     user: dict = Depends(get_current_user),
