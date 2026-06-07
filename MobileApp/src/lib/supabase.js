@@ -14,7 +14,7 @@ const supabaseKey = Constants.expoConfig?.extra?.supabaseAnonKey
   || '';
 
 if (!supabaseUrl || !supabaseKey) {
-  console.warn(
+  throw new Error(
     '[Supabase] Missing credentials. Set EXPO_PUBLIC_SUPABASE_URL and EXPO_PUBLIC_SUPABASE_ANON_KEY '
     + 'in your .env file or app.json extra config.'
   );
