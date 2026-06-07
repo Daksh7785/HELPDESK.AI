@@ -67,12 +67,15 @@ function Signup() {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
+        // Do not close dropdown while companies are loading
+        if (!isLoadingCompanies) {
+          setIsDropdownOpen(false);
+        }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isLoadingCompanies]);
 
   // Filter companies
   useEffect(() => {
@@ -261,7 +264,7 @@ function Signup() {
             {/* Company Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <label className="block mb-2" style={labelStyle}>Company</label>
-              <div onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              <div onClick={() => { if (!isLoadingCompanies) setIsDropdownOpen(!isDropdownOpen); }}
                 style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: isDropdownOpen ? '#22c55e' : '#e5e7eb', boxShadow: isDropdownOpen ? '0 0 0 3px rgba(34,160,69,0.1)' : 'none' }}>
                 {selectedCompany ? (
                   <div className="flex items-center gap-2">
