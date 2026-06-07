@@ -56,6 +56,10 @@ def _cosine_similarity_numpy(query: "np.ndarray", matrix: "np.ndarray") -> "np.n
     # query @ matrix.T  ->  shape (n,)
     return matrix @ query
 
+# Performance limits: prevent unbounded memory growth and O(n) scan degradation
+MAX_CACHE_SIZE = int(os.environ.get("DUPLICATE_MAX_CACHE_SIZE", "10000"))
+MAX_SEARCH_WINDOW = int(os.environ.get("DUPLICATE_MAX_SEARCH_WINDOW", "500"))
+
 
 class DuplicateService:
     def __init__(self) -> None:
