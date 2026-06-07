@@ -1,4 +1,0 @@
--- The service role key is populated at deployment time via the vault
--- setup script (supabase/scripts/setup_vault.py), NOT hardcoded here.
--- This prevents leaking sensitive credentials in version control.
--- See supabase/scripts/setup_vault.py and supabase/scripts/README.md

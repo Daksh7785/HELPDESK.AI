@@ -108,15 +108,19 @@ To support the project and get real-time open-source project updates, please mak
 
 <br/>
 
-<div align="center">
+## Table of Contents
 
-## 📖 Navigation Hub
+- [Neural System Orchestrator](#-neural-system-orchestrator-)
+- [🎯 Why Helpdesk.AI?](#-why-helpdeskai)
+- [💎 The Enterprise Evolution](#-the-enterprise-evolution)
+- [🏗️ System Architecture](#%EF%B8%8F-system-architecture)
+- [🧠 The AI Neural Pipeline](#-the-ai-neural-pipeline)
+- [🚀 Deployment & Operations](#-deployment--operations)
+- [🗺️ Roadmap](#%EF%B8%8F-roadmap)
+- [📱 Mobile Ecosystem (V1)](#-mobile-ecosystem-v1)
+- [👥 Contributors](#-contributors)
 
-| 🧩 **Platform Vision** | 🏗️ **Under the Hood** | 🚀 **Next Steps** |
-| :--- | :--- | :--- |
-| ➧ [Why Helpdesk.AI?](#why-helpdeskai)<br>➧ [The Enterprise Evolution](#the-enterprise-evolution) | ➧ [System Architecture](#system-architecture)<br>➧ [The AI Neural Pipeline](#the-ai-neural-pipeline) | ➧ [Deployment / Setup](#deploy)<br>➧ [Future Roadmap](#roadmap) |
-
-</div>
+---
 
 
 ---
