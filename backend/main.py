@@ -472,6 +472,7 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 # Admin Correction Logging endpoint
 # ---------------------------------------------------------------------------
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
+corrections_log_lock = asyncio.Lock()
 
 @app.post("/ai/log_correction")
 async def log_correction(raw_request: Request):
@@ -512,16 +513,17 @@ async def log_correction(raw_request: Request):
     }
 
     try:
-        if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
-            with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
-                logs = json.load(f)
-        else:
-            logs = []
+        async with corrections_log_lock:
+            if CORRECTIONS_LOG_PATH.exists() and CORRECTIONS_LOG_PATH.stat().st_size > 2:
+                with open(CORRECTIONS_LOG_PATH, "r", encoding="utf-8") as f:
+                    logs = json.load(f)
+            else:
+                logs = []
 
-        logs.append(entry)
+            logs.append(entry)
 
-        with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
-            json.dump(logs, f, indent=2)
+            with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
+                json.dump(logs, f, indent=2)
 
         print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
         return {"status": "saved", "changed_fields": changed_fields}
