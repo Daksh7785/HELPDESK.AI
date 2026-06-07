@@ -31,10 +31,15 @@ export const SUPPORTED_LANGUAGES = [
 export async function translateText(text, fromLang = 'en', toLang = 'en') {
     if (!text?.trim() || fromLang === toLang) return text;
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
     try {
         const langPair = `${fromLang}|${toLang}`;
         const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langPair}`;
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (!response.ok) throw new Error(`Translation API error: ${response.status}`);
 
         const data = await response.json();
@@ -44,7 +49,12 @@ export async function translateText(text, fromLang = 'en', toLang = 'en') {
         }
         throw new Error(data.responseDetails || 'Translation failed');
     } catch (err) {
-        console.error('[translationService] Translation error:', err);
+        clearTimeout(timeoutId);
+        if (err.name === 'AbortError') {
+            console.warn('[translationService] Translation request timed out after 10s');
+        } else {
+            console.error('[translationService] Translation error:', err);
+        }
         // Graceful degradation — return original text on failure
         return text;
     }
