@@ -234,11 +234,13 @@ const useAuthStore = create(
                 try {
                     const { error } = await supabase.auth.signOut();
                     if (error) throw error;
+                } finally {
+                    // Always clear auth state — even if signOut fails (network error, etc.)
+                    // This prevents cross-user data leakage on error paths
                     set({ user: null, profile: null });
                     // clear persisted ticket state to prevent cross-user data leakage
                     useTicketStore.getState().clearTicket();
                     useTicketStore.setState({ notifications: [], tickets: [] });
-                } finally {
                     set({ loading: false });
                 }
             },
