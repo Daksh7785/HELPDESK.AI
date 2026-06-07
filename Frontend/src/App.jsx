@@ -40,7 +40,6 @@ import MyTickets from "./user/pages/MyTickets";
 import TicketResult from "./user/pages/TicketResult";
 import Profile from "./user/pages/Profile";
 import TicketDetail from "./user/pages/TicketDetail";
-import TicketProcessing from "./user/pages/AIProcessing"; // Renamed generic import just in case, but keeping AIProcessing
 import AIProcessing from "./user/pages/AIProcessing";
 import AIUnderstanding from "./user/pages/AIUnderstanding";
 import Notifications from "./user/pages/Notifications";
