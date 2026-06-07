@@ -7,11 +7,13 @@ const useTicketsRealtime = () => {
     const { user, profile } = useAuthStore();
     const { addTicket, updateTicket, removeTicket } = useTicketStore();
 
+    // Derive admin status from profile role to include in dependency array
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'master_admin';
+
     useEffect(() => {
         if (!user || !profile) return;
 
         // Only admins see the live ticket queue
-        const isAdmin = profile.role === 'admin' || profile.role === 'master_admin';
         if (!isAdmin) return;
 
         const channel = supabase
@@ -45,7 +47,7 @@ const useTicketsRealtime = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [user, profile, addTicket, updateTicket, removeTicket]);
+    }, [user, profile, isAdmin, addTicket, updateTicket, removeTicket]);
 };
 
 export default useTicketsRealtime;
