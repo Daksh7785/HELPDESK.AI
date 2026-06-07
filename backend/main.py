@@ -87,6 +87,7 @@ def _startup_fatal(message: str) -> None:
 # Initialize Supabase Client (Service Role for backend bypass)
 try:
     from supabase import create_client, Client
+
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
@@ -1007,6 +1008,7 @@ class TicketRequest(BaseModel):
             raise ValueError(f"Value must be between 0.0 and 1.0, got {v}")
         return v
 
+
 class TicketSaveRequest(BaseModel):
     model_config = {"extra": "allow"}
 
@@ -1078,15 +1080,15 @@ class TicketResponse(BaseModel):
     confidence: float
     needs_review: bool = False
     reasoning: str = ""
-    decision_factors: list[str] = []
+    decision_factors: list[str] = Field(default_factory=list)
     image_description: str = ""
     ocr_text: str = ""
     ocr_warning: str = ""
     """Non-fatal warning when OCR/PDF extraction fails; user text is used as fallback."""
     image_url: str | None = None
-    highlights: list[str] = []
-    timeline: dict = {} # Map of step_name: timestamp
-    env_metadata: dict = {} # IP, Hostname, Browser/OS
+    highlights: list[str] = Field(default_factory=list)
+    timeline: dict = Field(default_factory=dict)  # Map of step_name: timestamp
+    env_metadata: dict = Field(default_factory=dict)  # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
     original_text: str | None = None
     source_language: str = "en"
@@ -1160,12 +1162,14 @@ semantic_dupe_service = SemanticDuplicateService(supabase_client=None)  # wired 
 
 try:
     from backend.services.gemini_service import GeminiService
+
     gemini_service = GeminiService()
 except ImportError:
     gemini_service = None
 
 try:
     from backend.services.ocr_service import OCRService
+
     ocr_service = OCRService()
 except ImportError:
     ocr_service = None
@@ -1321,7 +1325,9 @@ async def lifespan(app: FastAPI):
         print(f"[WARNING] ONNX classifier fallback not loaded: {e}")
     
     if gemini_service:
-        print(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
+        print(
+            f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}"
+        )
     else:
         print("[Startup] Gemini Service: NOT LOADED (Import failed)")
 
@@ -2096,7 +2102,8 @@ async def send_digest_now(current_user: dict = Depends(get_current_user)):
 class TroubleshootRequest(BaseModel):
     text: str
     category: str
-    history: list[dict] = []
+    history: list[dict] = Field(default_factory=list)
+
 
 
 class TroubleshootResponse(BaseModel):
@@ -2116,7 +2123,7 @@ async def troubleshoot(request: Request, request_body: TroubleshootRequest, curr
         return TroubleshootResponse(
             step_text="AI Troubleshooting is currently unavailable.",
             options=["Continue to tracking"],
-            is_final=True
+            is_final=True,
         )
 
     result = gemini_service.get_troubleshooting_step(
@@ -2156,10 +2163,12 @@ class BugReportAnalysisRequest(BaseModel):
     bug_title: str
     description: str
     steps_to_reproduce: str = ""
-    console_errors: list[str] = []
+    console_errors: list[str] = Field(default_factory=list)
+
 
 class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
+
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 @limiter.limit("10/minute")
@@ -2168,10 +2177,8 @@ async def analyze_bug(request: Request, request_body: BugReportAnalysisRequest, 
     captured console errors) using Gemini and return a short ``probable_cause``
     explanation that frontends can show to the reporter."""
     if not gemini_service or not gemini_service._initialized:
-        return BugReportAnalysisResponse(
-            probable_cause="AI Diagnostics are currently unavailable."
-        )
-    
+        return BugReportAnalysisResponse(probable_cause="AI Diagnostics are currently unavailable.")
+
     cause = gemini_service.analyze_bug_report(
         request_body.bug_title,
         request_body.description,
@@ -2400,7 +2407,8 @@ async def log_correction(request: Request, user: dict = Depends(get_current_user
 
     # Only log if something actually changed
     changed_fields = [
-        field for field in ["category", "subcategory", "priority", "assigned_team"]
+        field
+        for field in ["category", "subcategory", "priority", "assigned_team"]
         if original_prediction.get(field) != corrected_prediction.get(field)
     ]
 
@@ -2436,14 +2444,11 @@ REFRESH_COOKIE = "refresh_token"
 ACCESS_MAX_AGE = 60 * 60
 REFRESH_MAX_AGE = 60 * 60 * 24 * 7
 
+
 def _cookie_kwargs() -> dict:
     secure = os.getenv("ENV", "production").lower() != "development"
-    return {
-        "httponly": True,
-        "secure": secure,
-        "samesite": "strict",
-        "path": "/",
-    }
+    return {"httponly": True, "secure": secure, "samesite": "strict", "path": "/"}
+
 
 def extract_token(request: Request) -> str | None:
     cookie_token = request.cookies.get(ACCESS_COOKIE)
@@ -2454,28 +2459,21 @@ def extract_token(request: Request) -> str | None:
         return auth.split(" ", 1)[1].strip() or None
     return None
 
+
 def _set_session_cookies(response: Response, session) -> None:
     if not session or not getattr(session, "access_token", None):
         return
-    response.set_cookie(
-        ACCESS_COOKIE,
-        session.access_token,
-        max_age=ACCESS_MAX_AGE,
-        **_cookie_kwargs(),
-    )
+    response.set_cookie(ACCESS_COOKIE, session.access_token, max_age=ACCESS_MAX_AGE, **_cookie_kwargs())
     refresh = getattr(session, "refresh_token", None)
     if refresh:
-        response.set_cookie(
-            REFRESH_COOKIE,
-            refresh,
-            max_age=REFRESH_MAX_AGE,
-            **_cookie_kwargs(),
-        )
+        response.set_cookie(REFRESH_COOKIE, refresh, max_age=REFRESH_MAX_AGE, **_cookie_kwargs())
+
 
 def _clear_session_cookies(response: Response) -> None:
     kwargs = _cookie_kwargs()
     response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
     response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+
 
 async def get_current_user(request: Request) -> dict:
     token = extract_token(request)
@@ -2486,10 +2484,8 @@ async def get_current_user(request: Request) -> dict:
     try:
         result = supabase.auth.get_user(token)
     except Exception as exc:
-        raise HTTPException(
-            status_code=401,
-            detail=f"Invalid session: {exc}",
-        ) from exc
+        raise HTTPException(status_code=401, detail=f"Invalid session: {exc}") from exc
+
     user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid session")
