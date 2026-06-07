@@ -3759,9 +3759,6 @@ async def analyze_stream(request: Request, request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Reading your message', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.15)
         yield f"data: {json.dumps({'step': 'Analyzing', 'status': 'in_progress'})}\n\n"
-        # Centralized computation
-        result = compute_analysis(request_body, api_endpoint="/ai/analyze_stream")
-
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
             try:
