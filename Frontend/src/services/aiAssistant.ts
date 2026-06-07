@@ -120,6 +120,16 @@ const runWithFailover = async (promptText, history, image) => {
     if (configList.length === 0) throw new Error("No AI API keys configured in .env");
 
     const blacklistedKeys = new Set();
+    const MAX_RETRIES = 1;
+    const RETRY_DELAY_MS = 500;
+
+    const isNetworkError = (error) =>
+        error.message?.includes('fetch') ||
+        error.message?.includes('network') ||
+        error.message?.includes('ECONNRESET') ||
+        error.message?.includes('ETIMEDOUT') ||
+        error.message?.includes('timeout') ||
+        error.status === undefined;
 
     for (let i = 0; i < configList.length; i++) {
         const config = configList[i];
@@ -130,39 +140,68 @@ const runWithFailover = async (promptText, history, image) => {
 
         console.log(`[AI Failover] Trying ${i + 1}/${configList.length}: ${config.provider} (${config.model})`);
 
-        try {
-            if (config.provider === 'gemini') {
-                return await callGemini(config, promptText, history, image);
-            } else if (config.provider === 'openrouter') {
-                return await callOpenAICompat(config, promptText, history, image,
-                    'https://openrouter.ai/api/v1',
-                    { 'HTTP-Referer': API_CONFIG.FRONTEND_URL, 'X-Title': 'AI Helpdesk' }
-                );
-            } else if (config.provider === 'groq') {
-                return await callOpenAICompat(config, promptText, history, null, // Groq = text only
-                    'https://api.groq.com/openai/v1'
-                );
-            }
-        } catch (error) {
-            const isRateLimit = error.status === 429
-                || error.message?.includes('429')
-                || error.message?.includes('quota')
-                || error.message?.includes('RESOURCE_EXHAUSTED')
-                || error.message?.includes('rate_limit');
+        let lastError = null;
 
-            const isExpiredOrInvalid = error.message?.includes('API_KEY_INVALID')
-                || error.message?.includes('API key expired')
-                || error.message?.includes('invalid')
-                || error.message?.includes('expired')
-                || error.status === 401
-                || error.status === 403;
-
-            if (isExpiredOrInvalid) {
-                blacklistedKeys.add(config.key);
-                console.warn(`[AI Failover] Blacklisted invalid/expired key for ${config.provider}`);
+        for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+            if (attempt > 0) {
+                console.log(`[AI Failover] Retrying ${config.provider} (attempt ${attempt}/${MAX_RETRIES}) after ${RETRY_DELAY_MS}ms`);
+                await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
             }
 
-            console.warn(`[AI Failover] ❌ ${config.provider} key ${i + 1}: ${isRateLimit ? 'Quota exceeded' : error.message}`);
+            try {
+                if (config.provider === 'gemini') {
+                    return await callGemini(config, promptText, history, image);
+                } else if (config.provider === 'openrouter') {
+                    return await callOpenAICompat(config, promptText, history, image,
+                        'https://openrouter.ai/api/v1',
+                        { 'HTTP-Referer': API_CONFIG.FRONTEND_URL, 'X-Title': 'AI Helpdesk' }
+                    );
+                } else if (config.provider === 'groq') {
+                    return await callOpenAICompat(config, promptText, history, null, // Groq = text only
+                        'https://api.groq.com/openai/v1'
+                    );
+                }
+            } catch (error) {
+                lastError = error;
+
+                const isRateLimit = error.status === 429
+                    || error.message?.includes('429')
+                    || error.message?.includes('quota')
+                    || error.message?.includes('RESOURCE_EXHAUSTED')
+                    || error.message?.includes('rate_limit');
+
+                const isExpiredOrInvalid = error.message?.includes('API_KEY_INVALID')
+                    || error.message?.includes('API key expired')
+                    || error.message?.includes('invalid')
+                    || error.message?.includes('expired')
+                    || error.status === 401
+                    || error.status === 403;
+
+                if (isExpiredOrInvalid) {
+                    blacklistedKeys.add(config.key);
+                    console.warn(`[AI Failover] Blacklisted invalid/expired key for ${config.provider}`);
+                    break; // Don't retry invalid keys
+                }
+
+                // Don't retry on rate limit errors — immediate failover is correct
+                if (isRateLimit) {
+                    console.warn(`[AI Failover] ❌ ${config.provider}: Rate limited, moving to next provider`);
+                    break;
+                }
+
+                // Only retry on transient network errors, and only if we haven't exhausted retries
+                if (!isNetworkError(error) || attempt >= MAX_RETRIES) {
+                    console.warn(`[AI Failover] ❌ ${config.provider} key ${i + 1}: ${error.message}`);
+                }
+            }
+        }
+
+        // If we exhausted retries on a network error, log it
+        if (lastError && !blacklistedKeys.has(config.key)) {
+            const isNetwork = isNetworkError(lastError);
+            if (isNetwork && lastError.status === undefined) {
+                console.warn(`[AI Failover] ❌ ${config.provider}: Network error after ${MAX_RETRIES} retry(s): ${lastError.message}`);
+            }
         }
     }
 
