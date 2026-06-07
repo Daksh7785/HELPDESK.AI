@@ -101,8 +101,8 @@ function ForgotPassword() {
 
     const handleUpdatePassword = async (e) => {
         e.preventDefault();
-        if (!newPassword || newPassword.length < 6) {
-            setError("Password must be at least 6 characters long.");
+        if (!newPassword || newPassword.length < 8) {
+            setError("Password must be at least 8 characters long.");
             return;
         }
 
@@ -301,7 +301,7 @@ function ForgotPassword() {
 
                                         <button
                                             type="submit"
-                                            disabled={loading || newPassword.length < 6}
+                                            disabled={loading || newPassword.length < 8}
                                             className="w-full rounded-2xl py-4 font-bold transition-all flex items-center justify-center gap-2"
                                             style={{ background: 'linear-gradient(135deg, #16a34a, #22c55e)', color: '#fff', boxShadow: '0 10px 30px rgba(34,160,69,0.2)' }}
                                             onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
