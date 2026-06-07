@@ -73,7 +73,10 @@ function Signup() {
     const handleClickOutside = (event) => {
       if (isLoadingCompanies) return; // Prevent closing dropdown on outside click during loading
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
+        // Do not close dropdown while companies are loading
+        if (!isLoadingCompanies) {
+          setIsDropdownOpen(false);
+        }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
