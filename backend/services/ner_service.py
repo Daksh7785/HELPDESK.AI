@@ -43,9 +43,10 @@ class NERService:
         self.id2label = None
         self.label2id = None
         self._loaded = False
+        self._fallback_mode = False
 
     def load(self):
-        """Load model, tokenizer, and label map from disk."""
+        """Load model, tokenizer, and label map from disk. Falls back to regex extraction if model is missing."""
         if self._loaded:
             return
 
@@ -56,10 +57,13 @@ class NERService:
         abs_dir = os.path.abspath(SAVE_DIR)
 
         if not os.path.exists(os.path.join(abs_dir, "model.safetensors")):
-            raise FileNotFoundError(
-                f"NER model not found at {abs_dir}. "
-                "Please ensure model files are present."
+            print(
+                f"[WARNING] NER model not found at {abs_dir}. "
+                "Falling back to regex-based entity extraction."
             )
+            self._fallback_mode = True
+            self._loaded = True
+            return
 
         # Load label mappings
         with open(os.path.join(abs_dir, "ner_id2label.json"), "r") as f:
@@ -101,8 +105,13 @@ class NERService:
         """
         Extract named entities from text.
         Returns list of {text: str, label: str, confidence: float}.
+        Falls back to regex-based extraction if model is not available.
         """
         self.load()
+
+        # Fallback mode: use regex-only extraction
+        if self._fallback_mode:
+            return self._extract_entities_fallback(text)
 
         # Tokenize word-by-word for alignment
         words = text.split()
@@ -197,4 +206,21 @@ class NERService:
                         "confidence": 0.99 # High confidence for regex matches
                     })
 
+        return entities
+
+    def _extract_entities_fallback(self, text: str) -> list[dict]:
+        """Fallback entity extraction using only regex patterns when model is unavailable."""
+        entities = []
+        
+        for label, pattern in REGEX_PATTERNS.items():
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                match_text = match.group()
+                if not any(e["text"].lower() == match_text.lower() for e in entities):
+                    entities.append({
+                        "text": match_text,
+                        "label": label,
+                        "confidence": 0.85  # Slightly lower confidence for regex-only fallback
+                    })
+        
         return entities

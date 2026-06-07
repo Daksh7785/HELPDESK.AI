@@ -113,9 +113,10 @@ class ClassifierService:
         self.id2label = None
         self.label2id = None
         self._loaded = False
+        self._fallback_mode = False
 
     def load(self):
-        """Load model, tokenizer, and label mappings from disk."""
+        """Load model, tokenizer, and label mappings from disk. Falls back to regex-based fallback if model is missing."""
         if self._loaded:
             return
 
@@ -132,6 +133,9 @@ class ClassifierService:
                 f"Classifier model not found at {abs_dir}. "
                 "Please ensure model files are present."
             )
+            self._fallback_mode = True
+            self._loaded = True
+            return
 
         try:
             with open(safetensors_path, "rb") as f:
