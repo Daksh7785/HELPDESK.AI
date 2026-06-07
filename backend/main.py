@@ -731,6 +731,20 @@ async def create_ticket(ticket: dict, request: Request, user_client = Depends(ge
     if not user_client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    auth_header = request.headers.get("Authorization")
+    token = auth_header.split(" ")[1]
+    try:
+        user_response = user_client.auth.get_user(token)
+        trusted_user_id = user_response.user.id
+    except Exception:
+        raise HTTPException(status_code=401, detail="Authentication failed")
+
+    # Enforce trusted user ID from token
+    if ticket.get("user_id") and ticket["user_id"] != trusted_user_id:
+        raise HTTPException(status_code=403, detail="User ID mismatch. Spoofing detected.")
+    
+    ticket["user_id"] = trusted_user_id
+
     res = user_client.table("tickets").insert(ticket).execute()
     if not res.data:
         raise HTTPException(status_code=400, detail="Failed to create ticket")
@@ -746,9 +760,22 @@ async def update_ticket(ticket_id: str, updates: dict, request: Request, user_cl
     if not user_client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    # Prevent user_id spoofing on update
+    if "user_id" in updates:
+        auth_header = request.headers.get("Authorization")
+        token = auth_header.split(" ")[1]
+        try:
+            user_response = user_client.auth.get_user(token)
+            trusted_user_id = user_response.user.id
+        except Exception:
+            raise HTTPException(status_code=401, detail="Authentication failed")
+            
+        if updates["user_id"] != trusted_user_id:
+            raise HTTPException(status_code=403, detail="Cannot change ticket owner to another user")
+
     res = user_client.table("tickets").update(updates).eq("id", ticket_id).execute()
     if not res.data:
-        raise HTTPException(status_code=404, detail="Ticket not found")
+        raise HTTPException(status_code=404, detail="Ticket not found or unauthorized to modify")
         
     return res.data[0]
 
