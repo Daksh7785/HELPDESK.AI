@@ -35,7 +35,15 @@ class ClassifierServiceV3:
     def __init__(self):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.model = None
-        
+        self.num_labels = None
+        self.label_encoders = None
+        self.tokenizer = None
+        self._loaded = False
+
+    def load(self):
+        if self._loaded:
+            return
+
         config_path = os.path.join(MODEL_DIR, "model_config.json")
         if not os.path.exists(config_path):
             print(f"[V3 Service] Model not found yet at {MODEL_DIR}")
@@ -52,6 +60,7 @@ class ClassifierServiceV3:
         self.model.eval()
 
         self.tokenizer = BertTokenizerFast.from_pretrained(MODEL_DIR)
+        self._loaded = True
         print("[INFO] Classifier Service V3 (Power Model) Loaded.")
 
     def predict(self, text: str):

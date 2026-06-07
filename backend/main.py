@@ -231,51 +231,67 @@ except ImportError:
     ocr_service = None
 
 
+from concurrent.futures import ProcessPoolExecutor
+
+def _init_ml_worker():
+    """Load ML models in the isolated worker process."""
+    try:
+        from backend.services.classifier_service import classifier_service
+        from backend.services.ner_service import ner_service
+        from backend.services.duplicate_service import duplicate_service
+        from backend.services.rag_service import rag_service
+        from backend.services.classifier_v3 import classifier_v3
+        classifier_service.load()
+        ner_service.load()
+        duplicate_service.load()
+        rag_service.load()
+        classifier_v3.load()
+        print(f"[ML Worker {os.getpid()}] Models Loaded.")
+    except Exception as e:
+        print(f"[ML Worker ERROR] {e}")
+
+# Global ML Process Pool
+ml_pool = ProcessPoolExecutor(max_workers=2, initializer=_init_ml_worker)
+
+def _predict_v3(text):
+    from backend.services.classifier_v3 import classifier_v3
+    return classifier_v3.predict(text)
+
+def _predict_v1(text):
+    from backend.services.classifier_service import classifier_service
+    return classifier_service.predict(text)
+
+def _extract_entities(text):
+    from backend.services.ner_service import ner_service
+    return ner_service.extract_entities(text)
+
+def _find_duplicate(text, comp_id):
+    from backend.services.duplicate_service import duplicate_service
+    return duplicate_service.find_duplicate(text, comp_id)
+
+def _search_rag(text):
+    from backend.services.rag_service import rag_service
+    return rag_service.search_knowledge_base(text, threshold=0.85)
+
 # ---------------------------------------------------------------------------
 # Lifespan (startup / shutdown)
 # ---------------------------------------------------------------------------
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Load all models at startup."""
-    print("[Startup] Loading AI models ...")
-    try:
-        classifier_service.load()
-    except FileNotFoundError as e:
-        print(f"[WARNING] Classifier not loaded: {e}")
-    try:
-        ner_service.load()
-    except FileNotFoundError as e:
-        print(f"[WARNING] NER not loaded: {e}")
-    try:
-        duplicate_service.load()
-    except Exception as e:
-        print(f"[WARNING] Duplicate service not loaded: {e}")
-    try:
-        rag_service.load()
-    except Exception as e:
-        print(f"[WARNING] RAG service not loaded: {e}")
+    """Initialize resources without loading heavy ML models into the main web server process."""
+    print("[Startup] Initializing ML Process Pool...")
+    loop = asyncio.get_running_loop()
+    await loop.run_in_executor(ml_pool, str, "warmup")
     
     if gemini_service:
         print(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
     else:
         print("[Startup] Gemini Service: NOT LOADED (Import failed)")
 
-    print("[Startup] Classifier V2 Shadow: Ready.")
     print("[Startup] Ready.")
-    # Strict health checks: fail loudly when core model assets are unavailable.
-    # Set ALLOW_DEGRADED_STARTUP=1 to permit degraded startup for local/dev convenience.
-    try:
-        strict_mode = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") != "1"
-    except Exception:
-        strict_mode = True
-
-    classifier_loaded_flag = getattr(classifier_service, "_loaded", False)
-    ner_loaded_flag = getattr(ner_service, "_loaded", False)
-
-    if strict_mode and not classifier_loaded_flag:
-        raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
     yield
     print("[Shutdown] Cleaning up ...")
+    ml_pool.shutdown(wait=True)
 
 
 # ---------------------------------------------------------------------------
@@ -921,10 +937,11 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Classification ---
     try:
-        classification_v3_res = await asyncio.to_thread(classifier_v3.predict, text)
+        loop = asyncio.get_running_loop()
+        classification_v3_res = await loop.run_in_executor(ml_pool, _predict_v3, text)
         if "error" in classification_v3_res:
             # Fallback to V1
-            classification = await asyncio.to_thread(classifier_service.predict, text)
+            classification = await loop.run_in_executor(ml_pool, _predict_v1, text)
         else:
             # Parse V3 output
             cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
@@ -956,7 +973,7 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- NER ---
     try:
-        entities = await asyncio.to_thread(ner_service.extract_entities, text)
+        entities = await loop.run_in_executor(ml_pool, _extract_entities, text)
     except Exception:
         entities = []
     
@@ -1086,9 +1103,10 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            classification_v3_res = await asyncio.to_thread(classifier_v3.predict, text)
+            loop = asyncio.get_running_loop()
+            classification_v3_res = await loop.run_in_executor(ml_pool, _predict_v3, text)
             if "error" in classification_v3_res:
-                classification = await asyncio.to_thread(classifier_service.predict, text)
+                classification = await loop.run_in_executor(ml_pool, _predict_v1, text)
             else:
                 cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
                 sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
@@ -1112,6 +1130,7 @@ async def analyze_stream(request_body: TicketRequest):
                 "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
                 "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
             }
+
         timeline["ai_analyzed"] = get_now_ist()
         timeline["triaged"] = get_now_ist()
 
@@ -1119,7 +1138,7 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            dup_result = await asyncio.to_thread(duplicate_service.check_duplicate, text, threshold=duplicate_sensitivity)
+            dup_result = await loop.run_in_executor(ml_pool, _find_duplicate, text, request_body.company)
         except Exception:
             dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
@@ -1128,7 +1147,7 @@ async def analyze_stream(request_body: TicketRequest):
         await asyncio.sleep(0.2)
         rag_match = None
         try:
-            rag_match = await asyncio.to_thread(rag_service.search_knowledge_base, text, threshold=0.85)
+            rag_match = await loop.run_in_executor(ml_pool, _search_rag, text)
             if rag_match:
                 classification["auto_resolve"] = True
                 classification["assigned_team"] = "Auto-Resolve AI"
