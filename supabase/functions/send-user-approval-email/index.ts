@@ -1,16 +1,10 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import 'https://deno.land/std@0.168.0/http/server.ts';
+import { corsHeaders as sharedCorsHeaders, handleCors } from "../_shared/cors.ts";
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-serve(async (req) => {
-    // Handle CORS preflight requests
-    if (req.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers: corsHeaders });
-    }
+Deno.serve(async (req) => {
+    // Handle CORS via shared utility
+    const corsResp = handleCors(req);
+    if (corsResp) return corsResp;
 
     try {
         const { userId, email, name, company } = await req.json();
@@ -54,7 +48,7 @@ serve(async (req) => {
             }),
             {
                 status: 200,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                headers: { ...sharedCorsHeaders(), 'Content-Type': 'application/json' }
             }
         );
     } catch (error) {
@@ -62,7 +56,7 @@ serve(async (req) => {
             JSON.stringify({ error: error.message }),
             {
                 status: 400,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+                headers: { ...sharedCorsHeaders(), 'Content-Type': 'application/json' }
             }
         );
     }

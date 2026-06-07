@@ -14,11 +14,7 @@
  * Keys are NEVER exposed in the browser JavaScript bundle.
  */
 
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "https://helpdeskaiv1.vercel.app",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization, apikey, x-client-info",
-};
+import { corsHeaders, handleCors } from "../_shared/cors.ts";
 
 // Key pools — pulled from Supabase Secrets (env vars, never shipped to browser)
 const GEMINI_KEYS = [
@@ -60,12 +56,14 @@ async function tryWithFailover(keys, buildRequest) {
   throw lastError ?? new Error("All keys exhausted");
 }
 
+// CORS headers helper — reuses the shared corsHeaders() function
+const CH = () => corsHeaders();
+
 // Deno.serve is built into the Deno runtime — no import required
 Deno.serve(async (req) => {
-  // Handle CORS preflight
-  if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: CORS_HEADERS });
-  }
+  // Handle CORS preflight via shared utility
+  const corsResp = handleCors(req);
+  if (corsResp) return corsResp;
 
   try {
     const body = await req.json();
@@ -121,20 +119,20 @@ Deno.serve(async (req) => {
     else {
       return new Response(
         JSON.stringify({ error: `Unknown provider: "${provider}". Use gemini | openrouter | groq` }),
-        { status: 400, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...CH(), "Content-Type": "application/json" } }
       );
     }
 
     const data = await upstreamResponse.json();
     return new Response(JSON.stringify(data), {
       status: upstreamResponse.status,
-      headers: { ...CORS_HEADERS, "Content-Type": "application/json" },
+      headers: { ...CH(), "Content-Type": "application/json" },
     });
 
   } catch (err) {
     return new Response(
       JSON.stringify({ error: err instanceof Error ? err.message : "Proxy error" }),
-      { status: 500, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...CH(), "Content-Type": "application/json" } }
     );
   }
 });
