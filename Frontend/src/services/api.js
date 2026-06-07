@@ -2,7 +2,7 @@ import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
 
-const USE_MOCK = true;
+const USE_MOCK = import.meta.env.VITE_USE_MOCK === 'true';
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,6 +30,14 @@ const setStorage = (key, data) => {
     console.warn(`[Storage Error] Failed to write '${key}'. Possible quota exceeded:`, error);
     // If quota exceeded, we could trim the data, but for now we fail gracefully.
   }
+};
+
+// Validate AI backend response shape before using it
+const validateAIResponse = (result) => {
+  if (!result || typeof result !== 'object') return false;
+  // Required fields for ticket routing to work
+  const required = ['category', 'subcategory', 'priority'];
+  return required.every(field => result[field] != null && result[field] !== '');
 };
 
 export const api = {
@@ -78,6 +86,25 @@ export const api = {
 
       const result = response.data;
 
+      // Validate response shape before using it
+      if (!validateAIResponse(result)) {
+        console.warn('[api] predictTicket: malformed response from backend, using fallback', result);
+        await delay(1000);
+        return {
+          data: {
+            ticket_id: "TCKT-MOCK-" + Math.floor(Math.random() * 10000),
+            category: "Other",
+            priority: "Medium",
+            assigned_team: "General Support",
+            auto_resolve: false,
+            routing_confidence: 0.5,
+            duplicate_probability: 0.0,
+            summary: issueText.substring(0, 50) + (issueText.length > 50 ? '...' : ''),
+            entities: []
+          }
+        };
+      }
+
       // Map backend response to frontend format
       return {
         data: {
@@ -88,14 +115,14 @@ export const api = {
           assigned_team: result.assigned_team,
           auto_resolve: result.auto_resolve,
           routing_confidence: result.confidence,
-          duplicate_probability: result.duplicate_ticket.similarity,
-          duplicate_ticket: result.duplicate_ticket.duplicate_ticket_id,
+          duplicate_probability: result.duplicate_ticket?.similarity ?? 0.0,
+          duplicate_ticket: result.duplicate_ticket?.duplicate_ticket_id ?? null,
           summary: result.summary,
-          entities: result.entities,
+          entities: result.entities ?? [],
           reasoning: result.reasoning,
           decision_factors: result.decision_factors,
-          image_description: result.image_description,
-          ocr_text: result.ocr_text
+          image_description: result.image_description ?? '',
+          ocr_text: result.ocr_text ?? ''
         }
       };
     } catch (error) {
