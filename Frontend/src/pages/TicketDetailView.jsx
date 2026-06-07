@@ -76,6 +76,12 @@ function TicketDetailView() {
         const text = newMessage.trim();
         if (!text || isSending) return;
 
+        // Guard: prevent appending to wrong ticket if ticket_id is somehow null
+        if (!ticket?.ticket_id) {
+            console.warn('[TicketDetailView] Cannot send message: ticket_id is null');
+            return;
+        }
+
         setIsSending(true);
         setNewMessage('');
 
