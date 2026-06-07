@@ -78,16 +78,17 @@ const AIProcessing = () => {
                             type: contentType
                         });
 
-                        const fileName =
-                            `${user?.id || 'anon'}/${Date.now()}-${Math.random()
-                                .toString(36)
-                                .substring(7)}.${fileExt}`;
+                        // Use crypto.randomUUID() for collision-resistant filenames
+                        // No 'anon' fallback — require a user context for uploads
+                        const uniqueId = crypto.randomUUID();
+                        const userIdPrefix = user?.id ? `${user.id}` : `unauthenticated`;
+                        const fileName = `${userIdPrefix}/${uniqueId}.${fileExt}`;
 
                         const { error: uploadError } = await supabase.storage
                             .from('ticket-attachments')
                             .upload(fileName, blob, {
                                 contentType,
-                                upsert: true
+                                upsert: false
                             });
 
                         if (!uploadError) {
@@ -97,6 +98,8 @@ const AIProcessing = () => {
                                 .getPublicUrl(fileName);
 
                             uploadedImageUrl = publicUrlData?.publicUrl;
+                        } else {
+                            console.error("[AIProcessing] Image upload failed:", uploadError);
                         }
 
                     } catch (err) {
