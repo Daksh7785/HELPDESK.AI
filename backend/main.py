@@ -88,9 +88,9 @@ def _startup_fatal(message: str) -> None:
 try:
     from supabase import create_client, Client
     url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
-        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set in backend/.env")
         supabase = None
     else:
         from backend.auth.crypto import wrap_client
@@ -2580,6 +2580,9 @@ async def get_tickets(
     if company_scope:
         query = query.eq("company_id", company_scope)
         
+    # Apply pagination
+    query = query.range(offset, offset + limit - 1)
+        
     res = query.execute()
     return [decrypt_ticket_pii(t) for t in res.data]
 
@@ -2817,7 +2820,7 @@ async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_
             "ticket_id": ticket_id,
             "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
             "sender_name": "AI Assistant",
-            "sender_role": "admin",
+            "sender_role": "system",
             "message": msg
         }).execute()
         
@@ -3563,7 +3566,7 @@ async def analyze_only(request_body: TicketRequest, request: Request, current_us
     timeline["triaged"] = get_now_ist()
 
     try:
-        entities = ner_service.extract_entities(text)
+        entities = await asyncio.to_thread(ner_service.extract_entities, text)
     except Exception:
         entities = []
     timeline["metadata_harvested"] = get_now_ist()
@@ -3591,7 +3594,7 @@ async def analyze_only(request_body: TicketRequest, request: Request, current_us
     # --- RAG Knowledge Base Check ---
     rag_match = None
     try:
-        rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+        rag_match = await asyncio.to_thread(rag_service.search_knowledge_base, text, threshold=0.85)
         if rag_match:
             # Only allow RAG to enable auto-resolve if the company toggle permits it.
             # Fixes #913: the toggle in Admin Settings had no effect because RAG
@@ -3724,7 +3727,7 @@ async def analyze_stream(request: Request, request_body: TicketRequest):
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
             try:
-                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                vision_result = await asyncio.to_thread(gemini_service.analyze_image, request_body.image_base64, text)
                 gemini_analysis.update(vision_result)
             except Exception as e:
                 pass
@@ -3744,7 +3747,7 @@ async def analyze_stream(request: Request, request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Extracting technical entities', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            entities = ner_service.extract_entities(text)
+            entities = await asyncio.to_thread(ner_service.extract_entities, text)
         except Exception:
             entities = []
         timeline["metadata_harvested"] = get_now_ist()
@@ -3808,7 +3811,7 @@ async def analyze_stream(request: Request, request_body: TicketRequest):
         await asyncio.sleep(0.2)
         rag_match = None
         try:
-            rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+            rag_match = await asyncio.to_thread(rag_service.search_knowledge_base, text, threshold=0.85)
             if rag_match:
                 # Only allow RAG to enable auto-resolve if the company toggle permits it.
                 # Fixes #913: the toggle in Admin Settings had no effect because RAG
@@ -3915,7 +3918,7 @@ async def analyze_ticket_v2(request: Request, body: TicketRequest):
     """V2 AI analysis with improved classifier. Returns category, subcategory, priority, and auto-resolve flag."""
     text = sanitize_text(body.text) or ""
     try:
-        prediction = classifier_v2.predict(text)
+        prediction = await asyncio.to_thread(classifier_v2.predict, text)
         return {
             "status": "success",
             "category": prediction["category"]["prediction"],
