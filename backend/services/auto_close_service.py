@@ -18,7 +18,6 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
 
-from backend.utils.date_utils import parse_iso_string
 from supabase import create_client
 from dotenv import load_dotenv
 
