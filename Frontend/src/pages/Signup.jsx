@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 import { supabase } from "../lib/supabaseClient";
-import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, CheckCircle2, ChevronDown, Search, Building2, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, CheckCircle2, ChevronDown, Search, Building2, ArrowLeft, AlertCircle } from "lucide-react";
 
 function Signup() {
   const [email, setEmail] = useState("");
@@ -252,7 +252,7 @@ function Signup() {
 
           {error && (
             <div className="mb-6 flex items-start gap-3" style={{ background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: '12px', padding: '14px 16px' }}>
-              <div className="rounded-full p-1 mt-0.5" style={{ background: '#fee2e2' }}><ArrowRight className="w-3 h-3 text-red-600 rotate-45" /></div>
+              <div className="rounded-full p-1 mt-0.5" style={{ background: '#fee2e2' }}><AlertCircle className="w-4 h-4 text-red-600" /></div>
               <p className="text-sm font-medium" style={{ color: '#b91c1c' }}>{error}</p>
             </div>
           )}
