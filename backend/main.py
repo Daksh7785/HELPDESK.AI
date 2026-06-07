@@ -106,11 +106,23 @@ redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
 if _REDIS_PASSWORD and _REDIS_PASSWORD not in redis_url:
     redis_url = f"redis://:{_REDIS_PASSWORD}@{redis_url.split('://', 1)[-1]}"
 try:
-    redis_client = redis.from_url(redis_url, decode_responses=True)
+    # Set explicit connection timeout, socket timeout, and reconnect policies
+    redis_client = redis.from_url(
+        redis_url,
+        decode_responses=True,
+        socket_connect_timeout=1.0,
+        socket_timeout=1.0,
+        retry_on_timeout=True,
+        health_check_interval=30
+    )
+    # Verify initial connection
     redis_client.ping()
     print("[Startup] Redis Cache connected successfully.")
+except (redis.exceptions.ConnectionError, redis.exceptions.TimeoutError) as ce:
+    print(f"[WARNING] Redis service is offline on startup (will retry on demand): {ce}")
 except Exception as e:
-    print(f"[WARNING] Redis initialization failed: {e}")
+    print(f"[WARNING] Redis initialization failed (URL format or configuration issue): {e}")
+    # Disable client for non-connectivity configuration errors
     redis_client = None
 
 
