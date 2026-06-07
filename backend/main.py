@@ -536,74 +536,87 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(current_user: dict = Depends(get_current_user), company_id: str | None = None):
+    """Fetch persistent tickets from Supabase. Scoped to the authenticated user's company."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
-    
+
+    # Resolve the caller's company_id from their profile
+    caller_profile = _resolve_caller_company(current_user)
+    caller_company_id = caller_profile.get("company_id")
+
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
+
+    # If user provides a company_id filter, ensure it matches their own company
     if company_id:
+        if caller_company_id and company_id != caller_company_id:
+            raise HTTPException(status_code=403, detail="Not authorized to view tickets from this tenant")
         query = query.eq("company_id", company_id)
-        
+    elif caller_company_id:
+        # Restrict to caller's own company if they have a tenant assignment
+        query = query.eq("company_id", caller_company_id)
+
     res = query.execute()
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, current_user: dict = Depends(get_current_user)):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
-    This is called AFTER the user confirms the analysis results.
+    The authenticated user's identity is used — user_id from the body is ignored for authorization.
     """
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
     logger = logging.getLogger(__name__)
     try:
-        final_data = request_body.dict()
+        # Use the authenticated user's ID, not the one from the request body
+        authenticated_user_id = current_user.get("id") or current_user.get("sub")
+        if not authenticated_user_id:
+            raise HTTPException(status_code=401, detail="Authenticated user ID not resolvable")
 
-        # Resolve tenant linkage from user profile with authorization validation.
+        final_data = request_body.dict()
+        # Override user_id with authenticated user
+        final_data["user_id"] = authenticated_user_id
+
+        # Resolve tenant linkage from the authenticated user's profile
         profile = {}
-        if request_body.user_id:
-            try:
-                profile_res = (
-                    supabase.table("profiles")
-                    .select("company_id, company")
-                    .eq("id", request_body.user_id)
-                    .single()
-                    .execute()
-                )
-                profile = profile_res.data or {}
-                if not profile:
-                    raise HTTPException(status_code=404, detail="User profile not found")
-            except HTTPException:
-                raise
-            except Exception as profile_error:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
-                logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
-                raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
+        try:
+            profile_res = (
+                supabase.table("profiles")
+                .select("company_id, company")
+                .eq("id", authenticated_user_id)
+                .single()
+                .execute()
+            )
+            profile = profile_res.data or {}
+            if not profile:
+                raise HTTPException(status_code=404, detail="User profile not found")
+        except HTTPException:
+            raise
+        except Exception as profile_error:
+            user_hash = hashlib.sha256(str(authenticated_user_id).encode()).hexdigest()[:8]
+            logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
+            raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
 
         # Validate tenant consistency and authorization.
         profile_company_id = profile.get("company_id")
         if final_data.get("company_id"):
-            # User provided company_id: verify it matches their profile.
             if profile_company_id and final_data["company_id"] != profile_company_id:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                user_hash = hashlib.sha256(str(authenticated_user_id).encode()).hexdigest()[:8]
                 logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
                 raise HTTPException(status_code=403, detail="User not authorized for this tenant")
         elif profile_company_id:
-            # Backfill company_id from profile.
             final_data["company_id"] = profile_company_id
-        elif request_body.user_id:
-            # User has no tenant assignment.
+        else:
             raise HTTPException(status_code=400, detail="User has no tenant assignment")
 
         # Backfill company name if missing.
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
-        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        user_hash = hashlib.sha256(str(authenticated_user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
-
 
         res = supabase.table("tickets").insert(final_data).execute()
         
@@ -636,7 +649,7 @@ async def save_ticket(request_body: TicketSaveRequest):
 
         supabase.table("ticket_messages").insert({
             "ticket_id": ticket_id,
-            "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
+            "sender_id": "00000000-0000-0000-0000-000000000000",
             "sender_name": "AI Assistant",
             "sender_role": "admin",
             "message": msg
@@ -652,12 +665,20 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
-    """Fetch single persistent ticket."""
+async def get_ticket_by_id(ticket_id: str, current_user: dict = Depends(get_current_user)):
+    """Fetch single persistent ticket. Scoped to the authenticated user's tenant."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    # Resolve the caller's company_id
+    caller_profile = _resolve_caller_company(current_user)
+    caller_company_id = caller_profile.get("company_id")
+    
+    query = supabase.table("tickets").select("*").eq("id", ticket_id)
+    if caller_company_id:
+        query = query.eq("company_id", caller_company_id)
+    
+    res = query.execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
@@ -1116,6 +1137,17 @@ def _clear_session_cookies(response: Response) -> None:
     kwargs = _cookie_kwargs()
     response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
     response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+
+def _resolve_caller_company(current_user: dict) -> dict:
+    """Fetch the profile (company_id, company) for the authenticated user."""
+    user_id = current_user.get("id") or current_user.get("sub")
+    if not user_id or not supabase:
+        return {}
+    try:
+        res = supabase.table("profiles").select("company_id, company").eq("id", user_id).single().execute()
+        return res.data or {}
+    except Exception:
+        return {}
 
 async def get_current_user(request: Request) -> dict:
     token = extract_token(request)
