@@ -8,10 +8,10 @@ fastapi>=0.104.0
 uvicorn>=0.24.0
 openpyxl>=3.1.0
 accelerate>=0.25.0
-google-genai
-pillow
-python-dotenv
-easyocr
+google-genai==1.47.0
+pillow==11.3.0
+python-dotenv==1.2.1
+easyocr==1.7.2
 slowapi>=0.1.9
 supabase==2.22.4
 storage3==2.22.4
