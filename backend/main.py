@@ -103,7 +103,7 @@ def get_system_settings(company_id: str) -> dict:
     return defaults
 class TicketRequest(BaseModel):
     text: str = Field(..., max_length=20000)
-    image_base64: str = Field(default="", max_length=15000000)
+    image_base64: str = Field(default="", max_length=2000000) # Capped at ~1.5MB to prevent OOM
     image_text: str = Field(default="", max_length=50000) # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
