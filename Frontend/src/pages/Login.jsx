@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import useAuthStore from "../store/authStore";
-import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, BrainCircuit, AlertCircle, Loader2, ArrowLeft } from "lucide-react";
 import ThemeToggle from "../components/shared/ThemeToggle";
 import { useTheme } from "../components/shared/ThemeProvider";
 
@@ -263,7 +263,7 @@ function Login() {
           {error && (
             <div className="mb-6 flex items-start gap-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl p-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className="rounded-full p-1 mt-0.5 bg-red-100 dark:bg-red-900/40">
-                <ArrowRight className="w-3 h-3 text-red-600 dark:text-red-400 rotate-45" />
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-600 dark:text-red-400" />
               </div>
               <p className="text-sm font-medium text-red-700 dark:text-red-300">{error}</p>
             </div>
