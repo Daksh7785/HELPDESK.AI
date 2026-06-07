@@ -62,6 +62,95 @@ from backend.services.rag_service import RagService
 
 
 # ---------------------------------------------------------------------------
+# Auth helpers — must be defined before any route using Depends(get_current_user)
+# ---------------------------------------------------------------------------
+ACCESS_COOKIE = "access_token"
+REFRESH_COOKIE = "refresh_token"
+ACCESS_MAX_AGE = 60 * 60
+REFRESH_MAX_AGE = 60 * 60 * 24 * 7
+
+def _cookie_kwargs() -> dict:
+    secure = os.getenv("ENV", "production").lower() != "development"
+    return {
+        "httponly": True,
+        "secure": secure,
+        "samesite": "strict",
+        "path": "/",
+    }
+
+def extract_token(request: Request) -> str | None:
+    cookie_token = request.cookies.get(ACCESS_COOKIE)
+    if cookie_token:
+        return cookie_token
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip() or None
+    return None
+
+def _set_session_cookies(response: Response, session) -> None:
+    if not session or not getattr(session, "access_token", None):
+        return
+    response.set_cookie(
+        ACCESS_COOKIE,
+        session.access_token,
+        max_age=ACCESS_MAX_AGE,
+        **_cookie_kwargs(),
+    )
+    refresh = getattr(session, "refresh_token", None)
+    if refresh:
+        response.set_cookie(
+            REFRESH_COOKIE,
+            refresh,
+            max_age=REFRESH_MAX_AGE,
+            **_cookie_kwargs(),
+        )
+
+def _clear_session_cookies(response: Response) -> None:
+    kwargs = _cookie_kwargs()
+    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
+    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+
+def _resolve_caller_company(current_user: dict) -> dict:
+    """Fetch the profile (company_id, company) for the authenticated user.
+    Raises HTTPException on failure — never returns an ambiguous empty dict."""
+    user_id = current_user.get("id") or current_user.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User identity not found in session")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection not initialized")
+    try:
+        res = supabase.table("profiles").select("company_id, company").eq("id", user_id).single().execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="User profile not found")
+        return res.data
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail=f"Failed to resolve tenant: {exc}") from exc
+
+async def get_current_user(request: Request) -> dict:
+    token = extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid session: {exc}",
+        ) from exc
+    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    if hasattr(user, "model_dump"):
+        return user.model_dump()
+    if hasattr(user, "dict"):
+        return user.dict()
+    return dict(user)
+
+# ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
 def get_system_settings(company_id: str) -> dict:
@@ -541,19 +630,19 @@ async def get_tickets(current_user: dict = Depends(get_current_user), company_id
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
-    # Resolve the caller's company_id from their profile
+    # Resolve company_id — fail closed if tenant not resolvable
     caller_profile = _resolve_caller_company(current_user)
     caller_company_id = caller_profile.get("company_id")
+    if not caller_company_id:
+        raise HTTPException(status_code=403, detail="Authenticated user has no tenant assignment")
 
     query = supabase.table("tickets").select("*").order("created_at", desc=True)
 
-    # If user provides a company_id filter, ensure it matches their own company
     if company_id:
-        if caller_company_id and company_id != caller_company_id:
+        if company_id != caller_company_id:
             raise HTTPException(status_code=403, detail="Not authorized to view tickets from this tenant")
         query = query.eq("company_id", company_id)
-    elif caller_company_id:
-        # Restrict to caller's own company if they have a tenant assignment
+    else:
         query = query.eq("company_id", caller_company_id)
 
     res = query.execute()
@@ -670,13 +759,13 @@ async def get_ticket_by_id(ticket_id: str, current_user: dict = Depends(get_curr
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    # Resolve the caller's company_id
+    # Resolve company_id — fail closed if tenant not resolvable
     caller_profile = _resolve_caller_company(current_user)
     caller_company_id = caller_profile.get("company_id")
+    if not caller_company_id:
+        raise HTTPException(status_code=403, detail="Authenticated user has no tenant assignment")
     
-    query = supabase.table("tickets").select("*").eq("id", ticket_id)
-    if caller_company_id:
-        query = query.eq("company_id", caller_company_id)
+    query = supabase.table("tickets").select("*").eq("id", ticket_id).eq("company_id", caller_company_id)
     
     res = query.execute()
     if not res.data:
@@ -1090,87 +1179,8 @@ async def analyze_ticket_v2(request: TicketRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------------------------------------------------------------
-# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
+# Auth endpoints (Depends(get_current_user) is safe here — helper is defined above)
 # ---------------------------------------------------------------------------
-ACCESS_COOKIE = "access_token"
-REFRESH_COOKIE = "refresh_token"
-ACCESS_MAX_AGE = 60 * 60
-REFRESH_MAX_AGE = 60 * 60 * 24 * 7
-
-def _cookie_kwargs() -> dict:
-    secure = os.getenv("ENV", "production").lower() != "development"
-    return {
-        "httponly": True,
-        "secure": secure,
-        "samesite": "strict",
-        "path": "/",
-    }
-
-def extract_token(request: Request) -> str | None:
-    cookie_token = request.cookies.get(ACCESS_COOKIE)
-    if cookie_token:
-        return cookie_token
-    auth = request.headers.get("authorization") or request.headers.get("Authorization")
-    if auth and auth.lower().startswith("bearer "):
-        return auth.split(" ", 1)[1].strip() or None
-    return None
-
-def _set_session_cookies(response: Response, session) -> None:
-    if not session or not getattr(session, "access_token", None):
-        return
-    response.set_cookie(
-        ACCESS_COOKIE,
-        session.access_token,
-        max_age=ACCESS_MAX_AGE,
-        **_cookie_kwargs(),
-    )
-    refresh = getattr(session, "refresh_token", None)
-    if refresh:
-        response.set_cookie(
-            REFRESH_COOKIE,
-            refresh,
-            max_age=REFRESH_MAX_AGE,
-            **_cookie_kwargs(),
-        )
-
-def _clear_session_cookies(response: Response) -> None:
-    kwargs = _cookie_kwargs()
-    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
-    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
-
-def _resolve_caller_company(current_user: dict) -> dict:
-    """Fetch the profile (company_id, company) for the authenticated user."""
-    user_id = current_user.get("id") or current_user.get("sub")
-    if not user_id or not supabase:
-        return {}
-    try:
-        res = supabase.table("profiles").select("company_id, company").eq("id", user_id).single().execute()
-        return res.data or {}
-    except Exception:
-        return {}
-
-async def get_current_user(request: Request) -> dict:
-    token = extract_token(request)
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not supabase:
-        raise HTTPException(status_code=503, detail="Database connection offline")
-    try:
-        result = supabase.auth.get_user(token)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=401,
-            detail=f"Invalid session: {exc}",
-        ) from exc
-    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    if hasattr(user, "model_dump"):
-        return user.model_dump()
-    if hasattr(user, "dict"):
-        return user.dict()
-    return dict(user)
-
 class LoginBody(BaseModel):
     email: str
     password: str
