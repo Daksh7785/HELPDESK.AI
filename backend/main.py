@@ -40,6 +40,7 @@ try:
     from supabase import create_client, Client
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
+    anon_key = os.environ.get("SUPABASE_ANON_KEY")
     if not url or not key:
         print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set in backend/.env")
         supabase = None
@@ -49,6 +50,25 @@ except (ImportError, Exception) as e:
     print(f"[WARNING] Supabase initialization failed: {e}")
     supabase = None
     Client = None
+
+def get_user_supabase(request: Request):
+    """Dependency to create a scoped Supabase client using the user's JWT token."""
+    if not url or not anon_key:
+        raise HTTPException(status_code=500, detail="Supabase Anon Key or URL missing in backend/.env")
+    
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    
+    token = auth_header.split(" ")[1]
+    
+    try:
+        user_client = create_client(url, anon_key, options={
+            "global": {"headers": {"Authorization": f"Bearer {token}"}}
+        })
+        return user_client
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to initialize user client: {str(e)}")
 
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -542,17 +562,18 @@ async def get_tickets(
     request: Request,
     company_id: str | None = None,
     limit: int = 50,
-    offset: int = 0
+    offset: int = 0,
+    user_client = Depends(get_user_supabase)
 ):
     """Fetch persistent tickets from Supabase."""
-    if not supabase:
+    if not user_client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
     # Prevent excessive limit values
     if limit > 100:
         limit = 100
         
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
+    query = user_client.table("tickets").select("*").order("created_at", desc=True)
     if company_id:
         query = query.eq("company_id", company_id)
         
@@ -564,12 +585,12 @@ async def get_tickets(
 
 @app.post("/tickets/save")
 @limiter.limit("30/minute")
-async def save_ticket(request_body: TicketSaveRequest, request: Request):
+async def save_ticket(request_body: TicketSaveRequest, request: Request, user_client = Depends(get_user_supabase)):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
     """
-    if not supabase:
+    if not user_client:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
 
     logger = logging.getLogger(__name__)
@@ -581,7 +602,7 @@ async def save_ticket(request_body: TicketSaveRequest, request: Request):
     
     token = auth_header.split(" ")[1]
     try:
-        user_response = supabase.auth.get_user(token)
+        user_response = user_client.auth.get_user(token)
         if not user_response or not getattr(user_response, "user", None):
             raise HTTPException(status_code=401, detail="Invalid token")
         trusted_user_id = user_response.user.id
@@ -605,7 +626,7 @@ async def save_ticket(request_body: TicketSaveRequest, request: Request):
         if request_body.user_id:
             try:
                 profile_res = (
-                    supabase.table("profiles")
+                    user_client.table("profiles")
                     .select("company_id, company")
                     .eq("id", request_body.user_id)
                     .single()
@@ -644,7 +665,7 @@ async def save_ticket(request_body: TicketSaveRequest, request: Request):
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
-        res = supabase.table("tickets").insert(final_data).execute()
+        res = user_client.table("tickets").insert(final_data).execute()
         
         if not res.data:
             raise Exception("Failed to insert ticket into database.")
@@ -673,7 +694,7 @@ async def save_ticket(request_body: TicketSaveRequest, request: Request):
         if final_data["auto_resolve"]:
             msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps."
 
-        supabase.table("ticket_messages").insert({
+        user_client.table("ticket_messages").insert({
             "ticket_id": ticket_id,
             "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
             "sender_name": "AI Assistant",
@@ -692,12 +713,12 @@ async def save_ticket(request_body: TicketSaveRequest, request: Request):
 
 @app.get("/tickets/{ticket_id}")
 @limiter.limit("60/minute")
-async def get_ticket_by_id(ticket_id: str, request: Request):
+async def get_ticket_by_id(ticket_id: str, request: Request, user_client = Depends(get_user_supabase)):
     """Fetch single persistent ticket."""
-    if not supabase:
+    if not user_client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    res = user_client.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
@@ -705,12 +726,12 @@ async def get_ticket_by_id(ticket_id: str, request: Request):
 
 @app.post("/tickets")
 @limiter.limit("30/minute")
-async def create_ticket(ticket: dict, request: Request):
+async def create_ticket(ticket: dict, request: Request, user_client = Depends(get_user_supabase)):
     """Save a new ticket into the system (persisted to Supabase)."""
-    if not supabase:
+    if not user_client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    res = supabase.table("tickets").insert(ticket).execute()
+    res = user_client.table("tickets").insert(ticket).execute()
     if not res.data:
         raise HTTPException(status_code=400, detail="Failed to create ticket")
     
@@ -720,12 +741,12 @@ async def create_ticket(ticket: dict, request: Request):
 
 @app.patch("/tickets/{ticket_id}")
 @limiter.limit("60/minute")
-async def update_ticket(ticket_id: str, updates: dict, request: Request):
+async def update_ticket(ticket_id: str, updates: dict, request: Request, user_client = Depends(get_user_supabase)):
     """Partially update a ticket's fields (e.g., status, viewed_at) via Supabase."""
-    if not supabase:
+    if not user_client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    res = supabase.table("tickets").update(updates).eq("id", ticket_id).execute()
+    res = user_client.table("tickets").update(updates).eq("id", ticket_id).execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
         
