@@ -2309,37 +2309,8 @@ async def agent_scorecard(
 # ---------------------------------------------------------------------------
 # Admin Correction Logging endpoint
 # ---------------------------------------------------------------------------
-def extract_token(request: Request) -> str | None:
-    cookie_token = request.cookies.get("access_token")
-    if cookie_token:
-        return cookie_token
-    auth = request.headers.get("authorization") or request.headers.get("Authorization")
-    if auth and auth.lower().startswith("bearer "):
-        return auth.split(" ", 1)[1].strip() or None
-    return None
-
-async def get_current_user(request: Request) -> dict:
-    token = extract_token(request)
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not supabase:
-        raise HTTPException(status_code=503, detail="Database connection offline")
-    try:
-        result = supabase.auth.get_user(token)
-    except Exception as exc:
-        logger.error("Session validation failed", exc_info=exc)
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid session",
-        ) from exc
-    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    if hasattr(user, "model_dump"):
-        return user.model_dump()
-    if hasattr(user, "dict"):
-        return user.dict()
-    return dict(user)
+# NOTE: get_current_user and extract_token are imported from
+# backend.auth_cookie (line 147) which includes Redis token denylist checks.
 
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 _corrections_lock = asyncio.Lock()
@@ -2436,54 +2407,6 @@ async def log_correction(request: Request, user: dict = Depends(get_current_user
         return {"status": "error", "message": str(e)}
 
 
-# ---------------------------------------------------------------------------
-# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
-# ---------------------------------------------------------------------------
-ACCESS_COOKIE = "access_token"
-REFRESH_COOKIE = "refresh_token"
-ACCESS_MAX_AGE = 60 * 60
-REFRESH_MAX_AGE = 60 * 60 * 24 * 7
-
-def _cookie_kwargs() -> dict:
-    secure = os.getenv("ENV", "production").lower() != "development"
-    return {
-        "httponly": True,
-        "secure": secure,
-        "samesite": "strict",
-        "path": "/",
-    }
-
-def extract_token(request: Request) -> str | None:
-    cookie_token = request.cookies.get("access_token")
-    if cookie_token:
-        return cookie_token
-    auth = request.headers.get("authorization") or request.headers.get("Authorization")
-    if auth and auth.lower().startswith("bearer "):
-        return auth.split(" ", 1)[1].strip() or None
-    return None
-
-async def get_current_user(request: Request) -> dict:
-    token = extract_token(request)
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not supabase:
-        raise HTTPException(status_code=503, detail="Database connection offline")
-    try:
-        result = supabase.auth.get_user(token)
-    except Exception as exc:
-        logger.error("Session validation failed", exc_info=exc)
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid session",
-        ) from exc
-    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    if hasattr(user, "model_dump"):
-        return user.model_dump()
-    if hasattr(user, "dict"):
-        return user.dict()
-    return dict(user)
 
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
