@@ -9,6 +9,7 @@ const validatePassword = (password) => {
 import { create } from 'zustand';
 import { supabase } from '../lib/supabaseClient';
 import { API_CONFIG } from '../config';
+import { logger } from '../utils/logger';
 import useTicketStore from './ticketStore';
 
 const BACKEND_URL = API_CONFIG.BACKEND_URL;
