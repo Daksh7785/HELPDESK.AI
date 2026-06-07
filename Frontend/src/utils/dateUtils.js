@@ -5,14 +5,20 @@
 
 export const formatTimelineDate = (dateStr) => {
     if (!dateStr) return null;
-    
+
+    // Pre-validate: reject non-string or clearly malformed inputs early
+    if (typeof dateStr !== 'string') return 'Invalid Date';
+    const trimmed = dateStr.trim();
+    // Reject strings that are too short to be valid dates or contain only numbers/special chars
+    if (trimmed.length < 6 || /^\d+$/.test(trimmed)) return 'Invalid Date';
+
     // Ensure the date string is interpreted as UTC if it's an ISO string from DB
     let date;
-    if (typeof dateStr === 'string' && !dateStr.includes('Z') && !dateStr.includes('+')) {
+    if (!trimmed.includes('Z') && !trimmed.includes('+')) {
         // If it's a raw string without TZ, assume it was intended as UTC from our backend
-        date = new Date(dateStr + 'Z');
+        date = new Date(trimmed + 'Z');
     } else {
-        date = new Date(dateStr);
+        date = new Date(trimmed);
     }
 
     if (isNaN(date.getTime())) return 'Invalid Date';
