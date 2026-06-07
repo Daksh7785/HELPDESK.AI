@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import useAuthStore from "../store/authStore";
 import { supabase } from "../lib/supabaseClient";
-import { Eye, EyeOff, BrainCircuit, ArrowRight, Loader2, CheckCircle2, ChevronDown, Search, Building2, ArrowLeft } from "lucide-react";
+import { Eye, EyeOff, BrainCircuit, AlertCircle, Loader2, CheckCircle2, ChevronDown, Search, Building2, ArrowLeft } from "lucide-react";
 import { getPasswordValidation, getPasswordValidationMessage } from "../utils/passwordValidation";
 
 function Signup() {
@@ -244,7 +244,7 @@ function Signup() {
           {error && (
             <div className="mb-6 flex items-start gap-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/50 rounded-2xl p-4">
               <div className="rounded-full p-1 mt-0.5 bg-red-100 dark:bg-red-900/50">
-                <ArrowRight className="w-3 h-3 text-red-600 dark:text-red-400 rotate-45" />
+                <AlertCircle className="w-5 h-5 shrink-0 text-red-600 dark:text-red-400" />
               </div>
               <p className="text-sm font-medium text-red-700 dark:text-red-400">{error}</p>
             </div>
