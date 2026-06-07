@@ -20,6 +20,7 @@ export default function ContactSales() {
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [error, setError] = useState("");
     const [formData, setFormData] = useState({
         name: '',
         email: '',
