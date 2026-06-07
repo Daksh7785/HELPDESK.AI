@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
  
 import { motion } from 'framer-motion';
-import { Building2, Mail, User, Phone, MessageSquare, ArrowRight, CheckCircle2, ShieldCheck, Zap, Server } from 'lucide-react';
+import { Building2, Mail, User, Phone, MessageSquare, ArrowRight, CheckCircle2, ShieldCheck, Zap, Server, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 
@@ -9,6 +9,7 @@ export default function ContactSales() {
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isSuccess, setIsSuccess] = useState(false);
+    const [error, setError] = useState("");
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -45,7 +46,7 @@ export default function ContactSales() {
             setIsSuccess(true);
         } catch (error) {
             console.error('Error submitting form:', error);
-            alert("There was an issue submitting your request. Please try again.");
+            setError("There was an issue submitting your request. Please try again.");
         } finally {
             setIsSubmitting(false);
         }
@@ -248,6 +249,13 @@ export default function ContactSales() {
                                     onChange={handleChange}
                                 ></textarea>
                             </div>
+
+                            {error && (
+                                <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700">
+                                    <AlertCircle className="w-4 h-4 shrink-0" />
+                                    <span className="text-sm font-medium">{error}</span>
+                                </div>
+                            )}
 
                             <button 
                                 type="submit" 
