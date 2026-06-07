@@ -71,13 +71,14 @@ function Signup() {
   // Handle clicks outside dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
+      if (isLoadingCompanies) return; // Prevent closing dropdown on outside click during loading
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsDropdownOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [isLoadingCompanies]);
 
   // Filter companies
   useEffect(() => {
