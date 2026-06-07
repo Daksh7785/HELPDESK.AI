@@ -93,7 +93,6 @@ const useTicketStore = create(
 );
 
 // Listen for storage changes from other tabs to keep the queue in sync
-// Listen for storage changes from other tabs to keep the queue in sync
 window.addEventListener('storage', () => {
     // Force rehydration on any storage change to catch updates reliably
     useTicketStore.persist.rehydrate();
