@@ -9,7 +9,7 @@
  *   - Trend indicators
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Clock,
   AlertTriangle,
@@ -80,7 +80,7 @@ export default function SLADashboard({ compact = false, onViewAll }) {
   const [error, setError] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       setRefreshing(true);
       const [statsData, escData] = await Promise.all([
@@ -97,15 +97,15 @@ export default function SLADashboard({ compact = false, onViewAll }) {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [compact]);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   // Auto-refresh every 60 seconds
   useEffect(() => {
     const interval = setInterval(fetchData, 60_000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchData]);
 
   // ── KPIs ──────────────────────────────────────────────────────────────────
 
