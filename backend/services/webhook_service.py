@@ -6,7 +6,9 @@ Handles storing webhook URLs in Supabase and sending notifications.
 import json
 import logging
 import os
-from typing import Any, Optional
+from enum import Enum
+from typing import Optional
+from pydantic import BaseModel, ConfigDict, Field
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -14,15 +16,38 @@ logger = logging.getLogger(__name__)
 
 FRONTEND_BASE_URL = os.environ.get("FRONTEND_BASE_URL", "https://helpdeskaiv1.vercel.app").rstrip("/")
 
+class TicketPriority(str, Enum):
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    CRITICAL = "CRITICAL"
+    UNKNOWN = "UNKNOWN"
 
-def build_slack_payload(ticket: dict[str, Any]) -> dict:
-    ticket_id = str(ticket.get("id", "???"))
+
+class TicketPayload(BaseModel):
+    """
+    Validated webhook ticket payload schema.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(min_length=1)
+    subject: Optional[str] = Field(default="Untitled ticket", max_length=300)
+    priority: TicketPriority = TicketPriority.UNKNOWN
+    assigned_team: Optional[str] = Field(default="Unassigned", max_length=100)
+    company: Optional[str] = Field(default=None, max_length=100)
+    company_id: Optional[str] = Field(default=None, max_length=100)
+    sla_breach_at: Optional[str] = None
+
+
+def build_slack_payload(ticket: TicketPayload) -> dict:
+    ticket_id = str(ticket.id)
     ticket_ref = f"#T-{ticket_id[-4:]}" if len(ticket_id) >= 4 else f"#T-{ticket_id}"
-    subject = ticket.get("subject") or "Untitled ticket"
-    priority = str(ticket.get("priority") or "unknown").upper()
-    assigned_team = ticket.get("assigned_team") or "Unassigned"
-    company = ticket.get("company") or ticket.get("company_id") or "UNKNOWN"
-    breach_at = ticket.get("sla_breach_at") or "N/A"
+    subject = ticket.subject or "Untitled ticket"
+    priority = str(ticket.priority or "unknown").upper()
+    assigned_team = ticket.assigned_team or "Unassigned"
+    company = ticket.company or ticket.company_id or "UNKNOWN"
+    breach_at = ticket.sla_breach_at or "N/A"
     color = "#FF0000" if priority in ("CRITICAL", "HIGH") else "#FFA500"
 
     return {
@@ -65,14 +90,14 @@ def build_slack_payload(ticket: dict[str, Any]) -> dict:
     }
 
 
-def build_teams_payload(ticket: dict[str, Any]) -> dict:
-    ticket_id = str(ticket.get("id", "???"))
+def build_teams_payload(ticket: TicketPayload) -> dict:
+    ticket_id = str(ticket.id)
     ticket_ref = f"#T-{ticket_id[-4:]}" if len(ticket_id) >= 4 else f"#T-{ticket_id}"
-    subject = ticket.get("subject") or "Untitled ticket"
-    priority = str(ticket.get("priority") or "unknown").upper()
-    assigned_team = ticket.get("assigned_team") or "Unassigned"
-    company = ticket.get("company") or ticket.get("company_id") or "UNKNOWN"
-    breach_at = ticket.get("sla_breach_at") or "N/A"
+    subject = ticket.subject or "Untitled ticket"
+    priority = str(ticket.priority or "unknown").upper()
+    assigned_team = ticket.assigned_team or "Unassigned"
+    company = ticket.company or ticket.company_id or "UNKNOWN"
+    breach_at = ticket.sla_breach_at or "N/A"
     color = "FF0000" if priority in ("CRITICAL", "HIGH") else "FFA500"
 
     return {
@@ -117,7 +142,7 @@ def detect_webhook_type(url: str) -> str:
     return "slack"  # default
 
 
-def send_webhook_notification(webhook_url: str, ticket: dict[str, Any]) -> bool:
+def send_webhook_notification(webhook_url: str, ticket: TicketPayload) -> bool:
     """
     Send notification to Slack or Teams based on webhook URL.
 
@@ -152,7 +177,7 @@ def send_webhook_notification(webhook_url: str, ticket: dict[str, Any]) -> bool:
             logger.info(
                 "Webhook alert sent (%s) for ticket %s (HTTP %s)",
                 webhook_type,
-                ticket.get("id"),
+                ticket.id,
                 resp.status,
             )
             return True
@@ -166,7 +191,7 @@ def send_webhook_notification(webhook_url: str, ticket: dict[str, Any]) -> bool:
     return False
 
 
-def notify_critical_ticket(ticket: dict[str, Any], webhook_url: Optional[str] = None) -> bool:
+def notify_critical_ticket(ticket: TicketPayload, webhook_url: Optional[str] = None) -> bool:
     """
     Entry point for critical ticket notifications.
     Uses provided webhook_url or falls back to env variable.
@@ -184,10 +209,12 @@ def notify_critical_ticket(ticket: dict[str, Any], webhook_url: Optional[str] = 
         logger.info("No webhook URL configured — notification skipped")
         return False
 
-    sent = send_webhook_notification(url, ticket)
+    validated_ticket = TicketPayload.model_validate(ticket)
+    sent = send_webhook_notification(url, validated_ticket)
+    
     if sent:
-        logger.info("Critical ticket notified for ticket %s", ticket.get("id"))
+        logger.info("Critical ticket notified for ticket %s", ticket.id)
     else:
-        logger.warning("Webhook notification failed for ticket %s", ticket.get("id"))
+        logger.warning("Webhook notification failed for ticket %s", ticket.id)
 
     return sent
