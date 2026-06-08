@@ -9,8 +9,21 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
 const FROM_EMAIL = "HELPDESK.AI <bonthalamadhavi1@gmail.com>";
 
+// Security Fix: Sanitize user-supplied inputs to prevent XSS in HTML email templates
+const escapeHtml = (str: string) => {
+  const map: Record<string, string> = {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+  return String(str).replace(/[&<>"']/g, (m) => map[m] || m);
+};
+
 serve(async (req: Request) => {
   try {
+    // Security Fix: Implement authorization checks by verifying the incoming request's Authorization header against a shared secret
+    const authHeader = req.headers.get('Authorization');
+    const expectedSecret = Deno.env.get('WEBHOOK_SECRET');
+    if (!expectedSecret || !authHeader || authHeader !== `Bearer ${expectedSecret}`) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    }
+
     if (!RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
 
     const payload = await req.json();
@@ -32,16 +45,16 @@ serve(async (req: Request) => {
 
     // 2. Define Email Types & Templates
     if (type === "INSERT") {
-      const ticketId = record.id?.toString().slice(0, 8).toUpperCase();
+      const ticketId = record.id?.toString().slice(0, 8).toUpperCase() || "";
       subject = `[HELPDESK.AI] Support Ticket #${ticketId} Received`;
       templateData = {
         title: "Ticket Received",
         badge: "✨ Request Captured",
         mainText: "Your support request has been successfully captured. Our AI is currently analyzing your issue.",
         refLabel: "Tracking Reference",
-        refValue: `#${ticketId}`,
+        refValue: escapeHtml(`#${ticketId}`),
         ctaText: "View Ticket Status",
-        ctaUrl: `https://helpdeskaiv1.vercel.app/ticket/${record.id}`
+        ctaUrl: escapeHtml(`https://helpdeskaiv1.vercel.app/ticket/${record.id}`)
       };
     } else if (type === "OTP") {
       subject = "[HELPDESK.AI] Your Recovery Code";
@@ -50,7 +63,7 @@ serve(async (req: Request) => {
         badge: "🔐 Recovery Protocol",
         mainText: "You requested a password reset. Use the following 6-digit code to continue.",
         refLabel: "Verification Code",
-        refValue: code,
+        refValue: escapeHtml(code || ""),
         ctaText: "Continue Reset",
         ctaUrl: "https://helpdeskaiv1.vercel.app/forgot-password"
       };
@@ -63,7 +76,7 @@ serve(async (req: Request) => {
         refLabel: "Login Request",
         refValue: "Valid for 60 mins",
         ctaText: "Sign In Now",
-        ctaUrl: link
+        ctaUrl: escapeHtml(link || "")
       };
     }
 
