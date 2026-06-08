@@ -18,6 +18,7 @@ import {
   Copy,
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
+import useToastStore from "../../store/toastStore";
 import { Card, CardContent } from "../../components/ui/card";
 import TicketStatusBadge from "../components/TicketStatusBadge";
 import TicketTimeline from "../components/TicketTimeline";
@@ -35,6 +36,7 @@ const TicketDetail = () => {
     const [csatHasBeenDismissed, setCsatHasBeenDismissed] = useState(false);
     const [showOriginalText, setShowOriginalText] = useState(false);
     const [copied, setCopied] = useState(false);
+    const { showToast } = useToastStore();
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -79,6 +81,16 @@ const TicketDetail = () => {
                     text: payload.new.description,
                     summary: payload.new.subject,
                 }));
+            })
+            .on('postgres_changes', {
+                event: 'DELETE',
+                schema: 'public',
+                table: 'tickets',
+                filter: `id=eq.${ticket_id}`
+            }, (payload) => {
+                console.warn("Ticket was deleted:", payload.old);
+                showToast('This ticket has been removed.', 'warning');
+                navigate('/my-tickets');
             })
             .subscribe();
 
