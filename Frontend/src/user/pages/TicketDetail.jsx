@@ -13,6 +13,7 @@ import TicketTimeline from "../components/TicketTimeline";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
 import CSATModal from "../components/CSATModal";
+import { AlertTriangle, Link2 } from 'lucide-react';
 
 const TicketDetail = () => {
     const { ticket_id } = useParams();
@@ -122,6 +123,9 @@ const TicketDetail = () => {
     const solutionSteps = Array.isArray(ticket.solution_steps) ? ticket.solution_steps : [];
     const isAutoResolved = ticket.auto_resolve === true;
     const confidenceScore = ticket.metadata?.confidence ?? ticket.routing_confidence ?? 0.92;
+    const dependencyTicket = ticket.metadata?.blocked_by || null;
+    const relatedTicket = ticket.metadata?.related_ticket || null;
+    const isBlocked = !!dependencyTicket;
 
 
     const handleReopen = async () => {
@@ -180,6 +184,22 @@ const TicketDetail = () => {
             </div>
 
             {/* 2-Column Layout */}
+
+            {isBlocked && (
+    <Card className="p-4 border-amber-200 bg-amber-50">
+        <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
+            <div>
+                <p className="font-bold text-amber-800">
+                    Ticket Dependency Detected
+                </p>
+                <p className="text-sm text-amber-700">
+                    This ticket is blocked by Ticket #{dependencyTicket}
+                </p>
+            </div>
+        </div>
+    </Card>
+)}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* LEFT SIDE (Main Content) */}
@@ -194,6 +214,24 @@ const TicketDetail = () => {
                     </Card>
 
                     {/* Card 2: Ticket Details */}
+
+                    <div>
+    <p className="text-xs uppercase font-bold text-gray-400 tracking-wider mb-1.5">
+        Blocked By
+    </p>
+    <p className="text-sm font-semibold text-gray-900 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+        {dependencyTicket ? `#${dependencyTicket}` : 'None'}
+    </p>
+</div>
+
+<div>
+    <p className="text-xs uppercase font-bold text-gray-400 tracking-wider mb-1.5">
+        Related Ticket
+    </p>
+    <p className="text-sm font-semibold text-gray-900 bg-gray-50 border border-gray-100 rounded-lg px-3 py-2">
+        {relatedTicket ? `#${relatedTicket}` : 'None'}
+    </p>
+</div>
                     <Card className="p-6 sm:p-8 rounded-2xl border border-gray-100 shadow-sm bg-white">
                         <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
                             <ShieldCheck className="w-5 h-5 text-emerald-600" /> Ticket Details
@@ -305,6 +343,23 @@ const TicketDetail = () => {
                             </div>
                         )}
                     </Card>
+
+                    <Card className="p-4 rounded-2xl border border-gray-100 shadow-sm bg-white">
+    <h2 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-3 flex items-center gap-2">
+        <Link2 className="w-4 h-4 text-indigo-500" />
+        Dependencies
+    </h2>
+
+    {dependencyTicket ? (
+        <div className="text-sm text-amber-700 font-semibold">
+            Blocked by Ticket #{dependencyTicket}
+        </div>
+    ) : (
+        <div className="text-sm text-emerald-700 font-semibold">
+            No active dependencies
+        </div>
+    )}
+</Card>
 
                     {/* Card 5: Suggested Solution */}
                     <Card className="p-6 rounded-2xl border border-emerald-100 shadow-sm bg-gradient-to-br from-emerald-50/50 to-white relative overflow-hidden">
