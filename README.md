@@ -185,6 +185,14 @@ Helpdesk.ai is now available as a native Android application. It features a comp
 
 ---
 
+## 👥 Contributors
+
+<a href="https://github.com/ritesh-1918/HELPDESK.AI/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ritesh-1918/HELPDESK.AI" />
+</a>
+
+---
+
 <div align="center">
 Built with <span style="color:#10b981;">💚</span> by the <strong>HELPDESK.AI Professional</strong> Team. 
 </div>
