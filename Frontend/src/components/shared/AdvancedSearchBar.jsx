@@ -35,6 +35,10 @@ const AdvancedSearchBar = ({
     const [panelOpen, setPanelOpen] = useState(false);
     const debounceRef = useRef(null);
     const searchInputRef = useRef(null);
+    const filtersRef = useRef(filters);
+
+    // Keep filtersRef current to avoid stale closure in handleQChange
+    useEffect(() => { filtersRef.current = filters; }, [filters]);
 
     // Sync external filter.q → local input (e.g. URL param changes)
     useEffect(() => {
@@ -46,9 +50,9 @@ const AdvancedSearchBar = ({
         setLocalQ(value);
         clearTimeout(debounceRef.current);
         debounceRef.current = setTimeout(() => {
-            onChange({ ...filters, q: value || undefined });
+            onChange({ ...filtersRef.current, q: value || undefined });
         }, debounceMs);
-    }, [filters, onChange, debounceMs]);
+    }, [onChange, debounceMs]);
 
     // Keyboard shortcuts: "/" to focus, Escape to clear
     useEffect(() => {
