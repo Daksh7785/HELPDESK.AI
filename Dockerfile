@@ -13,14 +13,19 @@ RUN apt-get update && apt-get install -y \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container
-COPY backend/requirements.txt .
+# Layer 1: Copy ML models first (large, rarely change)
+COPY backend/models /app/backend/models
 
-# Install dependencies (no-cache-dir keeps the docker image smaller)
+# Layer 2: Copy requirements and install pip dependencies
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all the remaining files into the container as a 'backend' directory
-COPY backend /app/backend
+# Layer 3: Copy application source code (changes most frequently)
+COPY backend/main.py backend/healthcheck.py backend/__init__.py /app/backend/
+COPY backend/services /app/backend/services
+COPY backend/supabase /app/backend/supabase
+COPY backend/data /app/backend/data
+COPY backend/scripts /app/backend/scripts
 
 # Tell Python where to look for modules (so it can find the 'backend' folder)
 ENV PYTHONPATH=/app
