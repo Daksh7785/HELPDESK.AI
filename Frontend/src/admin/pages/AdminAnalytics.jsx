@@ -121,10 +121,48 @@ const AdminAnalytics = () => {
             time: new Date(t.created_at).getTime()
         }));
 
+        const heatmapData = [];
+
+for (let day = 0; day < 7; day++) {
+    for (let hour = 0; hour < 24; hour++) {
+        heatmapData.push({
+            day,
+            hour,
+            count: 0
+        });
+    }
+}
+
+tickets.forEach(ticket => {
+    if (!ticket.created_at) return;
+
+    const date = new Date(ticket.created_at);
+    const day = date.getDay();
+    const hour = date.getHours();
+
+    const cell = heatmapData.find(
+        item => item.day === day && item.hour === hour
+    );
+
+    if (cell) {
+        cell.count += 1;
+    }
+});
+
+const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
         return {
-            total, open, resolved, highPriority,
-            volumeTimeline, categoryData, teamData, resolutionData, liveFeed
-        };
+    total,
+    open,
+    resolved,
+    highPriority,
+    volumeTimeline,
+    categoryData,
+    teamData,
+    resolutionData,
+    liveFeed,
+    heatmapData
+};
     }, [tickets]);
 
     // AI-specific metrics
@@ -258,6 +296,60 @@ const AdminAnalytics = () => {
                             )}
                         </div>
                     </div>
+
+                    <div
+    style={{
+        background: '#ffffff',
+        borderRadius: '20px',
+        border: '1px solid #f0fdf4',
+        boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
+        padding: '24px'
+    }}
+>
+    <h3
+        style={{
+            fontFamily: 'Syne, sans-serif',
+            fontSize: '16px',
+            fontWeight: 700,
+            marginBottom: '20px'
+        }}
+    >
+        Ticket Activity Heatmap
+    </h3>
+
+    <div className="overflow-x-auto">
+        <div className="grid grid-cols-24 gap-1 min-w-[700px]">
+            {stats.heatmapData?.map((cell, index) => (
+                <div
+                    key={index}
+                    title={`${days[cell.day]} ${cell.hour}:00 → ${cell.count} tickets`}
+                    style={{
+                        width: '22px',
+                        height: '22px',
+                        borderRadius: '4px',
+                        background:
+                            cell.count === 0
+                                ? '#f3f4f6'
+                                : cell.count < 3
+                                ? '#bbf7d0'
+                                : cell.count < 6
+                                ? '#4ade80'
+                                : '#15803d'
+                    }}
+                />
+            ))}
+        </div>
+    </div>
+
+    <div className="flex items-center gap-2 mt-4 text-xs text-gray-500">
+        <span>Low</span>
+        <div className="w-4 h-4 bg-gray-200 rounded"></div>
+        <div className="w-4 h-4 bg-green-200 rounded"></div>
+        <div className="w-4 h-4 bg-green-400 rounded"></div>
+        <div className="w-4 h-4 bg-green-700 rounded"></div>
+        <span>High</span>
+    </div>
+</div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                         {/* Resolution Split Chart */}
