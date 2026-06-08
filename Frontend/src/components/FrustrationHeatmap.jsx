@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { API_CONFIG } from "../../config";
 
 /**
  * FrustrationHeatmap — admin widget showing frustration distribution
@@ -8,7 +9,7 @@ import { supabase } from "../lib/supabaseClient";
 export default function FrustrationHeatmap({ companyId }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+  const BACKEND = API_CONFIG.BACKEND_URL;
 
   useEffect(() => {
     if (!companyId) return;
