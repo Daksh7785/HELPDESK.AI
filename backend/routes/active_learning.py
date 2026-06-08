@@ -9,9 +9,11 @@ import datetime
 import os
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Header
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from pydantic import BaseModel
+from supabase import create_client
 
+from backend.auth_cookie import get_current_user
 from backend.services.active_learning_service import active_learning_service
 
 router = APIRouter(prefix="/active-learning", tags=["Active Learning"])
@@ -20,10 +22,24 @@ _last_retrain_result: dict[str, Any] = {}
 _retrain_in_progress: bool = False
 
 
-def _require_admin(x_admin_key: str | None = Header(default=None)) -> None:
-    secret = os.environ.get("ADMIN_SECRET", "")
-    if secret and x_admin_key != secret:
-        raise HTTPException(status_code=403, detail="Admin access required.")
+async def _require_admin(current_user: dict = Depends(get_current_user)) -> None:
+    user_id = current_user.get("id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Authentication required.")
+    url = os.environ.get("SUPABASE_URL")
+    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    if not url or not key:
+        raise HTTPException(status_code=503, detail="Server configuration error.")
+    try:
+        client = create_client(url, key)
+        result = client.table("profiles").select("role").eq("id", user_id).single().execute()
+        data = getattr(result, "data", None) or {}
+        if data.get("role") not in ("admin", "master_admin"):
+            raise HTTPException(status_code=403, detail="Admin access required.")
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(status_code=500, detail="Authorization check failed.")
 
 
 class AnnotationRequest(BaseModel):
@@ -63,7 +79,7 @@ async def _run_retrain_background(dry_run: bool) -> None:
 
 
 @router.get("/status")
-async def pipeline_status():
+async def pipeline_status(_: None = Depends(_require_admin)):
     return {
         "pipeline_active": True,
         "retrain_in_progress": _retrain_in_progress,
@@ -92,7 +108,7 @@ async def trigger_retrain(
 
 
 @router.get("/retrain/status")
-async def retrain_status():
+async def retrain_status(_: None = Depends(_require_admin)):
     return {"in_progress": _retrain_in_progress, "result": _last_retrain_result}
 
 
@@ -101,8 +117,8 @@ async def prepare_dataset(_: None = Depends(_require_admin)):
     try:
         summary = active_learning_service.prepare_training_dataset()
         return {"status": "ok", "summary": summary}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Dataset preparation failed.")
 
 
 @router.get("/model/registry")
@@ -143,10 +159,10 @@ async def annotate_pool_entry(
 
 
 @router.get("/stats/corrections")
-async def correction_statistics():
+async def correction_statistics(_: None = Depends(_require_admin)):
     return active_learning_service.get_correction_statistics()
 
 
 @router.get("/stats/drift")
-async def drift_statistics():
+async def drift_statistics(_: None = Depends(_require_admin)):
     return active_learning_service.get_low_confidence_statistics()
