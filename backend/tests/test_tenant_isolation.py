@@ -170,7 +170,7 @@ for module_name in [
     if module_name not in sys.modules: sys.modules[module_name] = MagicMock()
 
 import pytest
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 from backend.main import app, classifier_service, ner_service, duplicate_service, rag_service
 
 # Mock classifier, ner, duplicate and rag services as loaded for ready checks
