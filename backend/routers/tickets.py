@@ -1,7 +1,9 @@
 
 import logging
 import hashlib
-from fastapi import APIRouter, HTTPException
+import traceback
+from fastapi import APIRouter, Depends, HTTPException
+from backend.auth_cookie import get_current_user
 from backend.dependencies import supabase, duplicate_service
 from backend.models import TicketSaveRequest, TicketRecord, TICKETS_DB
 
@@ -9,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 @router.get("")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(company_id: str | None = None, user: dict = Depends(get_current_user)):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -22,7 +24,7 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @router.post("/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_current_user)):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -126,7 +128,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail="Failed to create ticket. Please try again later.")
 
 @router.get("/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
     """Fetch single persistent ticket."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
