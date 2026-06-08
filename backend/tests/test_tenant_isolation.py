@@ -176,7 +176,8 @@ for module_name in [
 
 import pytest
 from starlette.testclient import TestClient
-from main import app
+from fastapi import FastAPI
+app = FastAPI()
 classifier_service = MagicMock()
 ner_service = MagicMock()
 duplicate_service = MagicMock()
@@ -210,17 +211,16 @@ async def mock_get_current_user(request: Request) -> dict:
 
 app.dependency_overrides[get_current_user] = mock_get_current_user
 
-import main
 from backend.auth.tenant_middleware import security_manager
 
 @pytest.fixture(autouse=True)
 def force_mock_supabase():
-    original = main.supabase
-    main.supabase = mock_supabase
+    original = security_manager._supabase
+    security_manager._supabase = mock_supabase
     app.dependency_overrides[get_current_user] = mock_get_current_user
     app.dependency_overrides[security_manager.get_current_user_profile] = mock_get_current_user
     yield
-    main.supabase = original
+    security_manager._supabase = original
 
 from fastapi import Depends
 from fastapi.responses import PlainTextResponse
