@@ -41,6 +41,8 @@ const CreateTicket = () => {
     const [isTranslating, setIsTranslating] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
     const langRef = useRef(null);
+    const [recommendations, setRecommendations] = useState([]);
+    const [isFetchingRecommendations, setIsFetchingRecommendations] = useState(false);
 
     // Voice UI states
     const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -55,6 +57,39 @@ const CreateTicket = () => {
     const animationFrameRef = useRef(null);
     const [visualizerData, setVisualizerData] = useState(new Array(16).fill(15));
     const streamRef = useRef(null);
+
+    useEffect(() => {
+    if (issue.trim().length < 15) {
+        setRecommendations([]);
+        return;
+    }
+
+    const timer = setTimeout(async () => {
+        try {
+            setIsFetchingRecommendations(true);
+
+            // Replace with actual API later
+            const mockRecommendations = [
+                {
+                    title: "VPN Connection Error",
+                    solution: "Restart VPN service and reconnect."
+                },
+                {
+                    title: "Login Authentication Issue",
+                    solution: "Clear browser cache and login again."
+                }
+            ];
+
+            setRecommendations(mockRecommendations);
+        } catch (error) {
+            console.error(error);
+        } finally {
+            setIsFetchingRecommendations(false);
+        }
+    }, 800);
+
+    return () => clearTimeout(timer);
+}, [issue]);
 
     useEffect(() => {
         return () => {
@@ -428,6 +463,44 @@ const CreateTicket = () => {
                                             />
                                         </div>
                                     </div>
+
+                                    {issue.length > 15 && (
+    <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+        <div className="flex items-center gap-2 mb-3">
+            <BrainCircuit size={18} className="text-emerald-600" />
+            <h4 className="font-bold text-emerald-700">
+                AI Support Recommendations
+            </h4>
+        </div>
+
+        {isFetchingRecommendations ? (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+                <Loader2 size={16} className="animate-spin" />
+                Finding similar issues...
+            </div>
+        ) : recommendations.length > 0 ? (
+            <div className="space-y-3">
+                {recommendations.map((item, index) => (
+                    <div
+                        key={index}
+                        className="bg-white rounded-xl p-3 border border-emerald-100"
+                    >
+                        <p className="font-semibold text-gray-800">
+                            {item.title}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                            {item.solution}
+                        </p>
+                    </div>
+                ))}
+            </div>
+        ) : (
+            <p className="text-sm text-gray-500">
+                No similar issues found.
+            </p>
+        )}
+    </div>
+)}
 
                                     {/* Premium Voice Visualizer */}
                                     {supportsSpeech && (
