@@ -1,15 +1,30 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
 
-/**
- * MasterAdminProtectedRoute
- * Restricts access to /master-admin/* routes exclusively to
- * users with role === 'master_admin'. All other users (including
- * regular admins) are redirected back to the hidden login page.
- */
+const verifyMasterAdminWithDB = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+    return data?.role || null;
+  } catch {
+    return null;
+  }
+};
+
 const MasterAdminProtectedRoute = () => {
     const { user, profile, loading } = useAuthStore();
+    const [dbRole, setDbRole] = useState(null);
+
+    useEffect(() => {
+      if (user) {
+        verifyMasterAdminWithDB(user.id).then(setDbRole);
+      }
+    }, [user]);
 
     if (loading) {
         return (
@@ -19,16 +34,15 @@ const MasterAdminProtectedRoute = () => {
         );
     }
 
-    // Not authenticated at all
     if (!user) {
         return <Navigate to="/master-admin-login" replace />;
     }
 
-    // Authenticated but not a master_admin — redirect to hidden login
-    // (intentionally NOT to /dashboard to avoid leaking portal existence)
-    if (profile?.role !== 'master_admin') {
+    const effectiveRole = dbRole || profile?.role;
+
+    if (effectiveRole !== 'master_admin') {
         console.warn(
-            `[MasterAdminPortal] Unauthorized access attempt by ${user.email} (role: ${profile?.role})`
+            `[MasterAdminPortal] Unauthorized access attempt by ${user.email} (role: ${effectiveRole})`
         );
         return <Navigate to="/master-admin-login" replace />;
     }

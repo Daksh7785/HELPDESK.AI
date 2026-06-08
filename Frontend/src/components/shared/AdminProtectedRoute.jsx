@@ -1,13 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
+import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
 
-/**
- * AdminProtectedRoute Component
- * Restricts access to routes to only users with the 'admin' role.
- */
+const verifyAdminRoleWithDB = async (userId) => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('role, status, company_id')
+      .eq('id', userId)
+      .single();
+    if (error || !data) return null;
+    return data;
+  } catch {
+    return null;
+  }
+};
+
 const AdminProtectedRoute = () => {
     const { user, profile, loading } = useAuthStore();
+    const [dbVerified, setDbVerified] = useState(null);
+
+    useEffect(() => {
+      if (user) {
+        verifyAdminRoleWithDB(user.id).then(setDbVerified);
+      }
+    }, [user]);
 
     if (loading) {
         return (
@@ -17,13 +35,14 @@ const AdminProtectedRoute = () => {
         );
     }
 
-    // Check if the user is authenticated from Supabase
     if (!user) {
         return <Navigate to="/login" replace />;
     }
 
-    // If we have a user but no profile yet, wait for the database fetch
-    if (!profile) {
+    const effectiveRole = dbVerified?.role || profile?.role;
+    const effectiveStatus = dbVerified?.status || profile?.status;
+
+    if (!effectiveRole) {
         return (
             <div className="flex h-screen w-screen items-center justify-center bg-[#050508]">
                 <div className="h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent"></div>
@@ -31,21 +50,16 @@ const AdminProtectedRoute = () => {
         );
     }
 
-    // Check if the user's profile role is 'admin' or 'super_admin'
-    // Enforce role
-    if (profile.role !== "admin" && profile.role !== "super_admin") {
-        // Basic redirect for non-admins if they try to access admin routes
+    if (effectiveRole !== "admin" && effectiveRole !== "super_admin") {
         return <Navigate to="/" replace />;
     }
 
-    // Enforce active status for admins (Master Admin approval)
-    if (profile.status === "rejected") {
+    if (effectiveStatus === "rejected") {
         return <Navigate to="/not-approved" replace />;
-    } else if (profile.status !== "active") {
+    } else if (effectiveStatus !== "active") {
         return <Navigate to="/admin-lobby" replace />;
     }
 
-    // Authorised and active: render the protected layout
     return <Outlet />;
 };
 
