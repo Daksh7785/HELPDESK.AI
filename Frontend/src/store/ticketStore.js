@@ -1,14 +1,26 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+const buildLookup = (tickets) => {
+  const map = {};
+  if (Array.isArray(tickets)) {
+    tickets.forEach(t => { if (t?.ticket_id) map[t.ticket_id] = t; });
+  }
+  return map;
+};
+
+const lookupToArray = (lookup) => Object.values(lookup);
+
 const useTicketStore = create(
     persist(
         (set) => ({
             aiTicket: null,
             activeTicket: null,
-            autoResolvedTickets: [], // For analytics
-            tickets: [], // Global queue for admins
-            notifications: [], // User notifications
+            autoResolvedTickets: [],
+            tickets: [],
+            _ticketLookup: {},
+            notifications: [],
+
             setAITicket: (data) => set({ aiTicket: data }),
             setActiveTicket: (ticket) => set({ activeTicket: ticket }),
             addAutoResolvedTicket: (record) => set((state) => ({
@@ -26,56 +38,52 @@ const useTicketStore = create(
                 ]
             })),
             addTicket: (ticket) => set((state) => {
-                return {
-                    tickets: [...state.tickets, ticket]
-                };
+                const next = { ...state._ticketLookup };
+                next[ticket.ticket_id] = ticket;
+                return { _ticketLookup: next, tickets: lookupToArray(next) };
             }),
             updateTicket: (ticketId, updates) => set((state) => {
-// eslint-disable-next-line no-unused-vars
-                const existingTicket = state.tickets.find(t => t.ticket_id === ticketId);
-                const updatedTickets = state.tickets.map(t => t.ticket_id === ticketId ? { ...t, ...updates } : t);
+                const next = { ...state._ticketLookup };
+                if (next[ticketId]) next[ticketId] = { ...next[ticketId], ...updates };
                 const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
-
-
-
-
                 return {
-                    tickets: updatedTickets,
+                    _ticketLookup: next,
+                    tickets: lookupToArray(next),
                     activeTicket: shouldUpdateActive ? { ...state.activeTicket, ...updates } : state.activeTicket
                 };
             }),
-
-            removeTicket: (ticketId) => set((state) => ({
-    tickets: state.tickets.filter(t => t.ticket_id !== ticketId),
-    activeTicket: state.activeTicket?.ticket_id === ticketId
-        ? null
-        : state.activeTicket
-})),
-            appendMessage: (ticketId, message) => set((state) => {
-                const updatedTickets = state.tickets.map(t =>
-                    t.ticket_id === ticketId
-                        ? { ...t, messages: [...(t.messages || []), message] }
-                        : t
-                );
-                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
-
+            removeTicket: (ticketId) => set((state) => {
+                const next = { ...state._ticketLookup };
+                delete next[ticketId];
                 return {
-                    tickets: updatedTickets,
+                    _ticketLookup: next,
+                    tickets: lookupToArray(next),
+                    activeTicket: state.activeTicket?.ticket_id === ticketId ? null : state.activeTicket
+                };
+            }),
+            appendMessage: (ticketId, message) => set((state) => {
+                const next = { ...state._ticketLookup };
+                if (next[ticketId]) {
+                    next[ticketId] = { ...next[ticketId], messages: [...(next[ticketId].messages || []), message] };
+                }
+                const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
+                return {
+                    _ticketLookup: next,
+                    tickets: lookupToArray(next),
                     activeTicket: shouldUpdateActive
                         ? { ...state.activeTicket, messages: [...(state.activeTicket?.messages || []), message] }
                         : state.activeTicket
                 };
             }),
             appendNote: (ticketId, note) => set((state) => {
-                const updatedTickets = state.tickets.map(t =>
-                    t.ticket_id === ticketId
-                        ? { ...t, internal_notes: [...(t.internal_notes || []), note] }
-                        : t
-                );
+                const next = { ...state._ticketLookup };
+                if (next[ticketId]) {
+                    next[ticketId] = { ...next[ticketId], internal_notes: [...(next[ticketId].internal_notes || []), note] };
+                }
                 const shouldUpdateActive = state.activeTicket?.ticket_id === ticketId;
-
                 return {
-                    tickets: updatedTickets,
+                    _ticketLookup: next,
+                    tickets: lookupToArray(next),
                     activeTicket: shouldUpdateActive
                         ? { ...state.activeTicket, internal_notes: [...(state.activeTicket?.internal_notes || []), note] }
                         : state.activeTicket
@@ -84,18 +92,27 @@ const useTicketStore = create(
             markNotificationsRead: () => set((state) => ({
                 notifications: (state.notifications || []).map(n => ({ ...n, read: true }))
             })),
-            clearTicket: () => set({ aiTicket: null, activeTicket: null, autoResolvedTickets: [] }),
+            clearTicket: () => set({ aiTicket: null, activeTicket: null, autoResolvedTickets: [], _ticketLookup: {}, tickets: [] }),
         }),
         {
-            name: 'ticket-storage', // unique name for localStorage key
+            name: 'ticket-storage',
+            partialize: (state) => ({
+                aiTicket: state.aiTicket,
+                activeTicket: state.activeTicket,
+                autoResolvedTickets: state.autoResolvedTickets,
+                tickets: lookupToArray(state._ticketLookup),
+                notifications: state.notifications,
+            }),
+            merge: (persisted, current) => ({
+                ...current,
+                ...persisted,
+                _ticketLookup: buildLookup(persisted.tickets || []),
+            }),
         }
     )
 );
 
-// Listen for storage changes from other tabs to keep the queue in sync
-// Listen for storage changes from other tabs to keep the queue in sync
 window.addEventListener('storage', () => {
-    // Force rehydration on any storage change to catch updates reliably
     useTicketStore.persist.rehydrate();
 });
 
