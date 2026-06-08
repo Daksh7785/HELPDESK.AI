@@ -29,6 +29,9 @@ function MyTickets() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
+    const [savedViews, setSavedViews] = useState([]);
+    const [selectedView, setSelectedView] = useState('');
+    const [viewName, setViewName] = useState('');
 
     // Fetch tickets from Supabase
     const fetchTickets = useCallback(async () => {
@@ -54,6 +57,14 @@ function MyTickets() {
         }
         setLoading(false);
     }, [user]);
+
+    useEffect(() => {
+    const views = JSON.parse(
+        localStorage.getItem('savedTicketViews') || '[]'
+    );
+
+    setSavedViews(views);
+}, []);
 
     useEffect(() => {
          
@@ -120,6 +131,52 @@ function MyTickets() {
         return 'text-gray-600';
     };
 
+    const saveCurrentView = () => {
+    if (!viewName.trim()) return;
+
+    const newView = {
+        name: viewName,
+        searchQuery,
+        statusFilter,
+        priorityFilter
+    };
+
+    const updatedViews = [...savedViews, newView];
+
+    setSavedViews(updatedViews);
+
+    localStorage.setItem(
+        'savedTicketViews',
+        JSON.stringify(updatedViews)
+    );
+
+    setViewName('');
+};
+
+const applySavedView = (name) => {
+    const view = savedViews.find(v => v.name === name);
+
+    if (!view) return;
+
+    setSearchQuery(view.searchQuery);
+    setStatusFilter(view.statusFilter);
+    setPriorityFilter(view.priorityFilter);
+
+    setSelectedView(name);
+};
+
+const deleteView = (name) => {
+    const updatedViews =
+        savedViews.filter(v => v.name !== name);
+
+    setSavedViews(updatedViews);
+
+    localStorage.setItem(
+        'savedTicketViews',
+        JSON.stringify(updatedViews)
+    );
+};
+
     return (
         <main className="flex-1 max-w-[1200px] w-full mx-auto px-6 py-10 flex flex-col gap-8">
             {/* Header section */}
@@ -164,6 +221,7 @@ function MyTickets() {
                     />
                     <Select
                         value={priorityFilter}
+                        
                         onChange={(e) => setPriorityFilter(e.target.value)}
                         options={[
                             { value: 'All', label: 'All Priorities' },
@@ -172,9 +230,53 @@ function MyTickets() {
                             { value: 'Medium', label: 'Medium' },
                             { value: 'Low', label: 'Low' }
                         ]}
+
+                        
                     />
                 </div>
             </div>
+
+            <div className="flex items-center gap-2">
+    <input
+        type="text"
+        placeholder="View Name"
+        value={viewName}
+        onChange={(e) => setViewName(e.target.value)}
+        className="px-3 py-2 border rounded-lg text-sm"
+    />
+
+    <button
+        onClick={saveCurrentView}
+        className="px-4 py-2 bg-emerald-600 text-white rounded-lg"
+    >
+        Save View
+    </button>
+</div>
+
+{savedViews.length > 0 && (
+    <div className="flex gap-2 flex-wrap">
+        {savedViews.map((view) => (
+            <div
+                key={view.name}
+                className="flex items-center gap-2"
+            >
+                <button
+                    onClick={() => applySavedView(view.name)}
+                    className="px-3 py-1 bg-gray-100 rounded-lg text-sm"
+                >
+                    {view.name}
+                </button>
+
+                <button
+                    onClick={() => deleteView(view.name)}
+                    className="text-red-500 text-xs"
+                >
+                    ✕
+                </button>
+            </div>
+        ))}
+    </div>
+)}
 
             {/* Main Content */}
 
