@@ -2,7 +2,7 @@ import React from 'react';
 import { Globe } from 'lucide-react';
 
 const LanguageBadge = ({ detectedLanguage, compact = false }) => {
-    if (!detectedLanguage || detectedLanguage.toLowerCase() === 'en') return null;
+    if (!detectedLanguage || typeof detectedLanguage !== 'string' || detectedLanguage.toLowerCase() === 'en') return null;
 
     const langName = detectedLanguage.toUpperCase();
 
