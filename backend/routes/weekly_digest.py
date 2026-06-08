@@ -8,9 +8,10 @@ digest email report for admin users.
 import datetime
 import logging
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from backend.auth_cookie import get_current_user
 from backend.services.digest_service import (
     get_weekly_stats,
     generate_ai_summary,
@@ -49,7 +50,10 @@ class DigestSendResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 @router.get("/preview/{company_id}", response_model=DigestStatsResponse)
-async def preview_weekly_digest(company_id: str):
+async def preview_weekly_digest(
+    company_id: str,
+    user: dict = Depends(get_current_user),
+):
     """
     Generate and return a preview of the weekly digest — ticket stats,
     team performance metrics, and an AI-generated summary — without
@@ -61,7 +65,10 @@ async def preview_weekly_digest(company_id: str):
 
 
 @router.post("/send-now", response_model=DigestSendResponse)
-async def trigger_weekly_digest(body: DigestSendRequest):
+async def trigger_weekly_digest(
+    body: DigestSendRequest,
+    user: dict = Depends(get_current_user),
+):
     """
     Manually trigger the dispatch of a weekly operations digest email
     to the specified admin email address.
