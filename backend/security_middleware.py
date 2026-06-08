@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_CSP = (
     "default-src 'self'; "
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
+    "script-src 'self' https://cdn.jsdelivr.net; "
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
     "font-src 'self' https://fonts.gstatic.com data:; "
     "img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in; "
@@ -45,7 +45,7 @@ def _resolve_csp() -> str:
     origins_joined = " ".join(origins)
     return (
         f"default-src 'self' {origins_joined}; "
-        f"script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net {origins_joined}; "
+        f"script-src 'self' https://cdn.jsdelivr.net {origins_joined}; "
         f"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         f"font-src 'self' https://fonts.gstatic.com data:; "
         f"img-src 'self' data: blob: https://*.supabase.co https://*.supabase.in {origins_joined}; "
