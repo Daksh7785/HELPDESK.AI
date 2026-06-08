@@ -123,21 +123,43 @@ const AIProcessing = () => {
                     ticket_title: ticket_title || null,
                 };
 
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000);
+                // Dynamic timeout: text-only gets 15s, with image gets 30s
+                const hasImage = Boolean(image_base64 || image_text);
+                const TIMEOUT_MS = hasImage ? 30000 : 15000;
+                const RETRY_DELAY_MS = 2000;
+                const MAX_RETRIES = 2;
 
-                const response = await fetch(
-                    `${API_CONFIG.BACKEND_URL}/ai/analyze_stream`,
-                    {
+                let response = null;
+                for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+                  const controller = new AbortController();
+                  const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+                  try {
+                    const res = await fetch(
+                      `${API_CONFIG.BACKEND_URL}/ai/analyze_stream`,
+                      {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload),
-                        signal: controller.signal
+                        signal: controller.signal,
+                      }
+                    );
+                    clearTimeout(timeoutId);
+                    if (res.ok) { response = res; break; }
+                    if (attempt < MAX_RETRIES) {
+                      await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
                     }
-                );
-                clearTimeout(timeoutId);
+                  } catch (err) {
+                    clearTimeout(timeoutId);
+                    if (attempt < MAX_RETRIES) {
+                      await new Promise(r => setTimeout(r, RETRY_DELAY_MS));
+                    } else {
+                      throw err;
+                    }
+                  }
+                }
+
+                if (!response) throw new Error("Backend streaming failed after retries");
 
                 if (!response.ok) {
                     throw new Error("Backend streaming failed");
