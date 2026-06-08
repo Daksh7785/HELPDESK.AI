@@ -73,25 +73,23 @@ class NotificationRoutingMiddleware:
                 "email_notifications, admin_alerts, digest_frequency"
             ).eq("company_id", company_id).single().execute()
 
-            if response.data:
+            if response and getattr(response, "data", None):
                 return {
                     "email_notifications": response.data.get("email_notifications", True),
                     "admin_alerts": response.data.get("admin_alerts", True),
                     "digest_frequency": response.data.get("digest_frequency", "daily")
                 }
-        except Exception as e:
-            logger.warning(f"Could not fetch company settings for {company_id}: {str(e)}")
+            else:
+                raise ValueError("No record found for this company_id")
 
-        # Fail-open: allow notifications if settings unavailable
-        return {
-            "email_notifications": True,
-            "admin_alerts": True,
-            "digest_frequency": "daily"
-        }
+        except Exception as e:
+            logger.warning(f"Could not fetch company settings for {company_id}. Error details: {str(e)}")
+            raise
 
     def get_system_settings(self, company_id: str) -> Dict:
         """
-        Get company settings with caching.
+        Get company settings with caching. Accommodates negative caching 
+        for missing records or database connection failures.
         
         Args:
             company_id: UUID of company
@@ -100,7 +98,17 @@ class NotificationRoutingMiddleware:
             Dict with company notification preferences
         """
         if company_id not in self._settings_cache:
-            self._settings_cache[company_id] = self._fetch_system_settings(company_id)
+            try:
+                self._settings_cache[company_id] = self._fetch_system_settings(company_id)
+            except Exception:
+                # Negative Caching: Store fallback values to shield DB from transaction storms
+                self._settings_cache[company_id] = {
+                    "email_notifications": True,
+                    "admin_alerts": True,
+                    "digest_frequency": "daily"
+                }
+                logger.info(f"Negative caching applied for company {company_id}")
+                
         return self._settings_cache[company_id]
 
     def should_send_email_notification(self, company_id: str, notification_type: NotificationType) -> bool:
