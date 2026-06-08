@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     CheckCircle2, Clock, AlertCircle, User,
-    Activity, ShieldCheck, Briefcase, Globe, BarChart3,
+    Bell, Send, Activity, ShieldCheck, Briefcase, Globe, BarChart3,
     ImageIcon, CornerUpLeft, CheckSquare, XCircle,
     Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser
 } from 'lucide-react';
@@ -34,6 +34,8 @@ const AdminTicketDetail = () => {
     const [imageUrl, setImageUrl] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null);
     const [isLive, setIsLive] = useState(false);
+    const [lastActivity, setLastActivity] = useState(null);
+    const [reminderSent, setReminderSent] = useState(false);
 
     const [correctionForm, setCorrectionForm] = useState({
         category: '',
@@ -59,6 +61,9 @@ const AdminTicketDetail = () => {
             if (!data) throw new Error("Incident record not found.");
 
             setTicket(data);
+            setLastActivity(
+                data.updated_at || data.created_at
+            );
             setCorrectionForm({
                 category: data.category || '',
                 subcategory: data.subcategory || '',
@@ -172,6 +177,30 @@ const AdminTicketDetail = () => {
             metadata: { ...ticket.metadata, resolved_at: new Date().toISOString() }
         }, 'resolve');
     };
+
+    const handleSendReminder = async () => {
+    try {
+        setReminderSent(true);
+
+        showToast(
+            "Follow-up reminder sent successfully.",
+            "success"
+        );
+
+        setTicket(prev => ({
+            ...prev,
+            metadata: {
+                ...prev.metadata,
+                last_reminder_sent: new Date().toISOString()
+            }
+        }));
+    } catch (err) {
+        showToast(
+            "Failed to send reminder.",
+            "error"
+        );
+    }
+};
 
     if (isLoading) return (
         <div className="flex flex-col items-center justify-center min-h-[400px]">
@@ -421,6 +450,94 @@ const AdminTicketDetail = () => {
                             </div>
                         </div>
                     </div>
+
+                    <div
+    style={{
+        background: '#ffffff',
+        borderRadius: '20px',
+        border: '1px solid #f0fdf4',
+        boxShadow: '0 2px 16px rgba(0,0,0,0.05)',
+        overflow: 'hidden'
+    }}
+>
+    <div
+        style={{
+            background: '#f8faf9',
+            padding: '16px 20px',
+            borderBottom: '1px solid #f0fdf4'
+        }}
+    >
+        <h3
+            style={{
+                fontSize: '11px',
+                letterSpacing: '0.12em',
+                color: '#9ca3af',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+            }}
+        >
+            <Bell size={14} color="#f59e0b" />
+            FOLLOW-UP REMINDER
+        </h3>
+    </div>
+
+    <div style={{ padding: '24px' }}>
+        <p
+            style={{
+                fontSize: '12px',
+                color: '#6b7280',
+                marginBottom: '12px'
+            }}
+        >
+            Last Activity:
+        </p>
+
+        <p
+            style={{
+                fontSize: '13px',
+                fontWeight: 600,
+                color: '#111827',
+                marginBottom: '16px'
+            }}
+        >
+            {formatFullTimestamp(lastActivity)}
+        </p>
+
+        <button
+            onClick={handleSendReminder}
+            disabled={reminderSent}
+            style={{
+                width: '100%',
+                background: reminderSent
+                    ? '#d1fae5'
+                    : '#0f1f12',
+                color: reminderSent
+                    ? '#15803d'
+                    : '#ffffff',
+                border: 'none',
+                borderRadius: '10px',
+                padding: '10px',
+                fontSize: '11px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                textTransform: 'uppercase'
+            }}
+        >
+            <Send size={14} />
+            {reminderSent
+                ? 'Reminder Sent'
+                : 'Send Reminder'}
+        </button>
+    </div>
+</div>
 
                     {/* CSAT */}
                     {ticket.csat_rating && (
