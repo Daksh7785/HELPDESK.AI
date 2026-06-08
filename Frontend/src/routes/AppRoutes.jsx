@@ -69,8 +69,12 @@ const LazyRoute = ({ children, fallback = <PageSkeleton /> }) => (
 
 // ─── App Routes ─────────────────────────────────────────────────────────────
 
+import AIAssistant from '../components/shared/AIAssistant';
+
 const AppRoutes = () => (
-    <Routes>
+    <>
+        <AIAssistant />
+        <Routes>
         {/* Auth routes */}
         <Route path="/login" element={
             <LazyRoute><Login /></LazyRoute>
@@ -120,6 +124,7 @@ const AppRoutes = () => (
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
+    </>
 );
 
 export default AppRoutes;

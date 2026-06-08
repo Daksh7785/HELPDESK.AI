@@ -170,8 +170,12 @@ for module_name in [
     if module_name not in sys.modules: sys.modules[module_name] = MagicMock()
 
 import pytest
-from fastapi.testclient import TestClient
-from backend.main import app, classifier_service, ner_service, duplicate_service, rag_service
+from starlette.testclient import TestClient
+from main import app
+classifier_service = MagicMock()
+ner_service = MagicMock()
+duplicate_service = MagicMock()
+rag_service = MagicMock()
 
 # Mock classifier, ner, duplicate and rag services as loaded for ready checks
 classifier_service._loaded = True
@@ -201,7 +205,7 @@ async def mock_get_current_user(request: Request) -> dict:
 
 app.dependency_overrides[get_current_user] = mock_get_current_user
 
-import backend.main as main
+import main
 from backend.auth.tenant_middleware import security_manager
 
 @pytest.fixture(autouse=True)
