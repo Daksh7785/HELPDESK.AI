@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { API_CONFIG } from "../../config";
 
 /**
  * TagFilter — admin ticket list filter by tag
@@ -8,7 +9,7 @@ import { supabase } from "../lib/supabaseClient";
 export default function TagFilter({ companyId, onFilterChange }) {
   const [popularTags, setPopularTags] = useState([]);
   const [selected, setSelected]       = useState([]);
-  const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+  const BACKEND = API_CONFIG.BACKEND_URL;
 
   useEffect(() => {
     if (!companyId) return;
