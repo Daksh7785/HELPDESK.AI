@@ -138,14 +138,18 @@ const useAuthStore = create(
                 set({ loading: true });
                 console.log("Attempting magic link / OTP login for:", email);
                 try {
+                    const redirectTo = import.meta.env.VITE_FRONTEND_URL || (typeof window !== 'undefined' ? window.location.origin : undefined);
+
                     const { error } = await supabase.auth.signInWithOtp({
                         email,
                         options: {
                             shouldCreateUser: false, // Only existing users
+                            ...(redirectTo ? { emailRedirectTo: redirectTo } : {})
                         }
                     });
 
                     if (error) throw error;
+
                     return true;
                 } catch (error) {
                     console.error("Magic link operation failed:", error.message);
@@ -275,8 +279,28 @@ const useAuthStore = create(
                 if (get()._initialized) return;
                 set({ _initialized: true });
 
+                // 1) Attempt to restore any session already stored by Supabase
                 get().getCurrentUser();
 
+                // 2) If redirected from an email magic-link, exchange the URL fragment for a session
+                (async () => {
+                    try {
+                        if (typeof window !== 'undefined' && (window.location.hash.includes('access_token') || window.location.href.includes('access_token') || window.location.hash.includes('token'))) {
+                            console.log('Attempting to exchange auth session from URL fragment');
+                            const { data, error } = await supabase.auth.getSessionFromUrl();
+                            if (error) {
+                                console.warn('getSessionFromUrl error:', error.message || error);
+                            } else if (data?.session?.user) {
+                                set({ user: data.session.user });
+                                await get().getProfile(data.session.user);
+                            }
+                        }
+                    } catch (e) {
+                        console.error('Error processing session from URL:', e);
+                    }
+                })();
+
+                // 3) Listen to auth state changes for normal sign-ins/sign-outs
                 supabase.auth.onAuthStateChange(async (event, session) => {
                     console.log("Auth state change:", event);
                     if (session?.user) {

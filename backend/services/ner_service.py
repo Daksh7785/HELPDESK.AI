@@ -44,10 +44,8 @@ class NERService:
         abs_dir = os.path.abspath(SAVE_DIR)
 
         if not os.path.exists(os.path.join(abs_dir, "model.safetensors")):
-            raise FileNotFoundError(
-                f"NER model not found at {abs_dir}. "
-                "Please ensure model files are present."
-            )
+            print(f"[WARNING] NER model not found at {abs_dir}. Skipping NER load.")
+            return
 
         # Load label mappings
         with open(os.path.join(abs_dir, "ner_id2label.json"), "r") as f:
@@ -55,11 +53,15 @@ class NERService:
         with open(os.path.join(abs_dir, "ner_label2id.json"), "r") as f:
             self.label2id = json.load(f)
 
-        # Load tokenizer and model
-        self.tokenizer = DistilBertTokenizerFast.from_pretrained(abs_dir)
-        self.model = DistilBertForTokenClassification.from_pretrained(abs_dir)
-        self.model.to(DEVICE)
-        self.model.eval()
+        # Load tokenizer and model (guard against corrupt files)
+        try:
+            self.tokenizer = DistilBertTokenizerFast.from_pretrained(abs_dir)
+            self.model = DistilBertForTokenClassification.from_pretrained(abs_dir)
+            self.model.to(DEVICE)
+            self.model.eval()
+        except Exception as e:
+            print(f"[WARNING] Failed to load NER tokenizer/model: {e}")
+            return
 
         self._loaded = True
         print("NER loaded successfully")

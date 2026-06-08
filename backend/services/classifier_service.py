@@ -72,12 +72,18 @@ class ClassifierService:
             self.label2id = json.load(f)
 
         # Load tokenizer
-        self.tokenizer = DistilBertTokenizerFast.from_pretrained(abs_dir)
 
-        # Load model
-        self.model = DistilBertForSequenceClassification.from_pretrained(abs_dir)
-        self.model.to(DEVICE)
-        self.model.eval()
+        # Load tokenizer and model (guard against corrupt model files)
+        try:
+            self.tokenizer = DistilBertTokenizerFast.from_pretrained(abs_dir)
+            # Load model
+            self.model = DistilBertForSequenceClassification.from_pretrained(abs_dir)
+            self.model.to(DEVICE)
+            self.model.eval()
+        except Exception as e:
+            print(f"[WARNING] Failed to load classifier tokenizer/model: {e}")
+            # Leave _loaded False so the application can run in degraded mode
+            return
 
         self._loaded = True
         print("Classifier loaded successfully")
