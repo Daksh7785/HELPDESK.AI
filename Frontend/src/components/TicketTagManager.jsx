@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { API_CONFIG } from "../../config";
 import TagChip from "./TagChip";
 
 /**
@@ -24,7 +25,7 @@ export default function TicketTagManager({
   const [saving, setSaving]                 = useState(false);
   const [saveStatus, setSaveStatus]         = useState(null); // null | "saved" | "error"
 
-  const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+  const BACKEND = API_CONFIG.BACKEND_URL;
 
   // ── Auth token ──────────────────────────────────────────────────────────────
   const getToken = useCallback(async () => {
