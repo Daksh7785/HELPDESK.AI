@@ -428,8 +428,9 @@ const AdminTickets = () => {
     }, [fetchTickets]);
 
     useEffect(() => {
+        if (!user) return;
         fetchInitialData();
-    }, [statusFilter, categoryFilter, priorityFilter, teamFilter, searchQuery]);
+    }, [user, statusFilter, categoryFilter, priorityFilter, teamFilter, searchQuery, fetchInitialData]);
 
     // SLA breach realtime listener
     useEffect(() => {
