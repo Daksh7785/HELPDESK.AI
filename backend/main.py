@@ -426,7 +426,7 @@ class TroubleshootResponse(BaseModel):
     is_final: bool
 
 @app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
-async def troubleshoot(request: TroubleshootRequest):
+async def troubleshoot(request: TroubleshootRequest, current_user: dict = Depends(get_current_user)):
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
         return TroubleshootResponse(
@@ -453,7 +453,7 @@ class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
 @app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
-async def analyze_bug(request: BugReportAnalysisRequest):
+async def analyze_bug(request: BugReportAnalysisRequest, current_user: dict = Depends(get_current_user)):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
         return BugReportAnalysisResponse(
@@ -475,7 +475,7 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
 @app.post("/ai/log_correction")
-async def log_correction(raw_request: Request):
+async def log_correction(raw_request: Request, current_user: dict = Depends(get_current_user)):
     """Log an admin correction when the AI prediction differs from the human decision."""
     try:
         body = await raw_request.json()
@@ -484,6 +484,13 @@ async def log_correction(raw_request: Request):
         return {"status": "error", "message": "Invalid JSON body"}
 
     print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
+
+    # Admin-only: reject non-admin callers
+    _meta = (current_user.get('user_metadata') or
+             current_user.get('raw_user_meta_data') or {})
+    if isinstance(_meta, dict) and _meta.get('role') != 'admin':
+        raise HTTPException(status_code=403, detail='Admin privileges required')
+
 
     ticket_id = str(body.get("ticket_id", "unknown"))
     original_text = str(body.get("original_text", ""))
@@ -696,7 +703,7 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 @app.post("/ai/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
-async def analyze_ticket(request_body: TicketRequest, request: Request):
+async def analyze_ticket(request_body: TicketRequest, request: Request, current_user: dict = Depends(get_current_user)):
     """
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
     """
@@ -728,10 +735,10 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
     # Initalize Timeline
-    return await analyze_only(request_body)
+    return await analyze_only(request_body, current_user)
 
 @app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
+async def analyze_only(request_body: TicketRequest, current_user: dict = Depends(get_current_user)):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
     Does NOT persist to DB. This allows the user to review the analysis 
@@ -892,7 +899,7 @@ async def analyze_only(request_body: TicketRequest):
     )
 
 @app.post("/ai/analyze_stream")
-async def analyze_stream(request_body: TicketRequest):
+async def analyze_stream(request_body: TicketRequest, current_user: dict = Depends(get_current_user)):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
     """
@@ -1052,7 +1059,7 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze-v2")
-async def analyze_ticket_v2(request: TicketRequest):
+async def analyze_ticket_v2(request: TicketRequest, current_user: dict = Depends(get_current_user)):
     text = request.text
     try:
         prediction = classifier_v2.predict(text)
