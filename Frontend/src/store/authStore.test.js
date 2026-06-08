@@ -141,3 +141,197 @@ describe('authStore profile authorization cache handling', () => {
         });
     });
 });
+
+// The following tests cover the Supabase auth integration in authStore, including login, signup, logout, and OTP verification flows.
+describe('authStore Supabase auth integration', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+
+        useAuthStore.setState({
+            user: null,
+            profile: null,
+            loading: false,
+            isCheckingSession: false,
+        });
+    });
+
+    test('logs in successfully with valid credentials', async () => {
+        const mockUser = {
+            id: 'user-123',
+            email: 'user@example.com',
+            user_metadata: {},
+        };
+
+        supabase.auth.signInWithPassword.mockResolvedValue({
+            data: { user: mockUser },
+            error: null,
+        });
+
+        mockProfileQuery({
+            data: {
+                id: 'user-123',
+                role: 'user',
+                status: 'active',
+                email: 'user@example.com',
+            },
+            error: null,
+        });
+
+        const result = await useAuthStore
+            .getState()
+            .login('user@example.com', 'Password123');
+
+        expect(supabase.auth.signInWithPassword).toHaveBeenCalledWith({
+            email: 'user@example.com',
+            password: 'Password123',
+        });
+
+        expect(result.user).toEqual(mockUser);
+        expect(result.profile.role).toBe('user');
+    });
+
+    test('throws error for invalid login credentials', async () => {
+        const mockError = new Error('Invalid login credentials');
+
+        supabase.auth.signInWithPassword.mockResolvedValue({
+            data: { user: null },
+            error: mockError,
+        });
+
+        await expect(
+            useAuthStore
+                .getState()
+                .login('wrong@example.com', 'WrongPassword')
+        ).rejects.toThrow('Invalid login credentials');
+
+        expect(supabase.auth.signInWithPassword).toHaveBeenCalled();
+    });
+
+    test('signs up successfully with valid data', async () => {
+        const mockUser = {
+            id: 'new-user-123',
+            email: 'newuser@example.com',
+            user_metadata: {
+                full_name: 'New User',
+            },
+        };
+
+        supabase.auth.signUp.mockResolvedValue({
+            data: { user: mockUser },
+            error: null,
+        });
+
+        mockProfileQuery({
+            data: {
+                id: 'new-user-123',
+                role: 'user',
+                status: 'pending_email_verification',
+                email: 'newuser@example.com',
+            },
+            error: null,
+        });
+
+        const result = await useAuthStore.getState().signup(
+            'newuser@example.com',
+            'Password123',
+            'New User'
+        );
+
+        expect(supabase.auth.signUp).toHaveBeenCalled();
+
+        expect(result).toEqual(mockUser);
+    });
+
+    test('rejects weak passwords during signup', async () => {
+        await expect(
+            useAuthStore.getState().signup(
+                'weak@example.com',
+                'weak',
+                'Weak User'
+            )
+        ).rejects.toThrow('Password must be at least 8 characters.');
+
+        expect(supabase.auth.signUp).not.toHaveBeenCalled();
+    });
+
+    test('logs out successfully and clears auth state', async () => {
+        supabase.auth.signOut.mockResolvedValue({
+            error: null,
+        });
+
+        useAuthStore.setState({
+            user: {
+                id: 'user-123',
+                email: 'user@example.com',
+            },
+            profile: {
+                id: 'user-123',
+                role: 'user',
+            },
+        });
+
+        await useAuthStore.getState().logout();
+
+        expect(supabase.auth.signOut).toHaveBeenCalled();
+
+        expect(useAuthStore.getState().user).toBeNull();
+        expect(useAuthStore.getState().profile).toBeNull();
+    });
+
+    test('verifies OTP and logs in successfully', async () => {
+        const mockUser = {
+            id: 'otp-user',
+            email: 'otp@example.com',
+            user_metadata: {},
+        };
+
+        supabase.auth.verifyOtp.mockResolvedValue({
+            data: { user: mockUser },
+            error: null,
+        });
+
+        mockProfileQuery({
+            data: {
+                id: 'otp-user',
+                role: 'user',
+                status: 'active',
+                email: 'otp@example.com',
+            },
+            error: null,
+        });
+
+        const result = await useAuthStore
+            .getState()
+            .verifyOtpAndLogin(
+                'otp@example.com',
+                '123456'
+            );
+
+        expect(supabase.auth.verifyOtp).toHaveBeenCalledWith({
+            email: 'otp@example.com',
+            token: '123456',
+            type: 'magiclink',
+        });
+
+        expect(result.user).toEqual(mockUser);
+        expect(result.profile.role).toBe('user');
+    });
+
+    test('handles OTP verification failure correctly', async () => {
+        const mockError = new Error('Invalid OTP');
+
+        supabase.auth.verifyOtp.mockResolvedValue({
+            data: { user: null },
+            error: mockError,
+        });
+
+        await expect(
+            useAuthStore
+                .getState()
+                .verifyOtpAndLogin(
+                    'otp@example.com',
+                    'wrongotp'
+                )
+        ).rejects.toThrow('Invalid OTP');
+    });
+});
