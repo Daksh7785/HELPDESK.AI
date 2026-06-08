@@ -16,7 +16,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '../../lib/supabaseClient';
 
 // ─── Small icon helpers (inline SVG, no extra deps) ─────────────────────────
 
