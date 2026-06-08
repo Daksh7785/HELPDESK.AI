@@ -1,172 +1,61 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { API_CONFIG } from "../config";
+import { supabase } from "../lib/supabaseClient";
 
-// ============================================================
-// MULTI-API FAILOVER CONFIGURATION
-// Priority: Gemini Keys (1-4) → OpenRouter Keys (1-4) → Groq Keys (1-3)
-// If a provider hits a 429 / quota / error, it tries the next automatically.
-// ============================================================
-
-const buildConfigList = () => {
-    const env = import.meta.env;
-    const configs = [];
-
-    // Priority 1: Native Gemini — try modern flash models
-    const geminiKeys = [
-        env.VITE_GEMINI_API_KEY_1, env.VITE_GEMINI_API_KEY_2,
-        env.VITE_GEMINI_API_KEY_3, env.VITE_GEMINI_API_KEY_4
-    ].filter(Boolean);
-    // Dynamically retrieve configured model slugs or fallback to stable defaults
-    const geminiModels = (env.VITE_AI_GEMINI_MODELS || 'gemini-2.5-flash,gemini-2.5-flash-lite,gemini-2.0-flash').split(',');
-    
-    geminiKeys.forEach(key => {
-        geminiModels.forEach(model => {
-            configs.push({ provider: 'gemini', key, model: model.trim() });
-        });
-    });
-
-    // Priority 2: OpenRouter — updated model slugs
-    const openrouterKeys = [
-        env.VITE_OPENROUTER_API_KEY_1, env.VITE_OPENROUTER_API_KEY_2,
-        env.VITE_OPENROUTER_API_KEY_3, env.VITE_OPENROUTER_API_KEY_4,
-    ].filter(Boolean);
-    const openrouterModels = (env.VITE_AI_OPENROUTER_MODELS || 'meta-llama/llama-3.2-3b-instruct:free,microsoft/phi-3-mini-128k-instruct:free,mistralai/mistral-7b-instruct:free,google/gemma-2-9b-it:free').split(',');
-    
-    openrouterKeys.forEach((key, idx) => {
-        const primaryModel = openrouterModels[idx % openrouterModels.length].trim();
-        const secondaryModel = openrouterModels[(idx + 1) % openrouterModels.length].trim();
-        configs.push({ provider: 'openrouter', key, model: primaryModel });
-        configs.push({ provider: 'openrouter', key, model: secondaryModel });
-    });
-
-    // Priority 3: Groq — use stable models
-    const groqKeys = [
-        env.VITE_GROQ_API_KEY_1, env.VITE_GROQ_API_KEY_2, env.VITE_GROQ_API_KEY_3
-    ].filter(Boolean);
-    const groqModels = (env.VITE_AI_GROQ_MODELS || 'llama-3.1-8b-instant,mixtral-8x7b-32768,gemma2-9b-it').split(',');
-    
-    groqKeys.forEach((key, idx) => {
-        configs.push({ provider: 'groq', key, model: groqModels[idx % groqModels.length].trim() });
-    });
-
-    return configs;
+const AI_PROVIDER_PRIORITY = ["gemini", "openrouter", "groq"];
+const AI_MODEL_DEFAULTS = {
+  gemini: "gemma-3-27b-it",
+  openrouter: "google/gemma-3-27b-it:free",
+  groq: "llama3-8b-8192",
 };
 
 
-// ============================================================
-// PROVIDER HANDLERS
-// ============================================================
+// Routes AI requests through the Supabase Edge Function (ai-proxy)
+// which keeps all API keys server-side and handles failover across providers.
+const callAIProxy = async (provider, promptText, history, image) => {
+  const model = AI_MODEL_DEFAULTS[provider] || AI_MODEL_DEFAULTS.gemini;
+  const messages = history.map(msg => ({
+    role: msg.role === 'bot' ? 'assistant' : 'user',
+    content: msg.text || ""
+  }));
+  const userContent = image
+    ? [{ type: "text", text: promptText }, { type: "image_url", image_url: { url: image } }]
+    : promptText;
+  messages.push({ role: "user", content: userContent });
 
-const callGemini = async (config, promptText, history, image) => {
-    const genAI = new GoogleGenerativeAI(config.key);
-    const model = genAI.getGenerativeModel({ model: config.model });
+  const { data, error } = await supabase.functions.invoke("ai-proxy", {
+    body: { provider, model, messages, prompt: promptText },
+  });
 
-    let formattedHistory = history.map(msg => {
-        const parts = [{ text: msg.text || "" }];
-        if (msg.image) {
-            const [mime, data] = msg.image.split(';base64,');
-            parts.push({ inlineData: { mimeType: mime.split(':')[1] || 'image/png', data } });
-        }
-        return { role: msg.role === 'bot' ? 'model' : 'user', parts };
-    });
-
-    // Gemini requires history to start with 'user' role
-    const firstUserIdx = formattedHistory.findIndex(h => h.role === 'user');
-    if (firstUserIdx > 0) formattedHistory = formattedHistory.slice(firstUserIdx);
-    else if (firstUserIdx === -1) formattedHistory = [];
-
-    const chat = model.startChat({ history: formattedHistory, generationConfig: { maxOutputTokens: 2048 } });
-
-    const messageParts = [{ text: promptText }];
-    if (image) {
-        const [mime, data] = image.split(';base64,');
-        messageParts.push({ inlineData: { mimeType: mime.split(':')[1] || 'image/png', data } });
-    }
-
-    const result = await chat.sendMessage(messageParts);
-    return result.response.text();
+  if (error) {
+    const err = new Error(error.message || "AI proxy error");
+    err.status = 503;
+    throw err;
+  }
+  if (data?.error) {
+    const err = new Error(data.error);
+    err.status = 502;
+    throw err;
+  }
+  const reply =
+    data?.candidates?.[0]?.content?.parts?.[0]?.text ||
+    data?.choices?.[0]?.message?.content ||
+    data?.response ||
+    "No response received.";
+  return reply;
 };
 
-const callOpenAICompat = async (config, promptText, history, image, baseUrl, extraHeaders = {}) => {
-    const messages = history.map(msg => ({
-        role: msg.role === 'bot' ? 'assistant' : 'user',
-        content: msg.text || ""
-    }));
-
-    const userContent = image
-        ? [{ type: "text", text: promptText }, { type: "image_url", image_url: { url: image } }]
-        : promptText;
-
-    messages.push({ role: "user", content: userContent });
-
-    const response = await fetch(`${baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.key}`, ...extraHeaders },
-        body: JSON.stringify({ model: config.model, messages, max_tokens: 2048 })
-    });
-
-    if (!response.ok) {
-        const err = new Error(`HTTP ${response.status}`);
-        err.status = response.status;
-        throw err;
-    }
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || "No response received.";
-};
-
-// Core failover runner — shared by both exported functions
 const runWithFailover = async (promptText, history, image) => {
-    const configList = buildConfigList();
-    if (configList.length === 0) throw new Error("No AI API keys configured in .env");
-
-    const blacklistedKeys = new Set();
-
-    for (let i = 0; i < configList.length; i++) {
-        const config = configList[i];
-        if (blacklistedKeys.has(config.key)) {
-            console.log(`[AI Failover] Skipping blacklisted key for ${config.provider} (${config.model})`);
-            continue;
-        }
-
-        console.log(`[AI Failover] Trying ${i + 1}/${configList.length}: ${config.provider} (${config.model})`);
-
-        try {
-            if (config.provider === 'gemini') {
-                return await callGemini(config, promptText, history, image);
-            } else if (config.provider === 'openrouter') {
-                return await callOpenAICompat(config, promptText, history, image,
-                    'https://openrouter.ai/api/v1',
-                    { 'HTTP-Referer': API_CONFIG.FRONTEND_URL, 'X-Title': 'AI Helpdesk' }
-                );
-            } else if (config.provider === 'groq') {
-                return await callOpenAICompat(config, promptText, history, null, // Groq = text only
-                    'https://api.groq.com/openai/v1'
-                );
-            }
-        } catch (error) {
-            const isRateLimit = error.status === 429
-                || error.message?.includes('429')
-                || error.message?.includes('quota')
-                || error.message?.includes('RESOURCE_EXHAUSTED')
-                || error.message?.includes('rate_limit');
-
-            const isExpiredOrInvalid = error.message?.includes('API_KEY_INVALID')
-                || error.message?.includes('API key expired')
-                || error.message?.includes('invalid')
-                || error.message?.includes('expired')
-                || error.status === 401
-                || error.status === 403;
-
-            if (isExpiredOrInvalid) {
-                blacklistedKeys.add(config.key);
-                console.warn(`[AI Failover] Blacklisted invalid/expired key for ${config.provider}`);
-            }
-
-            console.warn(`[AI Failover] ❌ ${config.provider} key ${i + 1}: ${isRateLimit ? 'Quota exceeded' : error.message}`);
-        }
+  let lastError = null;
+  for (const provider of AI_PROVIDER_PRIORITY) {
+    console.log(`[AI Failover] Trying provider: ${provider}`);
+    try {
+      return await callAIProxy(provider, promptText, history, image);
+    } catch (error) {
+      lastError = error;
+      console.warn(`[AI Failover] ${provider} failed: ${error.message}`);
     }
-
-    throw new Error("QUOTA_EXCEEDED: All AI API keys exhausted. Please wait a few minutes and try again.");
+  }
+  throw new Error(lastError || new Error("All AI providers exhausted"));
 };
 
 // ─── Smart offline fallback (used when ALL providers fail) ───────────────────
