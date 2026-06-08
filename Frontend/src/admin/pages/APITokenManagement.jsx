@@ -17,12 +17,13 @@ import {
 } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
+import { API_CONFIG } from '../../config';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || '';
+const BACKEND_URL = API_CONFIG.BACKEND_URL;
 
 const ALL_SCOPES = [
     { id: 'tickets:read',     label: 'Tickets — Read',      desc: 'View and search tickets' },

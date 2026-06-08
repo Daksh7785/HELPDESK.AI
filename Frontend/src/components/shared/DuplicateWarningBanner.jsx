@@ -9,7 +9,7 @@
  *   - Matches the HELPDESK.AI design system (glass morphism, gradient)
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   AlertTriangle,
   Copy,
@@ -53,9 +53,15 @@ export default function DuplicateWarningBanner({
   const [visible, setVisible] = useState(false);
 
   // Animate in on mount
+  const mountedRef = useRef(true);
   useEffect(() => {
-    const timer = setTimeout(() => setVisible(true), 100);
-    return () => clearTimeout(timer);
+    const timer = setTimeout(() => {
+      if (mountedRef.current) setVisible(true);
+    }, 100);
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(timer);
+    };
   }, []);
 
   if (!duplicate || !duplicate.is_duplicate) return null;

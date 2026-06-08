@@ -28,7 +28,7 @@ import {
 import SLADashboard from '../components/SLADashboard';
 import SLABadge from '../components/SLABadge';
 
-import { API_CONFIG } from '@/config';
+import { API_CONFIG } from '../../config';
 
 const API_BASE = API_CONFIG.BACKEND_URL;
 
