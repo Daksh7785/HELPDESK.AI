@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Activity } from 'lucide-react';
 
 import useAuthStore from "../../store/authStore";
+import useToastStore from "../../store/toastStore";
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
@@ -70,41 +71,50 @@ const aiIconMap = [
 const AdminDashboard = () => {
     const navigate = useNavigate();
     const { profile } = useAuthStore();
+    const { showToast } = useToastStore();
     const [tickets, setTickets] = React.useState([]);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [error, setError] = React.useState(null);
 
-    React.useEffect(() => {
-        if (profile) {
-            const fetchStats = async () => {
-                setIsLoading(true);
-                try {
-                    let query = supabase
-                        .from('tickets')
-                        .select(`
+    const fetchStats = React.useCallback(async () => {
+        if (!profile) return;
+        setIsLoading(true);
+        setError(null);
+        try {
+            let query = supabase
+                .from('tickets')
+                .select(`
                     *,
                     creator:profiles!tickets_user_id_fkey(full_name, email, profile_picture)
                 `)
-                        .order('created_at', { ascending: false });
-                    if (profile?.role === 'admin' && profile?.company) query = query.eq('company', profile.company);
-                    const { data, error } = await query;
-                    if (error) {
-                        // Secondary check: If the relation fails, try a simpler select
-                        console.warn("Retrying dashboard fetch without relation...", error);
-                        const { data: basicData, error: basicError } = await supabase.from('tickets').select('*').eq('company', profile?.company).order('created_at', { ascending: false });
-                        if (basicError) throw basicError;
-                        setTickets(basicData || []);
-                    } else {
-                        setTickets(data || []);
-                    }
-                } catch (err) { console.error("Dashboard fetch error:", err); }
-                finally { setIsLoading(false); }
-            };
+                .order('created_at', { ascending: false });
+            if (profile?.role === 'admin' && profile?.company) query = query.eq('company', profile.company);
+            const { data, error: fetchErr } = await query;
+            if (fetchErr) {
+                // Secondary check: If the relation fails, try a simpler select
+                console.warn("Retrying dashboard fetch without relation...", fetchErr);
+                const { data: basicData, error: basicError } = await supabase.from('tickets').select('*').eq('company', profile?.company).order('created_at', { ascending: false });
+                if (basicError) throw basicError;
+                setTickets(basicData || []);
+            } else {
+                setTickets(data || []);
+            }
+        } catch (err) {
+            console.error("Dashboard fetch error:", err);
+            setError(err.message || "Failed to load dashboard metrics");
+            showToast("Failed to fetch dashboard statistics", "error");
+        } finally {
+            setIsLoading(false);
+        }
+    }, [profile, showToast]);
 
+    React.useEffect(() => {
+        if (profile) {
             fetchStats();
             const interval = setInterval(fetchStats, 30000);
             return () => clearInterval(interval);
         }
-    }, [profile]);
+    }, [profile, fetchStats]);
 
     const metrics = useMemo(() => {
         const total = tickets.length;
@@ -146,20 +156,42 @@ const AdminDashboard = () => {
             </div>
 
             {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
-                    <StatCard label="Total Tickets" value={metrics.total} color="indigo" subtitle="Lifetime generated" customIcon={<TicketIcon />} />
-                </button>
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
-                    <StatCard label="Active Tickets" value={metrics.active} color="amber" subtitle="Need attention" customIcon={<ActivityIcon />} />
-                </button>
-                <button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none">
-                    <StatCard label="AI Auto-Resolved" value={metrics.autoResolved} color="emerald" subtitle="Resolved by AI" customIcon={<CpuIcon />} />
-                </button>
-                <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
-                    <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
-                </button>
-            </div>
+            {error ? (
+                <div className="bg-red-50 border border-red-200 rounded-[2rem] p-8 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm shadow-red-100/30">
+                    <div className="flex items-center gap-4 text-left">
+                        <div className="w-12 h-12 rounded-2xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif' }} className="font-bold text-red-900">Dashboard Metrics Unavailable</h3>
+                            <p className="text-sm text-red-600 mt-1">{error}</p>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={fetchStats}
+                        className="px-6 py-2.5 bg-red-600 text-white hover:bg-red-700 transition-colors rounded-xl text-xs font-bold uppercase tracking-wider shadow-md shadow-red-600/10 shrink-0"
+                    >
+                        Retry Load
+                    </button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                        <StatCard label="Total Tickets" value={metrics.total} color="indigo" subtitle="Lifetime generated" customIcon={<TicketIcon />} />
+                    </button>
+                    <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                        <StatCard label="Active Tickets" value={metrics.active} color="amber" subtitle="Need attention" customIcon={<ActivityIcon />} />
+                    </button>
+                    <button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none">
+                        <StatCard label="AI Auto-Resolved" value={metrics.autoResolved} color="emerald" subtitle="Resolved by AI" customIcon={<CpuIcon />} />
+                    </button>
+                    <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
+                        <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
+                    </button>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
                 {/* Recent Activity */}
