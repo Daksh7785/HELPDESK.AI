@@ -14,8 +14,9 @@ import re
 import uuid
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Request, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from pydantic import BaseModel, Field
+from backend.auth_cookie import get_current_user
 from backend.services.rate_limit_config import limiter
 
 from backend.services.voice_service import (
@@ -72,6 +73,7 @@ async def transcribe_audio(
     request: Request,
     audio: UploadFile = File(...),
     language: Optional[str] = Form(None),
+    user: dict = Depends(get_current_user),
 ) -> TranscribeResponse:
     """Transcribe an uploaded audio file into text.
 
@@ -124,6 +126,7 @@ async def create_ticket_from_voice(
     user_id: Optional[str] = Form(None, max_length=128),
     company: Optional[str] = Form(None, max_length=256),
     language: Optional[str] = Form(None),
+    current_user: dict = Depends(get_current_user),
 ) -> CreateTicketResponse:
     """Full voice-to-ticket pipeline: transcribe audio → return ticket draft.
 
@@ -187,7 +190,7 @@ async def create_ticket_from_voice(
 
 
 @router.get("/health", response_model=HealthResponse)
-async def voice_health() -> HealthResponse:
+async def voice_health(user: dict = Depends(get_current_user)) -> HealthResponse:
     """Check if the voice transcription service is available."""
     try:
         # FIX 8: Call a public get_voice_service_health() function instead of
