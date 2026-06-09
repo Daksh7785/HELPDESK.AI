@@ -193,7 +193,14 @@ const TicketDetail = () => {
                                 {[
                                     { label: 'Domain', value: ticket.category },
                                     { label: 'Urgency', value: ticket.priority },
-                                    { label: 'Assigned Unit', value: ticket.assigned_team }
+                                    { label: 'Assigned Unit', value: ticket.assigned_team },
+                                    { 
+                                        label: 'Created At', 
+                                        value: ticket.created_at ? new Date(ticket.created_at).toLocaleString(undefined, {
+                                            year: 'numeric', month: 'short', day: 'numeric',
+                                            hour: '2-digit', minute: '2-digit'
+                                        }) : 'Unknown'
+                                    }
                                 ].map((item, i) => (
                                     <div key={i}>
                                         <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">{item.label}</p>
