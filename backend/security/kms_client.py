@@ -132,8 +132,14 @@ def get_kms_provider() -> KMSProvider:
         return GoogleCloudKMSProvider(key_name)
         
     else:
-        # Fallback local KMS using local DB_ENCRYPTION_SECRET_KEY
-        secret = os.environ.get("DB_ENCRYPTION_SECRET_KEY") or "default-development-secret-key-32b"
+        # Local KMS requires DB_ENCRYPTION_SECRET_KEY to be explicitly set
+        secret = os.environ.get("DB_ENCRYPTION_SECRET_KEY")
+        if not secret:
+            raise ValueError(
+                "DB_ENCRYPTION_SECRET_KEY environment variable not set. "
+                "Encryption requires a configured key. Generate one with: "
+                "python3 -c \"import secrets; print(secrets.token_hex(32))\""
+            )
         import hashlib
         key_bytes = hashlib.sha256(secret.encode()).digest()
         return LocalKMSProvider(key_bytes)
