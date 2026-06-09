@@ -1,9 +1,38 @@
 import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
+import useToastStore from '../store/toastStore';
 
 const USE_MOCK = true;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
+
+// Create a configured axios instance
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Global Error Interceptor
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const showToast = useToastStore.getState().showToast;
+    
+    if (error.response) {
+      const status = error.response.status;
+      if (status === 401) {
+        showToast('Session expired or unauthorized. Please log in again.', 'error');
+      } else if (status === 403) {
+        showToast('You do not have permission to perform this action.', 'error');
+      } else if (status >= 500) {
+        showToast('A server error occurred. Please try again later.', 'error');
+      }
+    } else if (error.request) {
+      showToast('Network error. Please check your connection.', 'error');
+    }
+    
+    return Promise.reject(error);
+  }
+);
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -70,7 +99,7 @@ export const api = {
   predictTicket: async (issueText, imageBase64 = "") => {
     try {
       // ALWAYS call the real backend for prediction if possible
-      const response = await axios.post(`${API_BASE_URL}/ai/analyze_ticket`, {
+      const response = await apiClient.post(`/ai/analyze_ticket`, {
         text: issueText,
         image_base64: imageBase64,
         image_text: ""
@@ -120,7 +149,7 @@ export const api = {
 
   logCorrection: async (correctionPayload) => {
     try {
-      await axios.post(`${API_BASE_URL}/ai/log_correction`, correctionPayload);
+      await apiClient.post(`/ai/log_correction`, correctionPayload);
     } catch (error) {
       // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);

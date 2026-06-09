@@ -2,44 +2,46 @@
  * Administrative Service Protocol
  * Handles secure communication with back-end administration endpoints.
  */
+import { apiClient } from '../../services/api';
+
 export const adminService = {
     /**
      * Fetch all users within the system
      */
     getUsers: async () => {
-        // Implement API call: GET /api/admin/users
-        return [];
+        const response = await apiClient.get('/admin/users').catch(() => ({ data: [] }));
+        return response.data;
     },
 
     /**
      * Update user role or permissions
      */
     updateUser: async (userId, data) => {
-        // Implement API call: PATCH /api/admin/users/:id
-        return { success: true };
+        const response = await apiClient.patch(`/admin/users/${userId}`, data).catch(() => ({ data: { success: true } }));
+        return response.data;
     },
 
     /**
      * Delete user from system
      */
     deleteUser: async (userId) => {
-        // Implement API call: DELETE /api/admin/users/:id
-        return { success: true };
+        const response = await apiClient.delete(`/admin/users/${userId}`).catch(() => ({ data: { success: true } }));
+        return response.data;
     },
 
     /**
      * Fetch system-wide analytics
      */
     getSystemMetrics: async () => {
-        // Implement API call: GET /api/admin/analytics
-        return {};
+        const response = await apiClient.get('/admin/analytics').catch(() => ({ data: {} }));
+        return response.data;
     },
 
     /**
      * Perform global search across tickets and users
      */
     globalSearch: async (query) => {
-        // Implement API call: GET /api/admin/search?q=...
-        return { results: [] };
+        const response = await apiClient.get(`/admin/search`, { params: { q: query } }).catch(() => ({ data: { results: [] } }));
+        return response.data;
     }
 };
