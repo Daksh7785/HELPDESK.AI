@@ -9,35 +9,54 @@
  * @param {string} filename - Output filename (without extension)
  */
 export function downloadCSV(tickets, filename = 'tickets-export') {
-  if (!tickets?.length) return;
+  if (!tickets?.length) {
+    throw new Error('No tickets available to export');
+  }
 
   const headers = [
     'Ticket ID',
-    'Title',
+    'Subject',
+    'Summary',
+    'Description',
     'Category',
     'Priority',
     'Status',
-    'Assigned To',
+    'Assigned Team',
+    'Assigned Agent',
+    'Requester Name',
+    'Requester Email',
+    'SLA Status',
+    'Confidence',
     'Created At',
+    'Updated At',
     'Resolved At',
     'Company',
   ];
 
   const rows = tickets.map((t) => [
     t.ticket_id || t.id || '',
-    t.title || t.subject || '',
+    t.title || t.subject || t.summary || '',
+    t.summary || '',
+    t.description || '',
     t.category || '',
     t.priority || '',
     t.status || '',
-    t.assigned_to || t.assigned_agent || t.agent_name || '',
-    t.created_at || t.createdAt || '',
-    t.resolved_at || t.resolvedAt || '',
+    t.assigned_team || '',
+    getAssignedAgentName(t),
+    t.creator?.full_name || t.profiles?.full_name || t.requester_name || '',
+    t.creator?.email || t.profiles?.email || t.user_email || '',
+    t.sla_status || (t.sla_breach ? 'breached' : ''),
+    formatConfidence(t.confidence),
+    formatExportDate(t.created_at || t.createdAt),
+    formatExportDate(t.updated_at || t.updatedAt),
+    formatExportDate(t.resolved_at || t.resolvedAt),
     t.company_name || t.company || '',
   ]);
 
   // Build CSV content
   const escape = (v) => {
-    const s = String(v ?? '');
+    const raw = String(v ?? '');
+    const s = /^[=+\-@]/.test(raw) ? `'${raw}` : raw;
     return /[,"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
   };
 
@@ -47,7 +66,7 @@ export function downloadCSV(tickets, filename = 'tickets-export') {
   ].join('\n');
 
   // Trigger download
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const el = document.createElement('a');
   el.href = url;
@@ -56,6 +75,30 @@ export function downloadCSV(tickets, filename = 'tickets-export') {
   el.click();
   document.body.removeChild(el);
   URL.revokeObjectURL(url);
+}
+
+function getAssignedAgentName(ticket) {
+  return (
+    ticket.assignee?.full_name ||
+    ticket.assigned_to ||
+    ticket.assigned_agent ||
+    ticket.agent_name ||
+    ''
+  );
+}
+
+function formatConfidence(confidence) {
+  if (confidence === null || confidence === undefined || confidence === '') return '';
+  const numericConfidence = Number(confidence);
+  if (Number.isNaN(numericConfidence)) return String(confidence);
+  return `${Math.round(numericConfidence * 100)}%`;
+}
+
+function formatExportDate(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toISOString();
 }
 
 /**

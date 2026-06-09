@@ -615,6 +615,19 @@ const AdminTickets = () => {
         return 'bg-red-500';
     };
 
+    const handleExportTickets = () => {
+        try {
+            const exportDate = new Date().toISOString().slice(0, 10);
+            downloadCSV(filteredTickets, `ticket-history-${exportDate}`);
+            showToast(`${filteredTickets.length} ticket${filteredTickets.length === 1 ? '' : 's'} exported as CSV.`, 'success');
+            setTicketAnnouncement(`${filteredTickets.length} ticket${filteredTickets.length === 1 ? '' : 's'} exported as CSV.`);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'CSV export failed';
+            showToast(message, 'error');
+            setTicketAnnouncement(message);
+        }
+    };
+
     const isAllSelected = filteredTickets.length > 0 && selectedTickets.length === filteredTickets.length;
     const isSomeSelected = selectedTickets.length > 0 && selectedTickets.length < filteredTickets.length;
 
@@ -636,7 +649,7 @@ const AdminTickets = () => {
                     {/* Export CSV */}
                     <button
                         type="button"
-                        onClick={() => downloadCSV(filteredTickets, `tickets-export-${new Date().toISOString().slice(0, 10)}`)}
+                        onClick={handleExportTickets}
                         disabled={filteredTickets.length === 0}
                         aria-label={`Export ${filteredTickets.length} filtered tickets as CSV`}
                         className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
