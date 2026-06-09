@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+app.add_middleware(CSRFTokenMiddleware)
+
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
