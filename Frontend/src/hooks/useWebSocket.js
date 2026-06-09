@@ -174,17 +174,24 @@ const useSupabaseRealtime = (
           ...(sub.filter ? { filter: sub.filter } : {}),
         },
         (payload) => {
-          // Reset pong timestamp on any message
-          lastPongRef.current = Date.now();
-          lastPongRef.current = Date.now();
+          try {
+            if (!payload || typeof payload !== 'object') {
+              throw new Error('Invalid socket payload format: expected object');
+            }
+            
+            // Reset pong timestamp on any message
+            lastPongRef.current = Date.now();
 
-          // If we were reconnecting, we're now connected
-          if (retryCountRef.current > 0) {
-            retryCountRef.current = 0;
-            setConnected();
+            // If we were reconnecting, we're now connected
+            if (retryCountRef.current > 0) {
+              retryCountRef.current = 0;
+              setConnected();
+            }
+
+            sub.handler(payload);
+          } catch (err) {
+            console.error('Error handling realtime socket payload:', err);
           }
-
-          sub.handler(payload);
         }
       );
     }
