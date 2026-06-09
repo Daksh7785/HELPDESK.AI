@@ -286,6 +286,7 @@ const AdminTickets = () => {
 
     // ── Filter State ────────────────────────────────
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [categoryFilter, setCategoryFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
@@ -427,8 +428,9 @@ const AdminTickets = () => {
     }, [fetchTickets]);
 
     useEffect(() => {
+        if (!user) return;
         fetchInitialData();
-    }, [statusFilter, categoryFilter, priorityFilter, teamFilter, searchQuery]);
+    }, [user, statusFilter, categoryFilter, priorityFilter, teamFilter, searchQuery, fetchInitialData]);
 
     // SLA breach realtime listener
     useEffect(() => {
@@ -462,6 +464,12 @@ const AdminTickets = () => {
 
         return () => { supabase.removeChannel(channelSla); };
     }, []);
+
+    // Debounce search query
+    useEffect(() => {
+        const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     // Seed search from URL
     useEffect(() => {
@@ -559,8 +567,8 @@ const AdminTickets = () => {
     // ── Derived / Filtered ──────────────────────────
     const filteredTickets = useMemo(() => {
         let result = tickets;
-        if (searchQuery) {
-            const q = sanitizeSearchQuery(searchQuery).toLowerCase();
+        if (debouncedSearch) {
+            const q = sanitizeSearchQuery(debouncedSearch).toLowerCase();
             result = result.filter(t =>
                 String(t.id).includes(q) ||
                 (t.subject || '').toLowerCase().includes(q) ||

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
     Building2,
     ShieldCheck,
@@ -36,6 +36,7 @@ const SSOConfig = () => {
         sync_groups: true
     });
     const [auditLogs, setAuditLogs] = useState([]);
+    const mountedRef = useRef(true);
 
     // Provider Form State
     const [providerForm, setProviderForm] = useState({
@@ -84,14 +85,14 @@ const SSOConfig = () => {
             if (!res.ok) throw new Error('Failed to load SSO configuration');
 
             const data = await res.json();
-            setProviders(data.providers || []);
-            setMappings(data.mappings || []);
-            if (data.settings) setSettings(data.settings);
+            if (mountedRef.current) setProviders(data.providers || []);
+            if (mountedRef.current) setMappings(data.mappings || []);
+            if (data.settings && mountedRef.current) setSettings(data.settings);
 
             // Populate form if there's an existing provider
             if (data.providers && data.providers.length > 0) {
                 const current = data.providers[0];
-                setProviderForm({
+                if (mountedRef.current) setProviderForm({
                     ...current,
                     domain_names: (current.domain_names || []).join(', ')
                 });
@@ -105,14 +106,19 @@ const SSOConfig = () => {
             });
             if (logsRes.ok) {
                 const logs = await logsRes.json();
-                setAuditLogs(logs || []);
+                if (mountedRef.current) setAuditLogs(logs || []);
             }
         } catch (err) {
-            setError(err.message);
+            if (mountedRef.current) setError(err.message);
         } finally {
-            setLoading(false);
+            if (mountedRef.current) setLoading(false);
         }
     };
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => { mountedRef.current = false; };
+    }, []);
 
     useEffect(() => {
         fetchSSOConfig();
@@ -150,7 +156,7 @@ const SSOConfig = () => {
             setSuccess('Identity Provider configuration updated successfully!');
             fetchSSOConfig();
         } catch (err) {
-            setError(err.message);
+            if (mountedRef.current) setError(err.message);
         } finally {
             setSaving(false);
         }
@@ -178,7 +184,7 @@ const SSOConfig = () => {
             setSuccess('Provisioning settings updated successfully!');
             fetchSSOConfig();
         } catch (err) {
-            setError(err.message);
+            if (mountedRef.current) setError(err.message);
         } finally {
             setSaving(false);
         }
@@ -207,7 +213,7 @@ const SSOConfig = () => {
             setSuccess('Group-to-role mapping rule added!');
             fetchSSOConfig();
         } catch (err) {
-            setError(err.message);
+            if (mountedRef.current) setError(err.message);
         } finally {
             setSaving(false);
         }
@@ -230,7 +236,7 @@ const SSOConfig = () => {
             setSuccess('Mapping rule deleted.');
             fetchSSOConfig();
         } catch (err) {
-            setError(err.message);
+            if (mountedRef.current) setError(err.message);
         }
     };
 
@@ -333,7 +339,7 @@ const SSOConfig = () => {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Provider Name</label>
                                 <select
                                     value={providerForm.provider_name}
-                                    onChange={(e) => setProviderForm({ ...providerForm, provider_name: e.target.value })}
+                                    onChange={(e) => if (mountedRef.current) setProviderForm({ ...providerForm, provider_name: e.target.value })}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-black text-slate-700 uppercase outline-none focus:border-indigo-600 transition-colors"
                                 >
                                     <option value="okta">Okta Identity</option>
@@ -347,7 +353,7 @@ const SSOConfig = () => {
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Protocol</label>
                                 <select
                                     value={providerForm.protocol}
-                                    onChange={(e) => setProviderForm({ ...providerForm, protocol: e.target.value })}
+                                    onChange={(e) => if (mountedRef.current) setProviderForm({ ...providerForm, protocol: e.target.value })}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-black text-slate-700 uppercase outline-none focus:border-indigo-600 transition-colors"
                                 >
                                     <option value="saml">SAML 2.0 Assertion</option>
@@ -363,7 +369,7 @@ const SSOConfig = () => {
                                     type="text"
                                     placeholder="enterprise.com, co.org"
                                     value={providerForm.domain_names}
-                                    onChange={(e) => setProviderForm({ ...providerForm, domain_names: e.target.value })}
+                                    onChange={(e) => if (mountedRef.current) setProviderForm({ ...providerForm, domain_names: e.target.value })}
                                     className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 outline-none focus:border-indigo-600 transition-colors"
                                 />
                             </div>
@@ -377,7 +383,7 @@ const SSOConfig = () => {
                                             type="url"
                                             placeholder="https://identity.okta.com/app/sso/saml"
                                             value={providerForm.sso_url || ''}
-                                            onChange={(e) => setProviderForm({ ...providerForm, sso_url: e.target.value })}
+                                            onChange={(e) => if (mountedRef.current) setProviderForm({ ...providerForm, sso_url: e.target.value })}
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 outline-none focus:border-indigo-600 transition-colors"
                                         />
                                     </div>
@@ -387,7 +393,7 @@ const SSOConfig = () => {
                                             type="text"
                                             placeholder="http://www.okta.com/exk..."
                                             value={providerForm.entity_id || ''}
-                                            onChange={(e) => setProviderForm({ ...providerForm, entity_id: e.target.value })}
+                                            onChange={(e) => if (mountedRef.current) setProviderForm({ ...providerForm, entity_id: e.target.value })}
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 outline-none focus:border-indigo-600 transition-colors"
                                         />
                                     </div>
@@ -397,7 +403,7 @@ const SSOConfig = () => {
                                             rows={6}
                                             placeholder="MIIDrjCCApagAwIBAgIGAX..."
                                             value={providerForm.x509_cert || ''}
-                                            onChange={(e) => setProviderForm({ ...providerForm, x509_cert: e.target.value })}
+                                            onChange={(e) => if (mountedRef.current) setProviderForm({ ...providerForm, x509_cert: e.target.value })}
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-[10px] font-mono text-slate-700 outline-none focus:border-indigo-600 transition-colors resize-none"
                                         />
                                     </div>
@@ -413,7 +419,7 @@ const SSOConfig = () => {
                                             type="text"
                                             placeholder="your-client-id"
                                             value={providerForm.client_id || ''}
-                                            onChange={(e) => setProviderForm({ ...providerForm, client_id: e.target.value })}
+                                            onChange={(e) => if (mountedRef.current) setProviderForm({ ...providerForm, client_id: e.target.value })}
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 outline-none focus:border-indigo-600 transition-colors"
                                         />
                                     </div>
@@ -423,7 +429,7 @@ const SSOConfig = () => {
                                             type="password"
                                             placeholder="••••••••••••••••"
                                             value={providerForm.client_secret || ''}
-                                            onChange={(e) => setProviderForm({ ...providerForm, client_secret: e.target.value })}
+                                            onChange={(e) => if (mountedRef.current) setProviderForm({ ...providerForm, client_secret: e.target.value })}
                                             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 outline-none focus:border-indigo-600 transition-colors"
                                         />
                                     </div>
@@ -434,7 +440,7 @@ const SSOConfig = () => {
                                                 type="url"
                                                 placeholder="https://accounts.google.com"
                                                 value={providerForm.metadata_url || ''}
-                                                onChange={(e) => setProviderForm({ ...providerForm, metadata_url: e.target.value })}
+                                                onChange={(e) => if (mountedRef.current) setProviderForm({ ...providerForm, metadata_url: e.target.value })}
                                                 className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 outline-none focus:border-indigo-600 transition-colors"
                                             />
                                         </div>
@@ -447,7 +453,7 @@ const SSOConfig = () => {
                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-2">Activate or deactivate login redirection for matched domains.</p>
                                 <button
                                     type="button"
-                                    onClick={() => setProviderForm({ ...providerForm, is_active: !providerForm.is_active })}
+                                    onClick={() => if (mountedRef.current) setProviderForm({ ...providerForm, is_active: !providerForm.is_active })}
                                     className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${providerForm.is_active ? 'bg-indigo-600' : 'bg-slate-200'}`}
                                 >
                                     <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${providerForm.is_active ? 'right-1' : 'left-1'}`}></div>

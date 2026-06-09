@@ -39,7 +39,8 @@ const TicketSearchBar = () => {
     if (e.key === "ArrowDown") setActiveIndex(i => Math.min(i + 1, results.length - 1));
     if (e.key === "ArrowUp") setActiveIndex(i => Math.max(i - 1, 0));
     if (e.key === "Enter" && activeIndex >= 0) {
-      navigate(`/tickets/${results[activeIndex].ticket_id}`);
+      const ticket = results[activeIndex];
+      if (ticket?.ticket_id) navigate(`/tickets/${ticket.ticket_id}`);
       setIsOpen(false);
       setQuery("");
     }
@@ -47,7 +48,8 @@ const TicketSearchBar = () => {
   };
 
   const handleSelect = (ticket) => {
-    navigate(`/tickets/${ticket.ticket_id}`);
+    const ticketId = ticket?.ticket_id;
+    if (ticketId) navigate(`/tickets/${ticketId}`);
     setIsOpen(false);
     setQuery("");
   };

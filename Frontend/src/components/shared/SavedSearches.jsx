@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bookmark, BookmarkPlus, ChevronDown, Trash2, Loader2, X } from 'lucide-react';
 import { supabase } from '../../lib/supabaseClient';
 import useAuthStore from '../../store/authStore';
@@ -24,7 +24,7 @@ const SavedSearches = ({ currentFilters, onLoad }) => {
     const hasActiveFilters = Object.values(currentFilters).some(v => v !== undefined && v !== '');
 
     // Load saved searches from Supabase
-    const loadSearches = async () => {
+    const loadSearches = useCallback(async () => {
         if (!user?.id) return;
         const { data, error } = await supabase
             .from('saved_searches')
@@ -32,11 +32,11 @@ const SavedSearches = ({ currentFilters, onLoad }) => {
             .eq('user_id', user.id)
             .order('created_at', { ascending: false });
         if (!error) setSearches(data || []);
-    };
+    }, [user?.id]);
 
     useEffect(() => {
         loadSearches();
-    }, [user?.id]);
+    }, [loadSearches]);
 
     // Close dropdown on outside click
     useEffect(() => {

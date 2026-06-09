@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { API_CONFIG } from "../../config";
 import TagChip from "./TagChip";
 
 /**
@@ -24,7 +25,7 @@ export default function TicketTagManager({
   const [saving, setSaving]                 = useState(false);
   const [saveStatus, setSaveStatus]         = useState(null); // null | "saved" | "error"
 
-  const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+  const BACKEND = API_CONFIG.BACKEND_URL;
 
   // ── Auth token ──────────────────────────────────────────────────────────────
   const getToken = useCallback(async () => {
@@ -50,6 +51,9 @@ export default function TicketTagManager({
   }, [ticketId]);
 
   // ── Fetch AI suggestions on mount ──────────────────────────────────────────
+  const mountedRef = useRef(true);
+  useEffect(() => { mountedRef.current = true; return () => { mountedRef.current = false; }; }, []);
+
   useEffect(() => {
     if (!ticketTitle && !ticketBody) return;
     (async () => {
@@ -69,15 +73,15 @@ export default function TicketTagManager({
           }),
         });
         const data = await res.json();
-        if (data.success) {
+        if (data.success && mountedRef.current) {
           setSuggestedTags(data.suggested_tags || []);
         }
       } catch (e) {
         console.error("[TagManager] suggest tags:", e);
       }
-      setLoadingSuggest(false);
+      if (mountedRef.current) setLoadingSuggest(false);
     })();
-  }, []);
+  }, [ticketTitle, ticketBody, category, getToken]);
 
   // ── Load popular tags for autocomplete when companyId provided ─────────────
   useEffect(() => {

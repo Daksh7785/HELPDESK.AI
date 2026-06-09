@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
     ShieldCheck, Zap, Activity, Clock, Search, Download, CheckCircle2,
     AlertTriangle, FileText, Lock, RefreshCw, Key, ArrowRight, User, Globe, Info, Calendar, X, Eye
@@ -28,6 +28,8 @@ const AuditLogViewer = () => {
     const [logs, setLogs] = useState([]);
     const [loading, setLoading] = useState(true);
     const [offset, setOffset] = useState(0);
+    const offsetRef = useRef(0);
+    useEffect(() => { offsetRef.current = offset; }, [offset]);
     const limit = 50;
 
     // Selected Log Detail Modal
@@ -56,11 +58,11 @@ const AuditLogViewer = () => {
     };
 
     // 1. Fetch Audit Logs
-    const fetchLogs = async (reset = false) => {
+    const fetchLogs = useCallback(async (reset = false) => {
         setLoading(true);
         try {
             const headers = await getAuthHeaders();
-            const currentOffset = reset ? 0 : offset;
+            const currentOffset = reset ? 0 : offsetRef.current;
             
             // Build query params
             const params = new URLSearchParams({
@@ -93,7 +95,7 @@ const AuditLogViewer = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [actionFilter, statusFilter, ipFilter, dateFrom, dateTo]);
 
     // 2. Fetch Security Alerts
     const fetchAlerts = async () => {

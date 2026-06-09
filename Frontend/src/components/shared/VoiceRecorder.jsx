@@ -100,7 +100,19 @@ const VoiceRecorder = ({
         setTranscript('');
 
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const permissionTimeout = new Promise((_, reject) =>
+                setTimeout(
+                    () =>
+                        reject(
+                            new Error('Microphone permission request timed out')
+                        ),
+                    10000
+                )
+            );
+            const stream = await Promise.race([
+                navigator.mediaDevices.getUserMedia({ audio: true }),
+                permissionTimeout,
+            ]);
             streamRef.current = stream;
 
             // Pick the best supported MIME type
@@ -193,9 +205,34 @@ const VoiceRecorder = ({
                 setError('Microphone access denied. Please allow microphone permissions and try again.');
             } else if (err.name === 'NotFoundError') {
                 setError('No microphone detected. Please connect a microphone and try again.');
+            } else if (
+                err.name === 'AbortError' ||
+                err.name === 'TimeoutError'
+            ) {
+                setError(
+                    'Microphone access request timed out. Please try again and allow microphone access when prompted.'
+                );
+
+            // Handle socket/network related recording issues
+            } else if (
+                err.message?.toLowerCase().includes('socket') ||
+                err.message?.toLowerCase().includes('network')
+            ) {
+                setError(
+                    'A network/socket error occurred while accessing the microphone. Please check your connection and try again.'
+                );
+
+            // Generic fallback
             } else {
-                setError(`Could not access microphone: ${err.message}`);
+                setError(
+                    err.message
+                        ? `Could not access microphone: ${err.message}`
+                        : 'Unable to start voice recording. Please try again.'
+                );
             }
+
+            setIsRecording(false);
+            setIsProcessing(false);
         }
     };
 

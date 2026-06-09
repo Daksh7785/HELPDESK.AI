@@ -14,33 +14,12 @@ provide strict validation and is designed for production security.
 from __future__ import annotations
 
 import logging
-import os
 from typing import List, Optional
+from backend.security_middleware import get_allowed_origins
 
 # ---------------------------------------------------------------------------
 # Logging
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Configuration helper
-def get_allowed_origins() -> List[str]:
-    """
-    Parse the ALLOWED_ORIGINS environment variable into a list of origins.
-
-    The variable should contain a comma‑separated list of origins (with scheme
-    and host).  Whitespace around each origin is stripped.  Empty values
-    result in an empty list.
-
-    Returns:
-        List of allowed origin strings.
-    """
-    raw = os.environ.get("ALLOWED_ORIGINS", "")
-    if not raw:
-        logger.warning("ALLOWED_ORIGINS not set or empty – all origins will be blocked")
-        return []
-    return [origin.strip() for origin in raw.split(",") if origin.strip()]
-
 
 # ---------------------------------------------------------------------------
 # Custom ASGI middleware

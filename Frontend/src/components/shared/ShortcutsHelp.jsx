@@ -3,11 +3,13 @@
  * Displays available keyboard shortcuts in a styled overlay.
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { formatShortcut, getShortcutDescription } from '../../hooks/useKeyboardShortcuts';
 
 const ShortcutsHelp = ({ isOpen, onClose, shortcuts = {} }) => {
     const [selectedCategory, setSelectedCategory] = useState('navigation');
+    const onCloseRef = useRef(onClose);
+    useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
 
     useEffect(() => {
         if (isOpen) {
@@ -23,12 +25,12 @@ const ShortcutsHelp = ({ isOpen, onClose, shortcuts = {} }) => {
     useEffect(() => {
         const handleEscape = (e) => {
             if (e.key === 'Escape' && isOpen) {
-                onClose();
+                onCloseRef.current();
             }
         };
         window.addEventListener('keydown', handleEscape);
         return () => window.removeEventListener('keydown', handleEscape);
-    }, [isOpen, onClose]);
+    }, [isOpen]);
 
     if (!isOpen) return null;
 
