@@ -20,6 +20,7 @@ import {
     Loader2,
     Save,
     RotateCcw,
+    Download,
 } from 'lucide-react';
 import { Select } from "../../components/ui/select";
 import { formatTicketId } from "../../utils/format";
@@ -193,6 +194,59 @@ const AdminTickets = () => {
         );
     }, [tickets, searchQuery]);
 
+    const escapeCsvValue = (value) => {
+        if (value === null || value === undefined) return '';
+        const normalized = String(value).replace(/\r?\n/g, ' ');
+        return /[",\n]/.test(normalized) ? `"${normalized.replace(/"/g, '""')}"` : normalized;
+    };
+
+    const handleExportCsv = () => {
+        if (filteredTickets.length === 0) {
+            showToast("No tickets available to export.", "error");
+            return;
+        }
+
+        const headers = [
+            'Ticket ID',
+            'User Name',
+            'User Email',
+            'Subject',
+            'Category',
+            'Priority',
+            'Status',
+            'Assigned Team',
+            'Assigned Agent',
+            'Created At',
+        ];
+
+        const rows = filteredTickets.map((ticket) => [
+            formatTicketId(ticket.id),
+            ticket.creator?.full_name || ticket.profiles?.full_name || 'System',
+            ticket.creator?.email || ticket.profiles?.email || '',
+            ticket.summary || ticket.subject || '',
+            ticket.category || '',
+            ticket.priority || '',
+            ticket.status || '',
+            ticket.assigned_team || 'General',
+            ticket.assignee?.full_name || '',
+            ticket.created_at || '',
+        ]);
+
+        const csv = [headers, ...rows]
+            .map((row) => row.map(escapeCsvValue).join(','))
+            .join('\n');
+        const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `ticket-history-${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showToast(`Exported ${filteredTickets.length} ticket${filteredTickets.length === 1 ? '' : 's'} to CSV.`, "success");
+    };
+
     const getPriorityStyle = (priority) => {
         const p = String(priority || '').toLowerCase();
         if (p === 'high' || p === 'critical') return 'text-red-600 bg-red-50 border-red-100';
@@ -217,6 +271,15 @@ const AdminTickets = () => {
                         <Activity size={14} className="text-indigo-500" /> {filteredTickets.length} tickets matching current filters.
                     </p>
                 </div>
+                <button
+                    type="button"
+                    onClick={handleExportCsv}
+                    disabled={loading || filteredTickets.length === 0}
+                    className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-[11px] font-black uppercase tracking-widest text-white shadow-lg shadow-slate-900/10 transition-all hover:bg-emerald-600 hover:shadow-emerald-500/20 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+                >
+                    <Download size={15} />
+                    Export CSV
+                </button>
             </div>
 
             {/* 2. Advanced Filtering Station */}
