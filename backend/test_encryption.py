@@ -11,10 +11,10 @@ import pytest
 
 @pytest.fixture
 def encryption_module(monkeypatch):
-    """Fixture that provides a fresh encryption module with test key configured."""
+    """Fixture that provides a fresh encryption module with a dynamically generated test key."""
     monkeypatch.setenv(
         "AES_ENCRYPTION_KEY",
-        "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        os.urandom(32).hex(),
     )
     import encryption
     importlib.reload(encryption)
