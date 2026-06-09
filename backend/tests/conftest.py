@@ -10,6 +10,19 @@ os.environ["GEMINI_API_KEY"] = "mock-gemini-key"
 os.environ["ALLOW_DEGRADED_STARTUP"] = "1"
 os.environ["REQUIRE_SUPABASE"] = "false"
 
+def mock_classifier():
+    with patch("backend.main.classifier_v3") as mock_cls_v3:
+        yield mock_cls_v3
+
+@pytest.fixture(autouse=True)
+def mock_ml_models():
+    with patch("backend.services.classifier_service.ClassifierService.load"), \
+         patch("backend.services.ner_service.NERService.load"), \
+         patch("backend.services.duplicate_service.DuplicateService.load"), \
+         patch("backend.services.rag_service.RAGService.load"), \
+         patch("backend.services.classifier_v3.ClassifierV3.load"):
+        yield
+
 @pytest.fixture(autouse=True)
 def mock_supabase():
     with patch("backend.main.supabase") as mock_supa:

@@ -1,3 +1,4 @@
+from __future__ import annotations
 """
 FastAPI Backend — AI Helpdesk Ticket Analyzer
 POST /ai/analyze_ticket  →  full analysis of a support ticket
@@ -13,6 +14,7 @@ import traceback
 import warnings
 import logging
 import hashlib
+from typing import Optional
 from contextlib import asynccontextmanager
 
 # Suppress harmless PyTorch CPU pin_memory warning
@@ -85,9 +87,9 @@ class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
-    user_id: str | None = None
-    company: str | None = None
-    image_url: str | None = None
+    user_id: Optional[str] = None
+    company: Optional[str] = None
+    image_url: Optional[str] = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
 
@@ -103,9 +105,9 @@ class TicketSaveRequest(BaseModel):
     auto_resolve: bool
     is_duplicate: bool
     confidence: float
-    image_url: str | None = None
-    company: str | None = None
-    company_id: str | None = None
+    image_url: Optional[str] = None
+    company: Optional[str] = None
+    company_id: Optional[str] = None
     sla_breach_at: str
     metadata: dict
     entities: list = []
@@ -117,7 +119,7 @@ class TicketSaveRequest(BaseModel):
 
 class DuplicateInfo(BaseModel):
     is_duplicate: bool
-    duplicate_ticket_id: str | None = None
+    duplicate_ticket_id: Optional[str] = None
     similarity: float = 0.0
 
 
@@ -128,8 +130,8 @@ class EntityInfo(BaseModel):
 
 
 class TicketResponse(BaseModel):
-    id: str | int | None = None
-    ticket_id: str | None = None
+    id: Optional[int] = None
+    ticket_id: Optional[str] = None
     summary: str
     category: str
     subcategory: str
@@ -144,11 +146,11 @@ class TicketResponse(BaseModel):
     decision_factors: list[str] = []
     image_description: str = ""
     ocr_text: str = ""
-    image_url: str | None = None
+    image_url: Optional[str] = None
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
-    sla_breach_at: str | None = None
+    sla_breach_at: Optional[str] = None
     version: str = "2.1.0-Neural-Diagnostic"
 
 
@@ -169,8 +171,8 @@ class TicketRecord(BaseModel):
     status: str
     assigned_team: str
     created_at: str
-    updated_at: str | None = None
-    last_user_viewed_at: str | None = None
+    updated_at: Optional[str] = None
+    last_user_viewed_at: Optional[str] = None
     messages: list[Message] = []
     metadata: dict = {}
     timeline: dict = {} # Milestones: created, analyzed, triaged, routed, in_progress, resolved
@@ -536,7 +538,7 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(company_id: Optional[str] = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -1085,7 +1087,7 @@ def _cookie_kwargs() -> dict:
         "path": "/",
     }
 
-def extract_token(request: Request) -> str | None:
+def extract_token(request: Request) -> Optional[str]:
     cookie_token = request.cookies.get(ACCESS_COOKIE)
     if cookie_token:
         return cookie_token
@@ -1146,9 +1148,9 @@ class LoginBody(BaseModel):
 class SignupBody(BaseModel):
     email: str
     password: str
-    full_name: str | None = None
-    role: str | None = "user"
-    company: str | None = None
+    full_name: Optional[str] = None
+    role: Optional[str] = "user"
+    company: Optional[str] = None
 
 @app.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):
