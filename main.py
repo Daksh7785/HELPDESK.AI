@@ -123,6 +123,29 @@ async def get_analytics(
     return {"company_id": user.get("company_id")}
 
 
+@app.get("/admin/metrics", tags=["Admin", "Analytics"])
+async def get_admin_metrics(
+    user: dict = Depends(security_manager.get_current_user_profile),
+):
+    """Optimize admin dashboard analytics using indexed CTEs."""
+    if user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Admins only")
+    
+    company_id = user.get("company_id")
+    if not company_id:
+        raise HTTPException(status_code=400, detail="User has no associated company")
+        
+    if not supabase:
+        return {}
+        
+    try:
+        res = supabase.rpc("get_admin_metrics", {"p_company_id": company_id}).execute()
+        return res.data if res.data else {}
+    except Exception as e:
+        logger.error(f"Error fetching admin metrics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch admin metrics")
+
+
 @app.get("/api/security/audit", tags=["Security"])
 async def security_audit(
     user: dict = Depends(security_manager.get_current_user_profile),
