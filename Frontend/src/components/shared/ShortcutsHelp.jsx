@@ -111,7 +111,7 @@ const ShortcutsHelp = ({ isOpen, onClose, shortcuts = {} }) => {
                                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
                                         selectedCategory === key
                                             ? 'bg-blue-100 text-blue-700'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            : 'bg-gray-100 text-gray-600 dark:text-gray-400 hover:bg-gray-200'
                                     }`}
                                 >
                                     {category.icon}
@@ -139,7 +139,7 @@ const ShortcutsHelp = ({ isOpen, onClose, shortcuts = {} }) => {
                                         {formatted.split('').map((char, index) => (
                                             <kbd
                                                 key={index}
-                                                className="px-2 py-1 bg-white border border-gray-300 rounded-md text-sm font-mono text-gray-600 shadow-sm"
+                                                className="px-2 py-1 bg-white border border-gray-300 rounded-md text-sm font-mono text-gray-600 dark:text-gray-400 shadow-sm"
                                             >
                                                 {char}
                                             </kbd>
@@ -164,7 +164,7 @@ const ShortcutsHelp = ({ isOpen, onClose, shortcuts = {} }) => {
                 {/* Footer */}
                 <div className="border-t border-gray-200 p-4 bg-gray-50">
                     <div className="flex items-center justify-between">
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                             Press <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">Ctrl</kbd> + <kbd className="px-2 py-1 bg-white border border-gray-300 rounded text-xs font-mono">/</kbd> to toggle this help
                         </p>
                         <button

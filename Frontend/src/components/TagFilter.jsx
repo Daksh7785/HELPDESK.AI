@@ -65,7 +65,7 @@ export default function TagFilter({ companyId, onFilterChange }) {
               text-xs font-medium border transition-colors ${
               selected.includes(tag)
                 ? "bg-indigo-600 text-white border-indigo-600"
-                : "bg-gray-50 text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600"
+                : "bg-gray-50 text-gray-600 dark:text-gray-400 border-gray-200 hover:border-indigo-300 hover:text-indigo-600"
             }`}
             aria-pressed={selected.includes(tag)}
           >

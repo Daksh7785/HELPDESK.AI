@@ -114,7 +114,7 @@ const BulkConfirmModal = ({ action, count, onConfirm, onCancel, isExecuting }) =
                 <h3 id={titleId} className="text-lg font-black text-slate-900 uppercase italic tracking-tight text-center">
                     Confirm Bulk Action
                 </h3>
-                <p id={descriptionId} className="text-sm text-slate-500 mt-3 text-center leading-relaxed">
+                <p id={descriptionId} className="text-sm text-slate-500 dark:text-slate-400 mt-3 text-center leading-relaxed">
                     You are about to <strong className="text-slate-800">{actionLabel}</strong>{' '}
                     <strong className="text-indigo-600">{count}</strong> ticket{count > 1 ? 's' : ''}.
                     This action cannot be undone.
@@ -142,7 +142,7 @@ const BulkConfirmModal = ({ action, count, onConfirm, onCancel, isExecuting }) =
                         onClick={onCancel}
                         disabled={isExecuting}
                         aria-label="Cancel bulk action"
-                        className="flex-1 bg-slate-100 text-slate-600 rounded-2xl py-3.5 text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors disabled:opacity-50"
+                        className="flex-1 bg-slate-100 text-slate-600 dark:text-slate-400 rounded-2xl py-3.5 text-xs font-black uppercase tracking-widest hover:bg-slate-200 transition-colors disabled:opacity-50"
                     >
                         Cancel
                     </button>
@@ -606,7 +606,7 @@ const AdminTickets = () => {
         if (p === 'high' || p === 'critical') return 'text-red-600 bg-red-50 border-red-100';
         if (p === 'medium') return 'text-amber-600 bg-amber-50 border-amber-100';
         if (p === 'low') return 'text-emerald-600 bg-emerald-50 border-emerald-100';
-        return 'text-slate-500 bg-slate-50 border-slate-100';
+        return 'text-slate-500 dark:text-slate-400 bg-slate-50 border-slate-100';
     };
 
     const getConfidenceColor = (conf) => {
@@ -639,7 +639,7 @@ const AdminTickets = () => {
                         onClick={() => downloadCSV(filteredTickets, `tickets-export-${new Date().toISOString().slice(0, 10)}`)}
                         disabled={filteredTickets.length === 0}
                         aria-label={`Export ${filteredTickets.length} filtered tickets as CSV`}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-700 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
                     >
                         <Download size={14} aria-hidden="true" />
                         CSV
@@ -653,7 +653,7 @@ const AdminTickets = () => {
                                 if (t) printTicket(t);
                             }}
                             aria-label={`Print ticket ${formatTicketId(selectedTickets[0])}`}
-                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shadow-sm"
+                            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-700 transition-all shadow-sm"
                         >
                             <Printer size={14} aria-hidden="true" />
                             Print
@@ -683,7 +683,7 @@ const AdminTickets = () => {
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                         aria-label="Filter tickets by status"
-                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
+                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={statuses.map(s => ({ value: s, label: s === 'All' ? 'All Statuses' : s }))}
                     />
 
@@ -692,7 +692,7 @@ const AdminTickets = () => {
                         value={categoryFilter}
                         onChange={(e) => setCategoryFilter(e.target.value)}
                         aria-label="Filter tickets by category"
-                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
+                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={categories.map(c => ({ value: c, label: c === 'All' ? 'All Categories' : c }))}
                     />
 
@@ -701,7 +701,7 @@ const AdminTickets = () => {
                         value={priorityFilter}
                         onChange={(e) => setPriorityFilter(e.target.value)}
                         aria-label="Filter tickets by priority"
-                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
+                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={priorities.map(p => ({ value: p, label: p === 'All' ? 'All Priorities' : p }))}
                     />
 
@@ -710,7 +710,7 @@ const AdminTickets = () => {
                         value={teamFilter}
                         onChange={(e) => setTeamFilter(e.target.value)}
                         aria-label="Filter tickets by assigned team"
-                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
+                        buttonClassName="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-4 focus:ring-emerald-500/5 transition-all text-left flex justify-between items-center"
                         options={teams.map(t => ({ value: t, label: t === 'All' ? 'All Teams' : t }))}
                     />
                 </div>
@@ -721,7 +721,7 @@ const AdminTickets = () => {
                         value={languageFilter}
                         onChange={(e) => setLanguageFilter(e.target.value)}
                         aria-label="Filter tickets by language"
-                        buttonClassName="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 focus:outline-none focus:ring-4 focus:ring-sky-500/5 transition-all text-left flex justify-between items-center"
+                        buttonClassName="bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[11px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-4 focus:ring-sky-500/5 transition-all text-left flex justify-between items-center"
                         options={[
                             { value: 'All', label: '🌐 All Languages' },
                             { value: 'English', label: 'English Only' },
@@ -737,7 +737,7 @@ const AdminTickets = () => {
                         className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-[11px] font-black uppercase tracking-widest border transition-all ${
                             slaAtRisk
                                 ? 'bg-red-50 border-red-200 text-red-700 shadow-sm'
-                                : 'bg-slate-50 border-slate-200 text-slate-500 hover:border-red-200 hover:text-red-600'
+                                : 'bg-slate-50 border-slate-200 text-slate-500 dark:text-slate-400 hover:border-red-200 hover:text-red-600'
                         }`}
                     >
                         <ShieldAlert size={14} aria-hidden="true" />
@@ -1022,7 +1022,7 @@ const AdminTickets = () => {
                                                 value={String(ticket.status || 'open').toLowerCase()}
                                                 onChange={(e) => handleUpdateTicket(ticket.id, { status: e.target.value })}
                                                 aria-label={`Change status for ticket ${formatTicketId(ticket.id)}`}
-                                                buttonClassName="bg-transparent text-[10px] font-black text-slate-600 uppercase tracking-widest outline-none cursor-pointer flex justify-between items-center w-full"
+                                                buttonClassName="bg-transparent text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest outline-none cursor-pointer flex justify-between items-center w-full"
                                                 options={statuses.filter(s => s !== 'All').map(s => ({ value: s.toLowerCase(), label: s }))}
                                             />
                                         </div>
@@ -1067,7 +1067,7 @@ const AdminTickets = () => {
                             <Inbox size={40} />
                         </div>
                         <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">No Incidents Found</h3>
-                        <p className="text-sm text-slate-500 font-medium max-w-xs mx-auto mt-2 italic">Refine your search parameters to view more data points.</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium max-w-xs mx-auto mt-2 italic">Refine your search parameters to view more data points.</p>
                     </div>
                 )}
             </div>

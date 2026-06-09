@@ -138,7 +138,7 @@ const AdvancedSearchBar = ({
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
                         panelOpen || activePills.length > 0
                             ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                     }`}
                 >
                     <SlidersHorizontal className="w-4 h-4" />
@@ -158,7 +158,7 @@ const AdvancedSearchBar = ({
                         value={filters.sort || 'created_at:desc'}
                         onChange={(e) => handleFilterChange('sort', e.target.value)}
                         aria-label="Sort tickets"
-                        className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
+                        className="px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all cursor-pointer"
                     >
                         {sortOptions.map(o => (
                             <option key={o.value} value={o.value}>{o.label}</option>

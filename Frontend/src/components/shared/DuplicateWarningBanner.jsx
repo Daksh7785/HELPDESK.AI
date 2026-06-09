@@ -104,7 +104,7 @@ export default function DuplicateWarningBanner({
                   <Copy size={16} className="text-amber-500" />
                   Potential Duplicate Detected
                 </h3>
-                <p className="text-sm text-gray-600 mt-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   A similar issue was recently reported by your teammate.
                 </p>
               </div>
@@ -148,7 +148,7 @@ export default function DuplicateWarningBanner({
                         {parent_subject}
                       </p>
                     )}
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                       Ticket #{((duplicate_ticket_id || '') + '').slice(0, 8).toUpperCase()}
                     </p>
                   </div>
@@ -157,7 +157,7 @@ export default function DuplicateWarningBanner({
                 {/* View Parent Ticket */}
                 <a
                   href={`/admin/ticket/${duplicate_ticket_id}`}
-                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex-shrink-0"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors flex-shrink-0"
                 >
                   <Eye size={14} />
                   View
@@ -169,7 +169,7 @@ export default function DuplicateWarningBanner({
                 <div className="mt-3 pt-3 border-t border-gray-100">
                   <button
                     onClick={() => setExpanded(!expanded)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors"
+                    className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 transition-colors"
                   >
                     {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                     {extraCandidates.length} more similar ticket{extraCandidates.length > 1 ? 's' : ''}
@@ -223,7 +223,7 @@ export default function DuplicateWarningBanner({
               {onCreateAnyway && (
                 <button
                   onClick={onCreateAnyway}
-                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all"
+                  className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-400 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-gray-300 transition-all"
                 >
                   <Send size={14} />
                   Create Anyway

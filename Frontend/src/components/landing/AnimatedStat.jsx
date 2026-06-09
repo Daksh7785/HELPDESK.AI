@@ -40,7 +40,7 @@ export default function AnimatedStat({ target, suffix = '', prefix = '', label, 
             <div className="text-4xl font-extrabold mb-1 text-white tabular-nums transition-colors duration-300">
                 {prefix}{display}{suffix}
             </div>
-            <div className="text-sm text-slate-300 dark:text-slate-500 font-medium tracking-wide transition-colors duration-300">
+            <div className="text-sm text-slate-300 dark:text-slate-400 font-medium tracking-wide transition-colors duration-300">
                 {label}
             </div>
         </div>

@@ -91,7 +91,7 @@ export default function AgentScorecard({ agentId, companyId, agentName }) {
         <div className="flex-1 space-y-2">
           {metrics.map(({ label, value, color }) => (
             <div key={label}>
-              <div className="flex justify-between text-xs text-gray-500 mb-0.5">
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-0.5">
                 <span>{label}</span>
                 <span>{Math.round(value)}%</span>
               </div>

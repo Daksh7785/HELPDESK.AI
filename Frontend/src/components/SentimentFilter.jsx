@@ -20,7 +20,7 @@ export default function SentimentFilter({ selected, onChange }) {
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-xs font-medium text-gray-500">Sentiment:</span>
+      <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Sentiment:</span>
       {levels.map(({ key, emoji, label }) => (
         <button
           key={key}
@@ -28,7 +28,7 @@ export default function SentimentFilter({ selected, onChange }) {
           className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
             selected.includes(key)
               ? "bg-gray-800 text-white border-gray-800"
-              : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+              : "bg-white text-gray-600 dark:text-gray-400 border-gray-200 hover:border-gray-400"
           }`}
           aria-pressed={selected.includes(key)}
         >

@@ -61,7 +61,7 @@ function DemoModal({ onClose }) {
                 <div className="p-6 bg-gray-50 dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="text-left">
                         <h2 className="text-xl font-extrabold text-gray-900 dark:text-white uppercase tracking-tight">Full Platform Walkthrough</h2>
-                        <p className="text-gray-500 dark:text-slate-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
+                        <p className="text-gray-500 dark:text-gray-400 dark:text-slate-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
@@ -93,18 +93,18 @@ export default function Header({ setShowDemo = () => {} }) {
                     </div>
 
                     <div className="hidden md:flex items-center gap-8">
-                        <a href="#features" className="text-sm font-semibold text-gray-600 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">
+                        <a href="#features" className="text-sm font-semibold text-gray-600 dark:text-gray-400 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">
                             Features
                         </a>
-                        <a href="#how-it-works" className="text-sm font-semibold text-gray-600 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">
+                        <a href="#how-it-works" className="text-sm font-semibold text-gray-600 dark:text-gray-400 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">
                             How It Works
                         </a>
-                        <a href="#pricing" className="text-sm font-semibold text-gray-600 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">
+                        <a href="#pricing" className="text-sm font-semibold text-gray-600 dark:text-gray-400 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors">
                             Pricing
                         </a>
                         <button
                             onClick={() => navigate('/about')}
-                            className="text-sm font-semibold text-gray-600 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors"
+                            className="text-sm font-semibold text-gray-600 dark:text-gray-400 dark:text-slate-300 hover:text-emerald-800 dark:hover:text-emerald-400 transition-colors"
                         >
                             About
                         </button>
@@ -138,7 +138,7 @@ export default function Header({ setShowDemo = () => {} }) {
 
                         <button 
                             onClick={() => setIsMenuOpen(!isMenuOpen)} 
-                            className="text-gray-600 dark:text-slate-400 hover:text-emerald-800 dark:hover:text-emerald-400 p-2 active:scale-95"
+                            className="text-gray-600 dark:text-gray-400 dark:text-slate-400 hover:text-emerald-800 dark:hover:text-emerald-400 p-2 active:scale-95"
                             aria-label="Toggle menu"
                         >
                             {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}

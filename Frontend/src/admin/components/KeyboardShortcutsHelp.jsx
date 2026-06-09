@@ -76,7 +76,7 @@ const KeyboardShortcutsHelp = ({ isOpen, onClose, shortcuts = [] }) => {
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
                     <div className="flex items-center gap-2">
-                        <Keyboard className="w-5 h-5 text-blue-500" />
+                        <Keyboard className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                             Keyboard Shortcuts
                         </h2>
@@ -86,7 +86,7 @@ const KeyboardShortcutsHelp = ({ isOpen, onClose, shortcuts = [] }) => {
                         className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         aria-label="Close"
                     >
-                        <X className="w-5 h-5 text-gray-500" />
+                        <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
                     </button>
                 </div>
 
@@ -95,7 +95,7 @@ const KeyboardShortcutsHelp = ({ isOpen, onClose, shortcuts = [] }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         {displayShortcuts.map((category, idx) => (
                             <div key={idx} className="space-y-2">
-                                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 dark:text-gray-400 uppercase tracking-wider">
                                     {category.category}
                                 </h3>
                                 <div className="space-y-1">
@@ -114,7 +114,7 @@ const KeyboardShortcutsHelp = ({ isOpen, onClose, shortcuts = [] }) => {
                                                         {item.label}
                                                     </span>
                                                 </div>
-                                                <kbd className="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600">
+                                                <kbd className="px-2 py-1 text-xs font-mono bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 dark:text-gray-300 rounded border border-gray-200 dark:border-gray-600">
                                                     {item.key.replace('Ctrl', ctrlLabel)}
                                                 </kbd>
                                             </div>
@@ -127,7 +127,7 @@ const KeyboardShortcutsHelp = ({ isOpen, onClose, shortcuts = [] }) => {
 
                     {/* Footer hint */}
                     <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
-                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400 text-center">
                             Press <kbd className="px-1.5 py-0.5 text-xs font-mono bg-gray-100 dark:bg-gray-700 rounded">?</kbd> anytime to show this help, 
                             <kbd className="px-1.5 py-0.5 text-xs font-mono bg-gray-100 dark:bg-gray-700 rounded ml-1">Esc</kbd> to close
                         </p>

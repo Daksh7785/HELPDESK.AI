@@ -238,12 +238,12 @@ const AuditLogViewer = () => {
                         <ShieldCheck size={12} /> Compliance & Forensics
                     </h2>
                     <h1 className="text-4xl font-black text-slate-900 tracking-tight leading-none uppercase italic">Audit Center.</h1>
-                    <p className="text-slate-500 font-medium mt-2">Immutable audit trails, cryptographic validation, and SOC2/HIPAA compliance analytics.</p>
+                    <p className="text-slate-500 dark:text-slate-400 font-medium mt-2">Immutable audit trails, cryptographic validation, and SOC2/HIPAA compliance analytics.</p>
                 </div>
                 <div className="flex gap-2">
                     <button
                         onClick={() => fetchLogs(true)}
-                        className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center"
+                        className="p-4 bg-slate-100 text-slate-600 dark:text-slate-400 rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center"
                         title="Refresh"
                     >
                         <RefreshCw size={20} className={loading ? "animate-spin" : ""} />
@@ -367,13 +367,13 @@ const AuditLogViewer = () => {
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => triggerExport('csv')}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-bold transition-all shadow-sm"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-bold transition-all shadow-sm"
                                 >
                                     <Download size={14} /> Export CSV
                                 </button>
                                 <button
                                     onClick={() => triggerExport('json')}
-                                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-lg text-xs font-bold transition-all shadow-sm"
+                                    className="flex items-center gap-1.5 px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 dark:text-slate-400 rounded-lg text-xs font-bold transition-all shadow-sm"
                                 >
                                     <Download size={14} /> Export JSON
                                 </button>
@@ -472,7 +472,7 @@ const AuditLogViewer = () => {
                             <button
                                 onClick={fetchAlerts}
                                 disabled={alertsLoading}
-                                className="flex items-center gap-1 bg-white border border-slate-200 text-slate-600 py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                                className="flex items-center gap-1 bg-white border border-slate-200 text-slate-600 dark:text-slate-400 py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
                             >
                                 <RefreshCw size={10} className={alertsLoading ? 'animate-spin' : ''} /> Rescan
                             </button>
@@ -500,7 +500,7 @@ const AuditLogViewer = () => {
                                                             {alert.severity}
                                                         </span>
                                                     </div>
-                                                    <p className="text-slate-500 text-xs font-semibold mt-1 leading-relaxed">{alert.description}</p>
+                                                    <p className="text-slate-500 dark:text-slate-400 text-xs font-semibold mt-1 leading-relaxed">{alert.description}</p>
                                                     
                                                     <div className="flex items-center gap-4 text-[10px] text-slate-400 font-bold mt-2">
                                                         <span>Category: {alert.category}</span>
@@ -521,7 +521,7 @@ const AuditLogViewer = () => {
                                                         setActiveTab('logs');
                                                     }
                                                 }}
-                                                className="flex items-center gap-1 bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl shadow-sm transition-all"
+                                                className="flex items-center gap-1 bg-white border border-slate-200 text-slate-500 dark:text-slate-400 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 text-[10px] font-black uppercase tracking-widest py-2 px-3 rounded-xl shadow-sm transition-all"
                                             >
                                                 Audit Trail <ArrowRight size={10} />
                                             </button>
@@ -557,7 +557,7 @@ const AuditLogViewer = () => {
                                         onClick={() => {
                                             setSelectedReport(type);
                                         }}
-                                        className={`px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all border ${selectedReport === type ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-600'}`}
+                                        className={`px-4 py-2 text-xs font-black uppercase tracking-widest rounded-xl transition-all border ${selectedReport === type ? 'bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-500/25' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-600 dark:text-slate-400'}`}
                                     >
                                         {type} Report
                                     </button>
@@ -578,7 +578,7 @@ const AuditLogViewer = () => {
                             <button
                                 onClick={fetchReport}
                                 disabled={reportLoading}
-                                className="flex items-center gap-1 bg-white border border-slate-200 text-slate-600 py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
+                                className="flex items-center gap-1 bg-white border border-slate-200 text-slate-600 dark:text-slate-400 py-1.5 px-3 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-slate-50 transition-all shadow-sm"
                             >
                                 <RefreshCw size={10} className={reportLoading ? 'animate-spin' : ''} /> Regenerate
                             </button>
@@ -626,9 +626,9 @@ const AuditLogViewer = () => {
                                             {section.events.length > 0 ? (
                                                 <div className="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-50">
                                                     {section.events.map((evt, idx) => (
-                                                        <div key={idx} className="p-4 bg-slate-50/10 hover:bg-slate-50/30 flex items-center justify-between text-xs font-bold text-slate-600">
+                                                        <div key={idx} className="p-4 bg-slate-50/10 hover:bg-slate-50/30 flex items-center justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
                                                             <div className="flex items-center gap-4">
-                                                                <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500">
+                                                                <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-400">
                                                                     {new Date(evt.timestamp).toLocaleDateString()}
                                                                 </span>
                                                                 <span className="font-black text-slate-800 uppercase">{evt.action}</span>
@@ -676,7 +676,7 @@ const AuditLogViewer = () => {
                                 <h3 className="text-xl font-black text-slate-900 uppercase italic">
                                     {verificationResult?.verified ? "Chain Verified" : verificationResult ? "Tampering Detected!" : "Integrity Not Verified"}
                                 </h3>
-                                <p className="text-slate-500 text-xs leading-relaxed font-semibold">
+                                <p className="text-slate-500 dark:text-slate-400 text-xs leading-relaxed font-semibold">
                                     {verificationResult?.verified ? 
                                         "Cryptographic check successfully traversed the entire audit log database schema. The sequential SHA-256 chain links match, proving no records have been altered or deleted." :
                                      verificationResult ? 
@@ -710,7 +710,7 @@ const AuditLogViewer = () => {
                                 </div>
                                 <div>
                                     <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">Log Details</h3>
-                                    <p className="text-sm font-bold text-slate-500 flex items-center gap-1.5 mt-0.5">
+                                    <p className="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
                                         Action: <span className="text-indigo-600 uppercase font-black">{selectedLog.action}</span>
                                     </p>
                                 </div>
@@ -743,7 +743,7 @@ const AuditLogViewer = () => {
                                     </div>
                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 sm:col-span-2">
                                         <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block mb-1">User Agent</span>
-                                        <span className="text-[10px] font-semibold text-slate-600 line-clamp-2">{selectedLog.user_agent || 'unknown'}</span>
+                                        <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 line-clamp-2">{selectedLog.user_agent || 'unknown'}</span>
                                     </div>
                                 </div>
                             </div>
@@ -758,7 +758,7 @@ const AuditLogViewer = () => {
                                     </div>
                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                         <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest block mb-1">Chained Previous Hash</span>
-                                        <span className="text-[9px] font-mono font-black text-slate-500 break-all">{selectedLog.previous_hash || 'None'}</span>
+                                        <span className="text-[9px] font-mono font-black text-slate-500 dark:text-slate-400 break-all">{selectedLog.previous_hash || 'None'}</span>
                                     </div>
                                 </div>
                             </div>

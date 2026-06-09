@@ -221,7 +221,7 @@ const TicketAuditTimeline = ({ ticketId, companyId }) => {
 
             <div className="px-6 sm:px-8 py-6">
                 {loading ? (
-                    <div className="flex items-center gap-3 text-sm font-semibold text-slate-500">
+                    <div className="flex items-center gap-3 text-sm font-semibold text-slate-500 dark:text-slate-400">
                         <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
                         Loading secure audit history...
                     </div>
@@ -230,7 +230,7 @@ const TicketAuditTimeline = ({ ticketId, companyId }) => {
                         {error}
                     </div>
                 ) : !hasLogs ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500">
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 p-5 text-sm text-slate-500 dark:text-slate-400">
                         No audit events have been recorded yet.
                     </div>
                 ) : (
@@ -272,7 +272,7 @@ const TicketAuditTimeline = ({ ticketId, companyId }) => {
                                                 <p className="text-sm font-bold text-slate-800" title={record.performed_by || 'System generated'}>
                                                     {actorLabel}
                                                 </p>
-                                                <p className="text-xs text-slate-500 mt-1">
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                                     {formatFullTimestamp(record.created_at)}
                                                 </p>
                                             </div>

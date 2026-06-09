@@ -53,7 +53,7 @@ export default function HowItWorks() {
                                 </div>
                                 <span className="text-xs font-bold text-gray-800 dark:text-slate-200 italic">HelpDesk AI</span>
                             </div>
-                            <p className="text-[11px] text-gray-600 dark:text-slate-400">"Remotely reset the Lab 3 router. Connectivity restored. Total downtime: 143ms."</p>
+                            <p className="text-[11px] text-gray-600 dark:text-gray-400 dark:text-slate-400">"Remotely reset the Lab 3 router. Connectivity restored. Total downtime: 143ms."</p>
                         </div>
                     </div>
                 </div>

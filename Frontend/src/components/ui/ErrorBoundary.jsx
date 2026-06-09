@@ -20,7 +20,7 @@ class ErrorBoundary extends React.Component {
         <div className="flex-1 flex items-center justify-center p-6 bg-[#f6f8f7] min-h-screen">
           <div className="text-center">
             <h2 className="text-xl font-bold text-gray-900 mb-2">Something went wrong</h2>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               An unexpected error occurred. Please try again.
             </p>
             <button
