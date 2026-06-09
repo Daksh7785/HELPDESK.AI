@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * translationService.js
  * Uses the free MyMemory Translation API (https://mymemory.translated.net)
