@@ -1,8 +1,10 @@
 import logging
+import os
 from fastapi import FastAPI, Request
 from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
 from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
+from supabase import create_client
 
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
 
@@ -12,6 +14,19 @@ logger = logging.getLogger(__name__)
 app = FastAPI()
 
 app.add_middleware(CSRFTokenMiddleware)
+
+# Initialize Supabase client
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+
+supabase = None
+if SUPABASE_URL and SUPABASE_SERVICE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+    except Exception as e:
+        if os.getenv("ALLOW_DEGRADED_STARTUP") != "1":
+            raise
+        logger.warning(f"Failed to initialize Supabase client: {e}")
 
 
 @app.get("/auth/csrf-token")
