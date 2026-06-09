@@ -42,40 +42,57 @@ const useTicketsRealtime = ({
                     ...(realtimeFilter ? { filter: realtimeFilter } : {}),
                 },
                 (payload) => {
-                    const ticket = payload.new || payload.old;
-                    const ticketId = getTicketRecordId(ticket);
-
-                    onTicketsChange((currentTickets) => (
-                        applyTicketRealtimePayload(currentTickets, payload, { shouldInclude })
-                    ));
-
-                    const ticketStore = useTicketStore.getState();
-                    const { user } = useAuthStore.getState();
-                    if (payload.eventType === 'DELETE') {
-                        ticketStore.removeTicket(ticketId);
-                    } else if (payload.new) {
-                        ticketStore.upsertTicket(payload.new);
-                        // Create notification for ticket updates from other users
-                        if (payload.eventType === 'UPDATE' && user && payload.new.user_id !== user.id) {
-                            ticketStore.addNotification({
-                                type: 'message',
-                                ticketId: payload.new.ticket_id || ticketId,
-                                title: 'Ticket Updated',
-                                message: `Ticket "${payload.new.subject || 'Unknown'}" has been updated.`
-                            });
+                    try {
+                        if (!payload || typeof payload !== 'object') {
+                            throw new Error('Invalid socket payload format: expected object');
                         }
-                    }
 
-                    if (payload.eventType === 'INSERT' && payload.new && onInsert) {
-                        onInsert(payload.new);
-                    }
+                        const ticket = payload.new || payload.old;
+                        if (!ticket || typeof ticket !== 'object') {
+                            console.warn('Realtime payload missing ticket data, ignoring.', payload);
+                            return;
+                        }
 
-                    if (ticketId) {
-                        setLastChangedTicketId(ticketId);
-                        window.clearTimeout(clearHighlightTimer);
-                        clearHighlightTimer = window.setTimeout(() => {
-                            setLastChangedTicketId(null);
-                        }, 3500);
+                        const ticketId = getTicketRecordId(ticket);
+                        if (!ticketId) {
+                            console.warn('Realtime payload missing ticket ID, ignoring.', payload);
+                            return;
+                        }
+
+                        onTicketsChange((currentTickets) => (
+                            applyTicketRealtimePayload(currentTickets, payload, { shouldInclude })
+                        ));
+
+                        const ticketStore = useTicketStore.getState();
+                        const { user } = useAuthStore.getState();
+                        if (payload.eventType === 'DELETE') {
+                            ticketStore.removeTicket(ticketId);
+                        } else if (payload.new) {
+                            ticketStore.upsertTicket(payload.new);
+                            // Create notification for ticket updates from other users
+                            if (payload.eventType === 'UPDATE' && user && payload.new.user_id !== user.id) {
+                                ticketStore.addNotification({
+                                    type: 'message',
+                                    ticketId: payload.new.ticket_id || ticketId,
+                                    title: 'Ticket Updated',
+                                    message: `Ticket "${payload.new.subject || 'Unknown'}" has been updated.`
+                                });
+                            }
+                        }
+
+                        if (payload.eventType === 'INSERT' && payload.new && onInsert) {
+                            onInsert(payload.new);
+                        }
+
+                        if (ticketId) {
+                            setLastChangedTicketId(ticketId);
+                            window.clearTimeout(clearHighlightTimer);
+                            clearHighlightTimer = window.setTimeout(() => {
+                                setLastChangedTicketId(null);
+                            }, 3500);
+                        }
+                    } catch (err) {
+                        console.error('Caught error processing realtime notification payload:', err);
                     }
                 },
             )

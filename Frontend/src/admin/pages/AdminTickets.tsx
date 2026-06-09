@@ -363,7 +363,7 @@ const AdminTickets = () => {
         }
     };
 
-    const fetchTickets = async () => {
+    const fetchTickets = useCallback(async () => {
         setError(null);
         try {
             const { profile } = useAuthStore.getState();
@@ -384,13 +384,13 @@ const AdminTickets = () => {
             if (categoryFilter !== 'All') query = query.eq('category', categoryFilter);
             if (priorityFilter !== 'All') query = query.eq('priority', priorityFilter.toLowerCase());
             if (teamFilter !== 'All') query = query.eq('assigned_team', teamFilter);
-            if (searchQuery) {
-                const escaped = searchQuery.replace(/%/g, '\\%').replace(/_/g, '\\_');
+            if (debouncedSearch) {
+                const escaped = debouncedSearch.replace(/%/g, '\\%').replace(/_/g, '\\_');
                 query = query.or(`subject.ilike.%${escaped}%,description.ilike.%${escaped}%,summary.ilike.%${escaped}%`);
             }
 
             // Sort
-            const [sortCol, sortDir] = (filters.sort || 'created_at:desc').split(':');
+            const [sortCol, sortDir] = ('created_at:desc').split(':');
             query = query.order(sortCol || 'created_at', { ascending: sortDir === 'asc' });
 
             let { data, error: sbError } = await query;
@@ -412,7 +412,7 @@ const AdminTickets = () => {
         } finally {
             setLoading(false);
         }
-    }, [filters]);
+    }, [debouncedSearch, statusFilter, categoryFilter, priorityFilter, teamFilter]);
 
     const fetchInitialData = useCallback(async () => {
         const { profile } = useAuthStore.getState();
@@ -430,7 +430,7 @@ const AdminTickets = () => {
     useEffect(() => {
         if (!user) return;
         fetchInitialData();
-    }, [user, statusFilter, categoryFilter, priorityFilter, teamFilter, searchQuery, fetchInitialData]);
+    }, [user, fetchInitialData]);
 
     // SLA breach realtime listener
     useEffect(() => {
@@ -598,7 +598,7 @@ const AdminTickets = () => {
     // Clear selection when filters change (selected IDs may no longer be visible)
     useEffect(() => {
         setSelectedTickets([]);
-    }, [statusFilter, categoryFilter, priorityFilter, teamFilter, searchQuery, languageFilter, slaAtRisk, tagFilters]);
+    }, [statusFilter, categoryFilter, priorityFilter, teamFilter, debouncedSearch, languageFilter, slaAtRisk, tagFilters]);
 
     // ── Helpers ─────────────────────────────────────
     const getPriorityStyle = (priority) => {
