@@ -10,8 +10,8 @@ services:
   # ── Backend: FastAPI (Python) ──────────────────────────────────────────────
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend/Dockerfile
       target: production
     image: helpdesk-ai-backend:local
     container_name: helpdesk_backend
