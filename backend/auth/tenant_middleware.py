@@ -23,7 +23,13 @@ class TenantSecurityManager:
     def supabase(self):
         # Lazy load or use the global client
         if self._supabase is None:
-            from backend.main import supabase as global_supabase
+            try:
+                from main import supabase as global_supabase  # root module (workspace root on pythonpath)
+            except ImportError:
+                try:
+                    from backend.main import supabase as global_supabase  # fallback: backend subpackage
+                except ImportError:
+                    global_supabase = None
             self._supabase = global_supabase
         return self._supabase
 
