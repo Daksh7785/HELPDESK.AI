@@ -1,4 +1,5 @@
 import os
+from backend.config import settings
 from sentence_transformers import SentenceTransformer
 from supabase import create_client, Client
 from dotenv import load_dotenv
@@ -10,8 +11,8 @@ class RagService:
         self._load_failed = False
         
         load_dotenv()
-        url = os.environ.get("SUPABASE_URL")
-        key = os.environ.get("SUPABASE_SERVICE_KEY")
+        url = settings.SUPABASE_URL
+        key = settings.SUPABASE_SERVICE_KEY
         if url and key:
             self.supabase: Client = create_client(url, key)
         else:
@@ -29,7 +30,7 @@ class RagService:
         print("[RAG] Loading SentenceTransformer for Knowledge Base...")
         try:
             # Check if a local model path is provided
-            model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
+            model_path = settings.SENTENCE_TRANSFORMER_MODEL_PATH
             if model_path and os.path.exists(model_path):
                 print(f"[RAG] Loading from local path: {model_path}")
                 self.model = SentenceTransformer(model_path)

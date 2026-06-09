@@ -23,6 +23,7 @@ This script:
 """
 
 import os
+from backend.config import settings
 import sys
 import logging
 from datetime import datetime, timezone
@@ -46,7 +47,7 @@ def seed_company_settings():
     
     # Initialize Supabase client
     supabase = create_client(
-        os.getenv("SUPABASE_URL"),
+        settings.SUPABASE_URL,
         os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     )
     
@@ -140,7 +141,7 @@ def verify_seed():
     logger.info("Verifying seed results...")
     
     supabase = create_client(
-        os.getenv("SUPABASE_URL"),
+        settings.SUPABASE_URL,
         os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     )
     

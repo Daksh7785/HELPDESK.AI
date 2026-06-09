@@ -14,6 +14,7 @@ Features:
 """
 
 import os
+from backend.config import settings
 import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict
@@ -52,7 +53,7 @@ class NotificationRoutingMiddleware:
     def __init__(self):
         """Initialize the notification routing middleware."""
         self.supabase = create_client(
-            os.getenv("SUPABASE_URL"),
+            settings.SUPABASE_URL,
             os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         )
         self._settings_cache: Dict[str, Dict] = {}

@@ -5,6 +5,7 @@ GET  /health             →  service health check
 """
 
 import os
+from backend.config import settings
 import sys
 import uuid
 import json
@@ -38,8 +39,8 @@ load_dotenv(dotenv_path=env_path)
 # Initialize Supabase Client (Service Role for backend bypass)
 try:
     from supabase import create_client, Client
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    url = settings.SUPABASE_URL
+    key = settings.SUPABASE_SERVICE_KEY
     if not url or not key:
         print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None
@@ -246,7 +247,7 @@ async def lifespan(app: FastAPI):
     # Strict health checks: fail loudly when core model assets are unavailable.
     # Set ALLOW_DEGRADED_STARTUP=1 to permit degraded startup for local/dev convenience.
     try:
-        strict_mode = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") != "1"
+        strict_mode = not settings.ALLOW_DEGRADED_STARTUP
     except Exception:
         strict_mode = True
 

@@ -1,4 +1,5 @@
 import os
+from backend.config import settings
 import base64
 import io
 import re
@@ -13,7 +14,7 @@ load_dotenv(dotenv_path=env_path)
 
 class GeminiService:
     def __init__(self):
-        self.api_key = os.getenv("GEMINI_API_KEY")
+        self.api_key = settings.GEMINI_API_KEY
         self._initialized = False
         self.model_name = 'gemini-2.5-flash'
         

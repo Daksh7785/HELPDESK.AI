@@ -5,6 +5,7 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
+from backend.config import settings
 from sentence_transformers import SentenceTransformer, util
 
 SIMILARITY_THRESHOLD = 0.70
@@ -32,7 +33,7 @@ class DuplicateService:
         print("[DuplicateService] Loading model...")
         try:
             # Check if a local model path is provided
-            model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
+            model_path = settings.SENTENCE_TRANSFORMER_MODEL_PATH
             if model_path and os.path.exists(model_path):
                 print(f"[DuplicateService] Loading from local path: {model_path}")
                 self.model = SentenceTransformer(model_path)

@@ -11,6 +11,7 @@ Features:
 """
 
 import os
+from backend.config import settings
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
@@ -35,7 +36,7 @@ class AutoCloseService:
     def __init__(self):
         """Initialize the auto-close service with Supabase client."""
         self.supabase = create_client(
-            os.getenv("SUPABASE_URL"),
+            settings.SUPABASE_URL,
             os.getenv("SUPABASE_SERVICE_ROLE_KEY")
         )
         self.enabled = os.getenv("AUTO_CLOSE_ENABLED", "true").lower() == "true"
