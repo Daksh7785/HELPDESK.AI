@@ -8,6 +8,9 @@ from supabase import create_client
 
 from backend.csrf import CSRFTokenMiddleware, set_csrf_cookie, CSRF_COOKIE_NAME
 
+from backend.routers import tickets, ai, admin, health, auth
+from backend.routes import translation, estimator, voice, privacy, active_learning, weekly_digest
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -27,6 +30,18 @@ if SUPABASE_URL and SUPABASE_SERVICE_KEY and os.getenv("ALLOW_DEGRADED_STARTUP")
         supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
     except Exception as e:
         logger.warning(f"Failed to initialize Supabase client: {e}")
+
+app.include_router(tickets.router)
+app.include_router(ai.router)
+app.include_router(admin.router)
+app.include_router(health.router)
+app.include_router(auth.router)
+app.include_router(translation.router)
+app.include_router(estimator.router)
+app.include_router(voice.router)
+app.include_router(privacy.router)
+app.include_router(active_learning.router)
+app.include_router(weekly_digest.router)
 
 
 # ---------------------------------------------------------------------------
