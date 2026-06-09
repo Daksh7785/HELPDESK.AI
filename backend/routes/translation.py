@@ -8,9 +8,10 @@ import uuid
 from functools import lru_cache
 from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import Optional, Any
+from backend.auth_cookie import get_current_user
 from backend.services.rate_limit_config import limiter
 
 
@@ -183,9 +184,9 @@ def _request_id(request: Request) -> str:
 
 @router.post("/translate", response_model=TranslateResponse)
 @limiter.limit("20/minute")
-async def translate(request: Request, body: TranslateTextRequest):
+async def translate(request: Request, body: TranslateTextRequest, user: dict = Depends(get_current_user)):
     """Translate text to target language with auto-detection."""
-    rid = _request_id(req)
+    rid = _request_id(request)
     logger.info(
         "translate: text_len=%d, target=%s, source=%s",
         len(body.text), body.target_lang, body.source_lang,
@@ -207,9 +208,9 @@ async def translate(request: Request, body: TranslateTextRequest):
 
 @router.post("/translate-ticket")
 @limiter.limit("20/minute")
-async def translate_ticket_endpoint(request: Request, body: TranslateTicketRequest):
+async def translate_ticket_endpoint(request: Request, body: TranslateTicketRequest, user: dict = Depends(get_current_user)):
     """Translate entire ticket content to target language."""
-    rid = _request_id(req)
+    rid = _request_id(request)
     # FIX 8: Restore full log line (msg_count, has_subject, has_desc regressed in prior version).
     logger.info(
         "translate_ticket: target=%s, has_subject=%s, has_desc=%s, msg_count=%d",
@@ -245,7 +246,7 @@ async def translate_ticket_endpoint(request: Request, body: TranslateTicketReque
 
 @router.post("/detect", response_model=DetectResponse)
 @limiter.limit("30/minute")
-async def detect(request: Request, body: DetectLanguageRequest):
+async def detect(request: Request, body: DetectLanguageRequest, user: dict = Depends(get_current_user)):
     """Detect the language of the given text."""
     logger.info("detect: text_len=%d", len(body.text))
     lang = detect_language(body.text)
@@ -267,8 +268,8 @@ async def detect(request: Request, body: DetectLanguageRequest):
 
 @router.get("/languages", response_model=LanguagesResponse)
 @limiter.limit("60/minute")
-async def list_languages(request: Request):
+async def list_languages(request: Request, user: dict = Depends(get_current_user)):
     """List supported languages for translation."""
-    rid = _request_id(req)
+    rid = _request_id(request)
     logger.info("[%s] languages: listing supported languages", rid)
     return {"success": True, "data": _cached_supported_languages()}
