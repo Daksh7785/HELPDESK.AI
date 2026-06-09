@@ -20,23 +20,26 @@ import os
 import base64
 from Crypto.Cipher import AES
 from Crypto.Random import get_random_bytes
-from dotenv import load_dotenv
 
-load_dotenv()
+_ENCRYPTION_KEY: str | None = None
 
-# Encryption key - should be set in environment variables
-# Generate with: python3 -c "import os; print(os.urandom(32).hex())"
-ENCRYPTION_KEY = os.getenv("AES_ENCRYPTION_KEY")
-
-def _get_cipher(nonce: bytes | None = None):
-    """Create AES-256-GCM cipher with the configured key."""
-    if not ENCRYPTION_KEY:
+def get_encryption_key() -> str:
+    global _ENCRYPTION_KEY
+    if _ENCRYPTION_KEY is not None:
+        return _ENCRYPTION_KEY
+    key = os.getenv("AES_ENCRYPTION_KEY")
+    if not key:
         raise ValueError(
             "AES_ENCRYPTION_KEY environment variable not set. "
             "Generate with: python3 -c \"import os; print(os.urandom(32).hex())\""
         )
-    
-    key_bytes = bytes.fromhex(ENCRYPTION_KEY)
+    _ENCRYPTION_KEY = key
+    return key
+
+def _get_cipher(nonce: bytes | None = None):
+    """Create AES-256-GCM cipher with the configured key."""
+    key = get_encryption_key()
+    key_bytes = bytes.fromhex(key)
     if len(key_bytes) != 32:
         raise ValueError("AES_ENCRYPTION_KEY must be 32 bytes (64 hex characters)")
     
