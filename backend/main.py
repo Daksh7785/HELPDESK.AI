@@ -39,7 +39,7 @@ load_dotenv(dotenv_path=env_path)
 try:
     from supabase import create_client, Client
     url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY")
+    key = os.environ.get("SUPABASE_SERVICE_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
         print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None
