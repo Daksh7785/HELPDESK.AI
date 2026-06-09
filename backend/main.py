@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -28,7 +28,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -81,15 +81,39 @@ def get_system_settings(company_id: str) -> dict:
     except Exception as e:
         print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
+
 class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
-    image_text: str = "" # Keep for backward compatibility
+    image_text: str = ""  # Keep for backward compatibility
     user_id: str | None = None
     company: str | None = None
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
+
+    @field_validator("image_base64")
+    @classmethod
+    def validate_base64_size(cls, value: str) -> str:
+        """
+        Validate that the incoming base64 image string does not exceed the 5MB payload limit.
+        
+        Args:
+            value (str): The base64 encoded image string.
+            
+        Returns:
+            str: The validated base64 string.
+            
+        Raises:
+            ValueError: If the string length exceeds the maximum allowed character limit.
+        """
+        if value:
+            # Base64 strings inflate binary file sizes by ~33%.
+            # 7,000,000 characters is roughly ~5MB of actual image data.
+            MAX_BASE64_CHARS = 7 * 1024 * 1024 
+            if len(value) > MAX_BASE64_CHARS:
+                raise ValueError("Payload too large: Image string exceeds the 5MB limit.")
+        return value
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -321,7 +345,6 @@ async def root():
     </head>
     <body class="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
         
-        <!-- Abstract Background Orbs -->
         <div class="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] rounded-full bg-emerald-600/20 blur-[120px] pointer-events-none"></div>
         <div class="absolute bottom-[-10%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-blue-600/20 blur-[120px] pointer-events-none"></div>
 
@@ -340,19 +363,16 @@ async def root():
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-                <!-- API Docs Button -->
                 <a href="/docs" class="btn-hover block w-full bg-slate-800/80 border border-slate-700 hover:border-emerald-500/50 hover:bg-slate-700/80 rounded-xl p-5 group">
                     <h3 class="font-bold text-white mb-1 group-hover:text-emerald-400 transition-colors">Interactive API Docs</h3>
                     <p class="text-slate-400 text-sm text-center md:text-left">Test endpoints natively via Swagger UI</p>
                 </a>
                 
-                <!-- Frontend Button -->
                 <a href="https://helpdeskaiv1.vercel.app/" target="_blank" class="btn-hover block w-full bg-slate-800/80 border border-slate-700 hover:border-blue-500/50 hover:bg-slate-700/80 rounded-xl p-5 group">
                     <h3 class="font-bold text-white mb-1 group-hover:text-blue-400 transition-colors">Client Web Portal</h3>
                     <p class="text-slate-400 text-sm text-center md:text-left">Access the React/Vite dashboard</p>
                 </a>
 
-                <!-- System Health Button -->
                 <a href="/health" class="btn-hover block w-full bg-slate-800/80 border border-slate-700 hover:border-emerald-500/50 hover:bg-slate-700/80 rounded-xl p-5 group md:col-span-2">
                         <div class="flex items-center justify-between">
                         <div>
@@ -766,7 +786,7 @@ async def analyze_only(request_body: TicketRequest):
     if request_body.image_base64 and not gemini_analysis["ocr_text"]:
         try:
             print("[AI] Detecting visual context via Gemini...")
-            vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+            vision_result = gemini_service.analyze_image(request_body.image_base64)
             gemini_analysis.update(vision_result)
         except Exception as e:
             print(f"[VISION ERROR] {e}")
@@ -920,7 +940,7 @@ async def analyze_stream(request_body: TicketRequest):
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
             try:
-                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                vision_result = gemini_service.analyze_image(request_body.image_base64)
                 gemini_analysis.update(vision_result)
             except Exception as e:
                 pass
@@ -1208,4 +1228,3 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
-
