@@ -10,11 +10,14 @@ Ensures email notifications are not lost on server restart, with:
 """
 
 import json
+import logging
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from enum import Enum
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationStatus(str, Enum):
@@ -72,7 +75,7 @@ class NotificationQueue:
             try:
                 self.supabase.table("notification_queue").insert(notification).execute()
             except Exception as e:
-                print(f"[NotificationQueue] Supabase enqueue failed, using fallback: {str(e)}")
+                logger.warning("Supabase enqueue failed, using fallback: %s", str(e))
                 state = self._read_state()
                 state["notifications"].append(notification)
                 self._write_state(state)
@@ -102,7 +105,7 @@ class NotificationQueue:
                 if response.data:
                     notifications = response.data
             except Exception as e:
-                print(f"[NotificationQueue] Supabase dequeue failed, using fallback: {str(e)}")
+                logger.warning("Supabase dequeue failed, using fallback: %s", str(e))
                 state = self._read_state()
                 notifications = [
                     n for n in state["notifications"]
@@ -150,7 +153,7 @@ class NotificationQueue:
 
                 self.supabase.table("notification_queue").update(update_data).eq("id", notification_id).execute()
             except Exception as e:
-                print(f"[NotificationQueue] Supabase update failed, using fallback: {str(e)}")
+                logger.warning("Supabase update failed, using fallback: %s", str(e))
                 state = self._read_state()
                 for n in state["notifications"]:
                     if n["id"] == notification_id:
@@ -193,7 +196,7 @@ class NotificationQueue:
                 if response.data:
                     notifications = response.data
             except Exception as e:
-                print(f"[NotificationQueue] Supabase get_failed failed, using fallback: {str(e)}")
+                logger.warning("Supabase get_failed failed, using fallback: %s", str(e))
                 state = self._read_state()
                 notifications = [
                     n for n in state["notifications"]
@@ -222,7 +225,7 @@ def load(supabase_client=None) -> NotificationQueue:
     global _instance
     if _instance is None:
         _instance = NotificationQueue(supabase_client)
-        print("[NotificationQueue] loaded")
+        logger.info("NotificationQueue loaded")
     return _instance
 
 
