@@ -1,6 +1,7 @@
 import os
+import asyncio
 from sentence_transformers import SentenceTransformer
-from supabase import create_client, Client
+from supabase import create_async_client, AsyncClient
 from dotenv import load_dotenv
 
 class RagService:
@@ -13,7 +14,7 @@ class RagService:
         url = os.environ.get("SUPABASE_URL")
         key = os.environ.get("SUPABASE_SERVICE_KEY")
         if url and key:
-            self.supabase: Client = create_client(url, key)
+            self.supabase: AsyncClient = create_async_client(url, key)
         else:
             self.supabase = None
 
@@ -49,9 +50,9 @@ class RagService:
             else:
                 raise
 
-    def search_knowledge_base(self, text: str, threshold: float = 0.85, match_count: int = 1):
+    async def search_knowledge_base_async(self, text: str, threshold: float = 0.85, match_count: int = 1):
         """
-        Embed the input text and query Supabase for a matching article.
+        Embed the input text and asynchronously query Supabase for a matching article.
         Returns the article text if found above threshold, else None.
         """
         if not self._loaded or not self.supabase:
@@ -60,11 +61,11 @@ class RagService:
             return None
 
         try:
-            # Generate Embedding vector (list of 384 floats)
-            vector = self.model.encode(text).tolist()
+            # Generate Embedding vector (list of 384 floats) asynchronously
+            vector = await asyncio.to_thread(lambda: self.model.encode(text).tolist())
 
-            # Call the Supabase RPC function we created in SQL
-            response = self.supabase.rpc(
+            # Call the Supabase RPC function we created in SQL asynchronously
+            response = await self.supabase.rpc(
                 'match_articles',
                 {
                     'query_embedding': vector,

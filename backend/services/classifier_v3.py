@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import pickle
 import json
+import asyncio
 from transformers import BertTokenizerFast, BertModel
 
 # Paths
@@ -53,6 +54,13 @@ class ClassifierServiceV3:
 
         self.tokenizer = BertTokenizerFast.from_pretrained(MODEL_DIR)
         print("[INFO] Classifier Service V3 (Power Model) Loaded.")
+
+    def load(self):
+        # Added for compatibility with other services
+        pass
+
+    async def predict_async(self, text: str):
+        return await asyncio.to_thread(self.predict, text)
 
     def predict(self, text: str):
         if self.model is None: return {"error": "V3 Model not loaded"}

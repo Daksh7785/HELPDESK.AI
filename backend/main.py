@@ -3,9 +3,15 @@ FastAPI Backend — AI Helpdesk Ticket Analyzer
 POST /ai/analyze_ticket  →  full analysis of a support ticket
 GET  /health             →  service health check
 """
+from __future__ import annotations
 
 import os
+from typing import Optional
 import sys
+
+# Ensure project root is on path for imports
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
 import uuid
 import json
 import datetime
@@ -37,21 +43,20 @@ load_dotenv(dotenv_path=env_path)
 
 # Initialize Supabase Client (Service Role for backend bypass)
 try:
-    from supabase import create_client, Client
+    from supabase import create_async_client, AsyncClient
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
         print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None
     else:
-        supabase = create_client(url, key)
+        supabase = create_async_client(url, key)
 except (ImportError, Exception) as e:
     print(f"[WARNING] Supabase initialization failed: {e}")
     supabase = None
-    Client = None
+    AsyncClient = None
 
-# Ensure project root is on path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+# --- Removed sys.path.insert from here since it's at the top ---
 
 from backend.services.classifier_service import ClassifierService
 from backend.services.classifier_v2 import classifier_v2
@@ -64,16 +69,22 @@ from backend.services.rag_service import RagService
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
-def get_system_settings(company_id: str) -> dict:
-    defaults = {
+def get_system_settings_sync(company_id: str) -> dict:
+    return get_system_settings_defaults()
+
+def get_system_settings_defaults() -> dict:
+    return {
         "ai_confidence_threshold": 0.80,
         "duplicate_sensitivity": 0.85,
         "enable_auto_resolve": False
     }
+
+async def get_system_settings(company_id: str) -> dict:
+    defaults = get_system_settings_defaults()
     if not supabase or not company_id:
         return defaults
     try:
-        res = supabase.table("system_settings").select(
+        res = await supabase.table("system_settings").select(
             "ai_confidence_threshold, duplicate_sensitivity, enable_auto_resolve"
         ).eq("company_id", company_id).single().execute()
         if res.data:
@@ -85,11 +96,12 @@ class TicketRequest(BaseModel):
     text: str
     image_base64: str = ""
     image_text: str = "" # Keep for backward compatibility
-    user_id: str | None = None
-    company: str | None = None
-    image_url: str | None = None
-    confidence_threshold: float = 0.20
-    duplicate_sensitivity: float = 0.85
+    user_id: Optional[str] = None
+    company: Optional[str] = None
+    image_url: Optional[str] = None
+    image_base64: Optional[str] = None
+    company: str = "default"
+    user_id: Optional[str] = None
 
 class TicketSaveRequest(BaseModel):
     user_id: str
@@ -103,9 +115,9 @@ class TicketSaveRequest(BaseModel):
     auto_resolve: bool
     is_duplicate: bool
     confidence: float
-    image_url: str | None = None
-    company: str | None = None
-    company_id: str | None = None
+    image_url: Optional[str] = None
+    company: Optional[str] = None
+    company_id: Optional[str] = None
     sla_breach_at: str
     metadata: dict
     entities: list = []
@@ -117,7 +129,7 @@ class TicketSaveRequest(BaseModel):
 
 class DuplicateInfo(BaseModel):
     is_duplicate: bool
-    duplicate_ticket_id: str | None = None
+    duplicate_ticket_id: Optional[str] = None
     similarity: float = 0.0
 
 
@@ -128,8 +140,8 @@ class EntityInfo(BaseModel):
 
 
 class TicketResponse(BaseModel):
-    id: str | int | None = None
-    ticket_id: str | None = None
+    id: Optional[str] = None
+    ticket_id: Optional[str] = None
     summary: str
     category: str
     subcategory: str
@@ -144,11 +156,11 @@ class TicketResponse(BaseModel):
     decision_factors: list[str] = []
     image_description: str = ""
     ocr_text: str = ""
-    image_url: str | None = None
+    image_url: Optional[str] = None
     highlights: list[str] = []
     timeline: dict = {} # Map of step_name: timestamp
     env_metadata: dict = {} # IP, Hostname, Browser/OS
-    sla_breach_at: str | None = None
+    sla_breach_at: Optional[str] = None
     version: str = "2.1.0-Neural-Diagnostic"
 
 
@@ -169,8 +181,8 @@ class TicketRecord(BaseModel):
     status: str
     assigned_team: str
     created_at: str
-    updated_at: str | None = None
-    last_user_viewed_at: str | None = None
+    updated_at: Optional[str] = None
+    last_user_viewed_at: Optional[str] = None
     messages: list[Message] = []
     metadata: dict = {}
     timeline: dict = {} # Milestones: created, analyzed, triaged, routed, in_progress, resolved
@@ -435,7 +447,7 @@ async def troubleshoot(request: TroubleshootRequest):
             is_final=True
         )
     
-    result = gemini_service.get_troubleshooting_step(
+    result = await gemini_service.get_troubleshooting_step(
         request.text,
         request.history,
         request.category
@@ -460,7 +472,7 @@ async def analyze_bug(request: BugReportAnalysisRequest):
             probable_cause="AI Diagnostics are currently unavailable."
         )
     
-    cause = gemini_service.analyze_bug_report(
+    cause = await gemini_service.analyze_bug_report(
         request.bug_title,
         request.description,
         request.steps_to_reproduce,
@@ -536,7 +548,7 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(company_id: Optional[str] = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
@@ -545,7 +557,7 @@ async def get_tickets(company_id: str | None = None):
     if company_id:
         query = query.eq("company_id", company_id)
         
-    res = query.execute()
+    res = await query.execute()
     return res.data
 
 @app.post("/tickets/save")
@@ -565,7 +577,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         profile = {}
         if request_body.user_id:
             try:
-                profile_res = (
+                profile_res = await (
                     supabase.table("profiles")
                     .select("company_id, company")
                     .eq("id", request_body.user_id)
@@ -605,7 +617,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
-        res = supabase.table("tickets").insert(final_data).execute()
+        res = await supabase.table("tickets").insert(final_data).execute()
         
         if not res.data:
             raise Exception("Failed to insert ticket into database.")
@@ -619,7 +631,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         duplicate_text = description_text or subject_text
         if duplicate_text:
             try:
-                duplicate_service.add_ticket(str(ticket_id), duplicate_text)
+                await duplicate_service.add_ticket(str(ticket_id), duplicate_text)
             except Exception as index_error:
                 duplicate_indexed = False
                 duplicate_index_warning = "Duplicate index update failed."
@@ -634,7 +646,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         if final_data["auto_resolve"]:
             msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps."
 
-        supabase.table("ticket_messages").insert({
+        await supabase.table("ticket_messages").insert({
             "ticket_id": ticket_id,
             "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
             "sender_name": "AI Assistant",
@@ -657,7 +669,7 @@ async def get_ticket_by_id(ticket_id: str):
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    res = await supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
@@ -702,7 +714,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     text = request_body.text
 
-    settings = get_system_settings(request_body.company)
+    settings = await get_system_settings(request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -722,7 +734,7 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     local_ocr_text = ""
     if request_body.image_base64 and ocr_service:
         print("[AI] Extracting text via local OCR...")
-        local_ocr_text = ocr_service.extract_text(request_body.image_base64)
+        local_ocr_text = await ocr_service.extract_text_async(request_body.image_base64)
         if local_ocr_text:
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
@@ -739,7 +751,7 @@ async def analyze_only(request_body: TicketRequest):
     """
     text = request_body.text
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(request_body.company)
+    settings = await get_system_settings(request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -766,7 +778,7 @@ async def analyze_only(request_body: TicketRequest):
     if request_body.image_base64 and not gemini_analysis["ocr_text"]:
         try:
             print("[AI] Detecting visual context via Gemini...")
-            vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+            vision_result = await gemini_service.analyze_image(request_body.image_base64, text)
             gemini_analysis.update(vision_result)
         except Exception as e:
             print(f"[VISION ERROR] {e}")
@@ -775,10 +787,10 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Classification ---
     try:
-        classification_v3_res = classifier_v3.predict(text)
+        classification_v3_res = await classifier_v3.predict_async(text)
         if "error" in classification_v3_res:
             # Fallback to V1
-            classification = classifier_service.predict(text)
+            classification = await classifier_service.predict_async(text)
         else:
             # Parse V3 output
             cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
@@ -825,7 +837,7 @@ async def analyze_only(request_body: TicketRequest):
     # --- RAG Knowledge Base Check ---
     rag_match = None
     try:
-        rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+        rag_match = await rag_service.search_knowledge_base_async(text, threshold=0.85)
         if rag_match:
             classification["auto_resolve"] = True
             classification["assigned_team"] = "Auto-Resolve AI"
@@ -908,7 +920,7 @@ async def analyze_stream(request_body: TicketRequest):
             "api_endpoint": "/ai/analyze_stream"
         }
         timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company)
+        settings = await get_system_settings(request_body.company)
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
         enable_auto_resolve = settings["enable_auto_resolve"]
@@ -920,7 +932,7 @@ async def analyze_stream(request_body: TicketRequest):
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
         if request_body.image_base64 and not gemini_analysis["ocr_text"]:
             try:
-                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                vision_result = await gemini_service.analyze_image(request_body.image_base64, text)
                 gemini_analysis.update(vision_result)
             except Exception as e:
                 pass
@@ -940,9 +952,9 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            classification_v3_res = classifier_v3.predict(text)
+            classification_v3_res = await classifier_v3.predict_async(text)
             if "error" in classification_v3_res:
-                classification = classifier_service.predict(text)
+                classification = await classifier_service.predict_async(text)
             else:
                 cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
                 sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
@@ -982,7 +994,7 @@ async def analyze_stream(request_body: TicketRequest):
         await asyncio.sleep(0.2)
         rag_match = None
         try:
-            rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+            rag_match = await rag_service.search_knowledge_base_async(text, threshold=0.85)
             if rag_match:
                 classification["auto_resolve"] = True
                 classification["assigned_team"] = "Auto-Resolve AI"
@@ -1085,7 +1097,7 @@ def _cookie_kwargs() -> dict:
         "path": "/",
     }
 
-def extract_token(request: Request) -> str | None:
+def extract_token(request: Request) -> Optional[str]:
     cookie_token = request.cookies.get(ACCESS_COOKIE)
     if cookie_token:
         return cookie_token
@@ -1146,9 +1158,9 @@ class LoginBody(BaseModel):
 class SignupBody(BaseModel):
     email: str
     password: str
-    full_name: str | None = None
-    role: str | None = "user"
-    company: str | None = None
+    full_name: Optional[str] = None
+    role: Optional[str] = "user"
+    company: Optional[str] = None
 
 @app.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):

@@ -5,6 +5,7 @@ Uses sentence-transformers all-MiniLM-L6-v2 to detect similar tickets.
 
 import uuid
 import os
+import asyncio
 from sentence_transformers import SentenceTransformer, util
 
 SIMILARITY_THRESHOLD = 0.70
@@ -87,15 +88,18 @@ class DuplicateService:
         except Exception as e:
             print(f"[DuplicateService] Failed to save to disk: {e}")
 
-    def add_ticket(self, ticket_id: str, text: str):
+    async def add_ticket(self, ticket_id: str, text: str):
         """Add a ticket to the in-memory store and persist to disk."""
         self.load()
         if not self.is_available():
             print(f"[DuplicateService] DEGRADED: Skipping embedding for ticket {ticket_id} (model not available)")
             return
-        embedding = self.model.encode(text, convert_to_tensor=True)
+        embedding = await asyncio.to_thread(self.model.encode, text, convert_to_tensor=True)
         self._tickets.append((ticket_id, embedding, text))
-        self.save_to_disk(ticket_id, text)
+        await asyncio.to_thread(self.save_to_disk, ticket_id, text)
+    async def check_duplicate_async(self, text: str, threshold: float = None) -> dict:
+        """Asynchronous wrapper for check_duplicate."""
+        return await asyncio.to_thread(self.check_duplicate, text, threshold)
 
     def check_duplicate(self, text: str, threshold: float = None) -> dict:
         """

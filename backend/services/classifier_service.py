@@ -7,6 +7,7 @@ Priority and other fields are derived from the category mapping.
 import os
 import json
 import torch
+import asyncio
 import torch.nn.functional as F
 from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
 
@@ -81,6 +82,10 @@ class ClassifierService:
 
         self._loaded = True
         print("Classifier loaded successfully")
+
+    async def predict_async(self, text: str) -> dict:
+        """Asynchronous wrapper for predict, offloaded to a thread to avoid blocking the event loop."""
+        return await asyncio.to_thread(self.predict, text)
 
     def predict(self, text: str) -> dict:
         """

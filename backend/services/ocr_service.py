@@ -5,6 +5,7 @@ No API key required. Runs entirely on the local machine.
 
 import base64
 import io
+import asyncio
 
 # Lazy import: easyocr is only imported once first use (heavy initialization ~3-5s)
 _reader = None
@@ -22,6 +23,13 @@ def _get_reader():
 
 
 class OCRService:
+    async def extract_text_async(self, image_base64: str) -> str:
+        """
+        Asynchronously extract all text from a base64-encoded image using EasyOCR 
+        by offloading to a separate thread so the event loop is not blocked.
+        """
+        return await asyncio.to_thread(self.extract_text, image_base64)
+
     def extract_text(self, image_base64: str) -> str:
         """
         Extract all text from a base64-encoded image using EasyOCR.
