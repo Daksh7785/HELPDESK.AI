@@ -3,6 +3,9 @@ NER Service — Loads the trained DistilBert token classifier and extracts entit
 Labels follow pattern: B-B-ENTITY_TYPE, I-B-ENTITY_TYPE, O
 """
 
+
+from backend.logger import get_logger
+logger = get_logger(__name__)
 import os
 import json
 import torch
@@ -62,7 +65,7 @@ class NERService:
         self.model.eval()
 
         self._loaded = True
-        print("NER loaded successfully")
+        logger.info("NER loaded successfully")
 
     def _clean_label(self, label: str) -> tuple[str, str]:
         """

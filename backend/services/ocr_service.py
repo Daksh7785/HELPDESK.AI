@@ -3,6 +3,9 @@ OCR Service — Local, CPU-only text extraction using EasyOCR.
 No API key required. Runs entirely on the local machine.
 """
 
+
+from backend.logger import get_logger
+logger = get_logger(__name__)
 import base64
 import io
 
@@ -15,9 +18,9 @@ def _get_reader():
     global _reader
     if _reader is None:
         import easyocr
-        print("[OCRService] Initializing EasyOCR (CPU mode)... this may take a moment on first load.")
+        logger.info("[OCRService] Initializing EasyOCR (CPU mode)... this may take a moment on first load.")
         _reader = easyocr.Reader(["en"], gpu=False)
-        print("[OCRService] Ready.")
+        logger.info("[OCRService] Ready.")
     return _reader
 
 
@@ -46,8 +49,8 @@ class OCRService:
             reader = _get_reader()
             results = reader.readtext(image_bytes, detail=0, paragraph=True)
             extracted = " ".join(results).strip()
-            print(f"[OCRService] Extracted {len(extracted)} chars from image.")
+            logger.info(f"[OCRService] Extracted {len(extracted)} chars from image.")
             return extracted
         except Exception as e:
-            print(f"[OCRService] Error during OCR: {e}")
+            logger.error(f"[OCRService] Error during OCR: {e}")
             return ""

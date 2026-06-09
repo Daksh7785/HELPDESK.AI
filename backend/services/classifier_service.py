@@ -4,6 +4,9 @@ The model outputs combined "Category | SubCategory" labels.
 Priority and other fields are derived from the category mapping.
 """
 
+
+from backend.logger import get_logger
+logger = get_logger(__name__)
 import os
 import json
 import torch
@@ -80,7 +83,7 @@ class ClassifierService:
         self.model.eval()
 
         self._loaded = True
-        print("Classifier loaded successfully")
+        logger.info("Classifier loaded successfully")
 
     def predict(self, text: str) -> dict:
         """

@@ -3,6 +3,9 @@ NER Trainer — Token Classification
 Fine-tunes distilbert-base-uncased for named-entity recognition using BIO tags.
 """
 
+
+from backend.logger import get_logger
+logger = get_logger(__name__)
 import os
 import sys
 import glob
@@ -138,18 +141,18 @@ def _align_labels(tokenizer, annotations, label2id, max_len):
 # Training loop
 # ---------------------------------------------------------------------------
 def train_ner():
-    print("=" * 60)
-    print("NER TRAINING")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("NER TRAINING")
+    logger.info("=" * 60)
 
     # 1. Load
     path = _find_ner_json()
-    print(f"[INFO] NER annotations found: {path}")
+    logger.info(f"[INFO] NER annotations found: {path}")
     annotations = _load_annotations(path)
-    print(f"[INFO] Loaded {len(annotations)} samples")
+    logger.info(f"[INFO] Loaded {len(annotations)} samples")
 
     label_list, label2id, id2label = _build_label_map(annotations)
-    print(f"[INFO] Labels ({len(label_list)}): {label_list}")
+    logger.info(f"[INFO] Labels ({len(label_list)}): {label_list}")
 
     # 2. Tokenize & align
     tokenizer = DistilBertTokenizerFast.from_pretrained("distilbert-base-uncased")
@@ -173,7 +176,7 @@ def train_ner():
     train_loader = DataLoader(train_ds, batch_size=BATCH_SIZE, shuffle=True)
     test_loader = DataLoader(test_ds, batch_size=BATCH_SIZE)
 
-    print(f"[INFO] Train: {len(train_ds)}, Test: {len(test_ds)}")
+    logger.info(f"[INFO] Train: {len(train_ds)}, Test: {len(test_ds)}")
 
     # 4. Model
     model = DistilBertForTokenClassification.from_pretrained(
@@ -187,8 +190,8 @@ def train_ner():
     total_steps = len(train_loader) * EPOCHS
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=0, num_training_steps=total_steps)
 
-    print(f"[INFO] Device: {DEVICE}")
-    print(f"[INFO] Training for {EPOCHS} epochs …")
+    logger.info(f"[INFO] Device: {DEVICE}")
+    logger.info(f"[INFO] Training for {EPOCHS} epochs …")
 
     # 5. Train
     for epoch in range(EPOCHS):
@@ -209,10 +212,10 @@ def train_ner():
             total_loss += loss.item()
 
         avg_loss = total_loss / len(train_loader)
-        print(f"  Epoch {epoch + 1}/{EPOCHS}  loss={avg_loss:.4f}")
+        logger.info(f"  Epoch {epoch + 1}/{EPOCHS}  loss={avg_loss:.4f}")
 
     # 6. Evaluate
-    print("\n[EVAL] Computing metrics on test set …")
+    logger.info("\n[EVAL] Computing metrics on test set …")
     model.eval()
     correct = 0
     total = 0
@@ -232,7 +235,7 @@ def train_ner():
             total += mask.sum().item()
 
     accuracy = correct / total if total > 0 else 0
-    print(f"  Token-level accuracy: {accuracy:.4f}")
+    logger.info(f"  Token-level accuracy: {accuracy:.4f}")
 
     # 7. Save
     os.makedirs(SAVE_DIR, exist_ok=True)
@@ -242,8 +245,8 @@ def train_ner():
     with open(os.path.join(SAVE_DIR, "label_map.json"), "w") as f:
         json.dump({"label2id": label2id, "id2label": {str(k): v for k, v in id2label.items()}}, f, indent=2)
 
-    print(f"\n[INFO] NER model saved to {SAVE_DIR}")
-    print("=" * 60)
+    logger.info(f"\n[INFO] NER model saved to {SAVE_DIR}")
+    logger.info("=" * 60)
 
 
 if __name__ == "__main__":

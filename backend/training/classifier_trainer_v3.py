@@ -3,6 +3,9 @@ Classifier Trainer V3 — "Supervised Brain" Pipeline
 Upgraded to BERT-Base for maximum accuracy and power.
 """
 
+
+from backend.logger import get_logger
+logger = get_logger(__name__)
 import os
 import pickle
 import json
@@ -87,7 +90,7 @@ class TicketDataset(Dataset):
 # Training Logic
 # ---------------------------------------------------------------------------
 def train_v3():
-    print("🔥 Starting POWER TRAINING (V3 - BERT-Base)")
+    logger.info("🔥 Starting POWER TRAINING (V3 - BERT-Base)")
     
     df = pd.read_csv(DATASET_PATH)
     df.dropna(subset=[TEXT_COLUMN] + LABEL_COLUMNS, inplace=True)
@@ -124,7 +127,7 @@ def train_v3():
     scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=200, num_training_steps=total_steps)
     loss_fn = nn.CrossEntropyLoss()
 
-    print(f"\n[TRAIN] Executing {EPOCHS} epochs on {DEVICE}...")
+    logger.info(f"\n[TRAIN] Executing {EPOCHS} epochs on {DEVICE}...")
     for epoch in range(EPOCHS):
         model.train()
         total_loss = 0
@@ -141,7 +144,7 @@ def train_v3():
             scheduler.step()
             total_loss += loss.item()
 
-        print(f"✅ Epoch {epoch+1}/{EPOCHS} | Avg Loss: {total_loss/len(train_loader):.4f}")
+        logger.info(f"✅ Epoch {epoch+1}/{EPOCHS} | Avg Loss: {total_loss/len(train_loader):.4f}")
 
     # Save
     os.makedirs(SAVE_DIR, exist_ok=True)
@@ -149,7 +152,7 @@ def train_v3():
     tokenizer.save_pretrained(SAVE_DIR)
     with open(os.path.join(SAVE_DIR, "label_encoders.pkl"), "wb") as f: pickle.dump(label_encoders, f)
     with open(os.path.join(SAVE_DIR, "model_config.json"), "w") as f: json.dump(num_labels_per_output, f)
-    print(f"\n[SUCCESS] V3 Power Model saved to {SAVE_DIR}")
+    logger.info(f"\n[SUCCESS] V3 Power Model saved to {SAVE_DIR}")
 
 if __name__ == "__main__":
     train_v3()

@@ -1,3 +1,6 @@
+
+from backend.logger import get_logger
+logger = get_logger(__name__)
 import os
 import sys
 import csv
@@ -21,7 +24,7 @@ def download_image(url, output_path):
                 out_file.write(response.read())
             return True
     except Exception as e:
-        print(f"Failed to download {url}: {e}")
+        logger.error(f"Failed to download {url}: {e}")
     return False
 
 def smart_crop_face(image_path, output_path, target_size=(400, 400)):
@@ -42,11 +45,11 @@ def smart_crop_face(image_path, output_path, target_size=(400, 400)):
         else:
             img = cv2.imread(image_path)
     except Exception as e:
-        print(f"Error loading image or PDF {image_path}: {e}")
+        logger.error(f"Error loading image or PDF {image_path}: {e}")
         return False
         
     if img is None:
-        print(f"Could not read image {image_path}")
+        logger.info(f"Could not read image {image_path}")
         return False
         
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -107,7 +110,7 @@ def smart_crop_face(image_path, output_path, target_size=(400, 400)):
         # If the adjustments made it non-square, force square based on the shortest clamped dimension
         final_size = min(x2 - x1, y2 - y1)
         if final_size <= 0:
-            print("Math error in bounding box clamping.")
+            logger.error("Math error in bounding box clamping.")
             cropped = img
         else:
             # Re-center the square
@@ -120,7 +123,7 @@ def smart_crop_face(image_path, output_path, target_size=(400, 400)):
             cropped = img[y1_f:y1_f+final_size, x1_f:x1_f+final_size]
     else:
         # No face detected, fallback to center crop square
-        print(f"No face detected in {image_path}, using center crop.")
+        logger.info(f"No face detected in {image_path}, using center crop.")
         size = min(w_img, h_img)
         x1 = (w_img - size) // 2
         y1 = (h_img - size) // 2
@@ -138,7 +141,7 @@ def main():
     csv_path = "Team Profile for Landing Page - Form Responses 1 (1).csv"
     
     if not os.path.exists(csv_path):
-        print(f"CSV file not found: {csv_path}")
+        logger.info(f"CSV file not found: {csv_path}")
         return
         
     with open(csv_path, 'r', encoding='utf-8') as f:
@@ -168,7 +171,7 @@ def main():
             # Since download might be a PDF, check the headers or just try downloading and inspecting
             temp_file = os.path.join(target_dir, f"temp_{filename}")
             
-            print(f"Processing {name}...")
+            logger.info(f"Processing {name}...")
             
             if download_image(img_url, temp_file):
                 # Try to detect if it's a PDF by reading the first few bytes
@@ -185,9 +188,9 @@ def main():
                     os.rename(temp_file, proc_file)
 
                 if smart_crop_face(proc_file, output_file):
-                    print(f"  -> Saved smart cropped image to {output_file}")
+                    logger.info(f"  -> Saved smart cropped image to {output_file}")
                 else:
-                    print(f"  -> Failed to process image")
+                    logger.error(f"  -> Failed to process image")
                 
                 # Cleanup temp file
                 if os.path.exists(proc_file):
@@ -195,7 +198,7 @@ def main():
                 if os.path.exists(temp_file):
                     os.remove(temp_file)
             else:
-                print(f"  -> Failed to download")
+                logger.error(f"  -> Failed to download")
 
 if __name__ == "__main__":
     main()

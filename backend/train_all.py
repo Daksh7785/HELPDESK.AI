@@ -5,6 +5,9 @@ Usage:
     python train_all.py                (from backend/ directory)
 """
 
+
+from backend.logger import get_logger
+logger = get_logger(__name__)
 import os
 import sys
 import time
@@ -19,39 +22,39 @@ from backend.training.ner_trainer import train_ner
 
 
 def main():
-    print("╔" + "═" * 58 + "╗")
-    print("║" + "  AI HELPDESK — FULL MODEL TRAINING".center(58) + "║")
-    print("╚" + "═" * 58 + "╝")
-    print()
+    logger.info("╔" + "═" * 58 + "╗")
+    logger.info("║" + "  AI HELPDESK — FULL MODEL TRAINING".center(58) + "║")
+    logger.info("╚" + "═" * 58 + "╝")
+    logger.info()
 
     overall_start = time.time()
 
     # ── Step 1: Classifier ────────────────────────────────────
-    print("[1/2] Training Classifier Model …\n")
+    logger.info("[1/2] Training Classifier Model …\n")
     t0 = time.time()
     try:
         train_classifier()
     except Exception as e:
-        print(f"\n[ERROR] Classifier training failed: {e}")
+        logger.error(f"\n[ERROR] Classifier training failed: {e}")
         raise
     t1 = time.time()
-    print(f"\n[1/2] Classifier training completed in {t1 - t0:.1f}s\n")
+    logger.info(f"\n[1/2] Classifier training completed in {t1 - t0:.1f}s\n")
 
     # ── Step 2: NER ───────────────────────────────────────────
-    print("[2/2] Training NER Model …\n")
+    logger.info("[2/2] Training NER Model …\n")
     t0 = time.time()
     try:
         train_ner()
     except Exception as e:
-        print(f"\n[ERROR] NER training failed: {e}")
+        logger.error(f"\n[ERROR] NER training failed: {e}")
         raise
     t1 = time.time()
-    print(f"\n[2/2] NER training completed in {t1 - t0:.1f}s\n")
+    logger.info(f"\n[2/2] NER training completed in {t1 - t0:.1f}s\n")
 
     total = time.time() - overall_start
-    print("╔" + "═" * 58 + "╗")
-    print("║" + f"  ALL TRAINING COMPLETE — {total:.1f}s total".center(58) + "║")
-    print("╚" + "═" * 58 + "╝")
+    logger.info("╔" + "═" * 58 + "╗")
+    logger.info("║" + f"  ALL TRAINING COMPLETE — {total:.1f}s total".center(58) + "║")
+    logger.info("╚" + "═" * 58 + "╝")
 
 
 if __name__ == "__main__":

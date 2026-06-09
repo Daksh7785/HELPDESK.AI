@@ -1,3 +1,6 @@
+
+from backend.logger import get_logger
+logger = get_logger(__name__)
 import os
 import torch
 import torch.nn as nn
@@ -38,7 +41,7 @@ class ClassifierServiceV3:
         
         config_path = os.path.join(MODEL_DIR, "model_config.json")
         if not os.path.exists(config_path):
-            print(f"[V3 Service] Model not found yet at {MODEL_DIR}")
+            logger.info(f"[V3 Service] Model not found yet at {MODEL_DIR}")
             return
 
         with open(config_path, "r") as f:
@@ -52,7 +55,7 @@ class ClassifierServiceV3:
         self.model.eval()
 
         self.tokenizer = BertTokenizerFast.from_pretrained(MODEL_DIR)
-        print("[INFO] Classifier Service V3 (Power Model) Loaded.")
+        logger.info("[INFO] Classifier Service V3 (Power Model) Loaded.")
 
     def predict(self, text: str):
         if self.model is None: return {"error": "V3 Model not loaded"}

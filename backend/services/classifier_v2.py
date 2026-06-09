@@ -1,3 +1,6 @@
+
+from backend.logger import get_logger
+logger = get_logger(__name__)
 import os
 import torch
 import torch.nn as nn
@@ -35,7 +38,7 @@ class ClassifierServiceV2:
         config_path = os.path.join(MODEL_DIR, "model_config.json")
         if not os.path.exists(config_path):
             self.model = None
-            print(f"[WARN] V2 Model config not found at {config_path}")
+            logger.warning(f"[WARN] V2 Model config not found at {config_path}")
             return
 
         with open(config_path, "r") as f:
@@ -53,7 +56,7 @@ class ClassifierServiceV2:
 
         # 4. Load Tokenizer
         self.tokenizer = DistilBertTokenizerFast.from_pretrained(MODEL_DIR)
-        print("[SUCCESS] Classifier Service V2 (Shadow) Loaded Successfully.")
+        logger.info("[SUCCESS] Classifier Service V2 (Shadow) Loaded Successfully.")
 
     def predict(self, text: str):
         if self.model is None:
