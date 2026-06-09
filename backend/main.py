@@ -277,6 +277,7 @@ ACCESS_MAX_AGE = 60 * 60
 REFRESH_MAX_AGE = 60 * 60 * 24 * 7
 
 def _cookie_kwargs() -> dict:
+    """Generate standardized cookie configuration based on environment."""
     secure = os.getenv("ENV", "production").lower() != "development"
     return {
         "httponly": True,
@@ -286,6 +287,7 @@ def _cookie_kwargs() -> dict:
     }
 
 def extract_token(request: Request) -> str | None:
+    """Extract Supabase authentication token from cookies or authorization header."""
     cookie_token = request.cookies.get(ACCESS_COOKIE)
     if cookie_token:
         return cookie_token
@@ -295,6 +297,7 @@ def extract_token(request: Request) -> str | None:
     return None
 
 def _set_session_cookies(response: Response, session) -> None:
+    """Set secure HTTP-only cookies containing Supabase access and refresh tokens."""
     if not session or not getattr(session, "access_token", None):
         return
     response.set_cookie(
@@ -313,11 +316,13 @@ def _set_session_cookies(response: Response, session) -> None:
         )
 
 def _clear_session_cookies(response: Response) -> None:
+    """Clear Supabase access and refresh tokens from HTTP-only cookies."""
     kwargs = _cookie_kwargs()
     response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
     response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
 
 async def get_current_user(request: Request) -> dict:
+    """Retrieve and validate the currently authenticated user from the request session."""
     token = extract_token(request)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
