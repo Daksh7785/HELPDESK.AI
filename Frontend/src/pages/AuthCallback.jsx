@@ -61,7 +61,7 @@ function AuthCallback() {
   return (
     <div className="flex h-screen w-screen flex-col items-center justify-center bg-white dark:bg-gray-900 transition-colors duration-200">
       <div className="h-12 w-12 animate-spin rounded-full border-4 border-emerald-600 border-t-transparent"></div>
-      <p className="mt-4 text-lg font-medium text-gray-600 dark:text-gray-300">Signing you in...</p>
+      <p className="mt-4 text-lg font-medium text-gray-600 dark:text-gray-400 dark:text-gray-300">Signing you in...</p>
     </div>
   );
 }

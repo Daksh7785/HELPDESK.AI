@@ -135,46 +135,46 @@ const KeyboardShortcuts = () => {
                 <div className="p-5">
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-600 font-medium text-sm">
+                            <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">
                                 {role === 'admin' || role === 'super_admin' ? 'Go to Tickets' : role === 'master_admin' ? 'Go to Companies' : 'Go to My Tickets'}
                             </span>
                             <div className="flex items-center gap-1">
-                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-xs font-bold">G</kbd>
+                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 dark:text-slate-400 font-mono text-xs font-bold">G</kbd>
                                 <span className="text-slate-400 text-xs">+</span>
-                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-xs font-bold">T</kbd>
+                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 dark:text-slate-400 font-mono text-xs font-bold">T</kbd>
                             </div>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-600 font-medium text-sm">
+                            <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">
                                 {role === 'admin' || role === 'super_admin' ? 'Go to Analytics' : 'Go to Dashboard'}
                             </span>
                             <div className="flex items-center gap-1">
-                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-xs font-bold">G</kbd>
+                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 dark:text-slate-400 font-mono text-xs font-bold">G</kbd>
                                 <span className="text-slate-400 text-xs">+</span>
-                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-xs font-bold">A</kbd>
+                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 dark:text-slate-400 font-mono text-xs font-bold">A</kbd>
                             </div>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-600 font-medium text-sm">
+                            <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">
                                 {role === 'admin' || role === 'super_admin' ? 'Go to Settings' : role === 'master_admin' ? 'Go to Admins' : 'Go to Profile'}
                             </span>
                             <div className="flex items-center gap-1">
-                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-xs font-bold">G</kbd>
+                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 dark:text-slate-400 font-mono text-xs font-bold">G</kbd>
                                 <span className="text-slate-400 text-xs">+</span>
-                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-xs font-bold">S</kbd>
+                                <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 dark:text-slate-400 font-mono text-xs font-bold">S</kbd>
                             </div>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-600 font-medium text-sm">Focus search (Admin only)</span>
-                            <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-xs font-bold">/</kbd>
+                            <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">Focus search (Admin only)</span>
+                            <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 dark:text-slate-400 font-mono text-xs font-bold">/</kbd>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-600 font-medium text-sm">Close modals/blur</span>
-                            <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-xs font-bold">Esc</kbd>
+                            <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">Close modals/blur</span>
+                            <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 dark:text-slate-400 font-mono text-xs font-bold">Esc</kbd>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-slate-600 font-medium text-sm">Show shortcuts</span>
-                            <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 font-mono text-xs font-bold">?</kbd>
+                            <span className="text-slate-600 dark:text-slate-400 font-medium text-sm">Show shortcuts</span>
+                            <kbd className="px-2 py-1 bg-slate-100 border border-slate-200 rounded text-slate-600 dark:text-slate-400 font-mono text-xs font-bold">?</kbd>
                         </div>
                     </div>
                 </div>

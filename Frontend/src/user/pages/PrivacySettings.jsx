@@ -230,7 +230,7 @@ const PrivacySettings = () => {
                     <div className="flex flex-col gap-3">
                         <button
                             onClick={() => navigate('/profile')}
-                            className="flex items-center gap-2 text-sm font-semibold text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-500 w-fit transition-colors"
+                            className="flex items-center gap-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-500 w-fit transition-colors"
                         >
                             <ArrowLeft size={16} /> Back to Profile
                         </button>
@@ -325,7 +325,7 @@ const PrivacySettings = () => {
                                     
                                     {/* Comms */}
                                     <div className="space-y-4">
-                                        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest italic border-b pb-2 border-slate-100 dark:border-slate-800">
+                                        <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest italic border-b pb-2 border-slate-100 dark:border-slate-800">
                                             1. Communications Consent
                                         </h3>
                                         {[
@@ -350,7 +350,7 @@ const PrivacySettings = () => {
 
                                     {/* Analytics */}
                                     <div className="space-y-4">
-                                        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest italic border-b pb-2 border-slate-100 dark:border-slate-800">
+                                        <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest italic border-b pb-2 border-slate-100 dark:border-slate-800">
                                             2. System Analytics & Tracking
                                         </h3>
                                         {[
@@ -380,7 +380,7 @@ const PrivacySettings = () => {
 
                                     {/* Optional */}
                                     <div className="space-y-4">
-                                        <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest italic border-b pb-2 border-slate-100 dark:border-slate-800">
+                                        <h3 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest italic border-b pb-2 border-slate-100 dark:border-slate-800">
                                             3. Optional / Experimental clearance
                                         </h3>
                                         {[
@@ -492,9 +492,9 @@ const PrivacySettings = () => {
                                             <div key={idx} className="p-4 bg-slate-50 dark:bg-gray-800/20 rounded-2xl border border-slate-100/50 dark:border-gray-800 space-y-2">
                                                 <h5 className="text-[11px] font-black text-slate-900 dark:text-white uppercase italic">{disc.cat}</h5>
                                                 <div className="space-y-1">
-                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest"><span className="text-[10px] font-black text-slate-400">PII Fields:</span> {disc.fields}</p>
-                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest"><span className="text-[10px] font-black text-indigo-400">Retention:</span> {disc.retention}</p>
-                                                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest"><span className="text-[10px] font-black text-emerald-400">Purpose:</span> {disc.purpose}</p>
+                                                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest"><span className="text-[10px] font-black text-slate-400">PII Fields:</span> {disc.fields}</p>
+                                                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest"><span className="text-[10px] font-black text-indigo-400">Retention:</span> {disc.retention}</p>
+                                                    <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest"><span className="text-[10px] font-black text-emerald-400">Purpose:</span> {disc.purpose}</p>
                                                 </div>
                                             </div>
                                         ))}
@@ -540,7 +540,7 @@ const PrivacySettings = () => {
                                                             ID: {req.id.substring(0, 8)} • Date: {new Date(req.created_at).toLocaleDateString()}
                                                         </p>
                                                         {req.admin_notes && (
-                                                            <p className="text-[10px] italic text-slate-500 mt-1 bg-slate-50 dark:bg-gray-800/40 p-2 rounded-lg border border-slate-100 dark:border-gray-800">
+                                                            <p className="text-[10px] italic text-slate-500 dark:text-slate-400 mt-1 bg-slate-50 dark:bg-gray-800/40 p-2 rounded-lg border border-slate-100 dark:border-gray-800">
                                                                 {req.admin_notes}
                                                             </p>
                                                         )}

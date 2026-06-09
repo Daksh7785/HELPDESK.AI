@@ -322,7 +322,7 @@ const SSOConfig = () => {
                             className={`px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 ${
                                 activeTab === tab.id
                                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/25'
-                                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-50'
                             }`}
                         >
                             <tab.icon size={14} />
@@ -739,7 +739,7 @@ const SSOConfig = () => {
                         {/* Audit log list */}
                         <div className="space-y-4">
                             <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-slate-500" /> Authentication & Synchronization Logs
+                                <FileText className="w-4 h-4 text-slate-500 dark:text-slate-400" /> Authentication & Synchronization Logs
                             </h4>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
                                 System audit history detailing SSO login attempts, provisioning actions, and group mappings.
@@ -757,7 +757,7 @@ const SSOConfig = () => {
                                                 <th className="px-6 py-4">Details</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-slate-100 text-[11px] font-bold text-slate-600">
+                                        <tbody className="divide-y divide-slate-100 text-[11px] font-bold text-slate-600 dark:text-slate-400">
                                             {auditLogs.map((log) => (
                                                 <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
                                                     <td className="px-6 py-4 text-slate-400 select-none">
@@ -775,7 +775,7 @@ const SSOConfig = () => {
                                                     </td>
                                                     <td className="px-6 py-4">{log.user_email}</td>
                                                     <td className="px-6 py-4 uppercase font-mono text-[10px]">{log.provider_name}</td>
-                                                    <td className="px-6 py-4 font-mono text-[10px] text-slate-500 max-w-xs truncate">
+                                                    <td className="px-6 py-4 font-mono text-[10px] text-slate-500 dark:text-slate-400 max-w-xs truncate">
                                                         {JSON.stringify(log.details)}
                                                     </td>
                                                 </tr>

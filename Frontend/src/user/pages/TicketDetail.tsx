@@ -138,7 +138,7 @@ const TicketDetail = () => {
             <main className="max-w-7xl mx-auto flex flex-col gap-8">
                 {/* Header Node */}
                 <div className="flex flex-col gap-6">
-                    <button onClick={() => navigate('/my-tickets')} className="flex items-center gap-2 text-[10px] font-black text-slate-500 hover:text-emerald-400 uppercase tracking-[0.2em] w-fit transition-colors">
+                    <button onClick={() => navigate('/my-tickets')} className="flex items-center gap-2 text-[10px] font-black text-slate-500 dark:text-slate-400 hover:text-emerald-400 uppercase tracking-[0.2em] w-fit transition-colors">
                         <ArrowLeft size={14} /> Back to Repository
                     </button>
                     
@@ -196,7 +196,7 @@ const TicketDetail = () => {
                                     { label: 'Assigned Unit', value: ticket.assigned_team }
                                 ].map((item, i) => (
                                     <div key={i}>
-                                        <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">{item.label}</p>
+                                        <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2">{item.label}</p>
                                         <p className="text-sm font-bold text-slate-200 bg-white/[0.03] p-3 rounded-xl border border-white/[0.05]">
                                             {item.value || 'Unassigned'}
                                         </p>

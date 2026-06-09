@@ -56,7 +56,7 @@ const TicketSearchBar = () => {
 
   const statusColors = {
     open: "bg-green-100 text-green-700",
-    closed: "bg-gray-100 text-gray-600",
+    closed: "bg-gray-100 text-gray-600 dark:text-gray-400",
     in_progress: "bg-blue-100 text-blue-700",
     resolved: "bg-purple-100 text-purple-700",
   };
@@ -94,7 +94,7 @@ const TicketSearchBar = () => {
                 <span className="text-sm font-medium text-slate-800 truncate max-w-[260px]">{ticket.title || ticket.summary}</span>
                 <span className="text-xs text-slate-400">{ticket.category}</span>
               </div>
-              <span className={`text-xs px-2 py-1 rounded-full font-semibold ${statusColors[ticket.status] || "bg-gray-100 text-gray-600"}`}>
+              <span className={`text-xs px-2 py-1 rounded-full font-semibold ${statusColors[ticket.status] || "bg-gray-100 text-gray-600 dark:text-gray-400"}`}>
                 {ticket.status}
               </span>
             </div>

@@ -24,14 +24,14 @@ function DistributionBar({ count, total, star }) {
   const pct = total > 0 ? (count / total) * 100 : 0;
   return (
     <div className="flex items-center gap-2 text-sm">
-      <span className="w-8 text-right text-gray-500 dark:text-gray-400">{star}★</span>
+      <span className="w-8 text-right text-gray-500 dark:text-gray-400 dark:text-gray-400">{star}★</span>
       <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-2.5 overflow-hidden">
         <div
           className="bg-yellow-400 h-full rounded-full transition-all duration-500"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="w-8 text-gray-500 dark:text-gray-400">{count}</span>
+      <span className="w-8 text-gray-500 dark:text-gray-400 dark:text-gray-400">{count}</span>
     </div>
   );
 }
@@ -78,7 +78,7 @@ export default function CSATDashboard() {
 
   if (!data || data.total_ratings === 0) {
     return (
-      <div className="p-6 text-center text-gray-500 dark:text-gray-400">
+      <div className="p-6 text-center text-gray-500 dark:text-gray-400 dark:text-gray-400">
         <MessageSquare size={40} className="mx-auto mb-2 opacity-50" />
         <p>No ratings submitted yet.</p>
         <p className="text-sm mt-1">Ratings will appear here once users rate resolved tickets.</p>
@@ -100,7 +100,7 @@ export default function CSATDashboard() {
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Overall CSAT</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">Overall CSAT</p>
           <div className="flex items-center gap-2 mt-1">
             <span className="text-3xl font-bold text-gray-900 dark:text-white">
               {overallAvg.toFixed(1)}
@@ -110,14 +110,14 @@ export default function CSATDashboard() {
         </div>
 
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Total Ratings</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">Total Ratings</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
             {data.total_ratings}
           </p>
         </div>
 
         <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
-          <p className="text-sm text-gray-500 dark:text-gray-400">Agents Rated</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-gray-400">Agents Rated</p>
           <p className="text-3xl font-bold text-gray-900 dark:text-white mt-1">
             {data.agents.length}
           </p>
@@ -156,7 +156,7 @@ export default function CSATDashboard() {
                 <p className="font-medium text-gray-900 dark:text-white text-sm">
                   {agent.agent_id === 'unassigned' ? 'Unassigned' : agent.agent_id}
                 </p>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
+                <p className="text-xs text-gray-500 dark:text-gray-400 dark:text-gray-400">
                   {agent.total_ratings} rating{agent.total_ratings !== 1 ? 's' : ''}
                 </p>
               </div>

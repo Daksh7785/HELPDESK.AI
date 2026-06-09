@@ -108,7 +108,7 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
                                     className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors
                                         ${value === option.value
                                             ? 'bg-[#13ec80]/10 text-slate-900 font-semibold'
-                                            : 'text-slate-600 hover:bg-slate-50'
+                                            : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50'
                                         }`}
                                 >
                                     {option.label}
@@ -449,7 +449,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
 
                                 {/* Info Box */}
                                 <div className="mb-6 bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 text-sm text-blue-800">
-                                    <Info className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
+                                    <Info className="w-5 h-5 text-blue-500 dark:text-blue-400 shrink-0 mt-0.5" />
                                     <div>
                                         <p className="font-semibold mb-1 text-blue-900">Auto-captured Diagnosis</p>
                                         <p className="text-blue-700/90 leading-relaxed">
@@ -597,10 +597,10 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                             {/* Diagnostics Read-Only View */}
                                             <div className="mt-8 border border-slate-100 rounded-xl overflow-hidden text-xs">
                                                 <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-100 flex items-center gap-2">
-                                                    <ShieldAlert className="w-4 h-4 text-slate-500" />
-                                                    <span className="font-semibold text-slate-600 tracking-wide uppercase">Captured Diagnostics</span>
+                                                    <ShieldAlert className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                                                    <span className="font-semibold text-slate-600 dark:text-slate-400 tracking-wide uppercase">Captured Diagnostics</span>
                                                 </div>
-                                                <div className="p-4 bg-white/50 space-y-2 font-mono text-slate-500">
+                                                <div className="p-4 bg-white/50 space-y-2 font-mono text-slate-500 dark:text-slate-400">
                                                     <div className="flex"><span className="w-24 shrink-0 text-slate-400">Path:</span> <span className="truncate">{diagnostics.url.split(window.location.host)[1] || diagnostics.url}</span></div>
                                                     <div className="flex"><span className="w-24 shrink-0 text-slate-400">Browser:</span> <span className="truncate" title={diagnostics.browser}>{diagnostics.browser.split(' ')[0]} {diagnostics.browser.split(' ')[diagnostics.browser.split(' ').length - 1]}</span></div>
                                                     <div className="flex"><span className="w-24 shrink-0 text-slate-400">Screen:</span> <span>{diagnostics.screen}</span></div>
@@ -620,7 +620,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                         <Camera className="w-4 h-4 text-[#13ec80]" />
                                                         Advanced Attachments
                                                     </h3>
-                                                    <p className="text-xs text-slate-500 mt-1">Capture your screen to show exactly what's wrong.</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Capture your screen to show exactly what's wrong.</p>
                                                 </div>
                                                 {!screenshotData && (
                                                     <button
@@ -668,7 +668,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                 <button
                                     type="button"
                                     onClick={handleClose}
-                                    className="px-5 py-2.5 text-sm font-semibold text-slate-600 hover:text-slate-900 hover:bg-slate-200 transition-colors rounded-xl"
+                                    className="px-5 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 hover:bg-slate-200 transition-colors rounded-xl"
                                 >
                                     Cancel
                                 </button>
@@ -704,7 +704,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                             <MousePointer2 className="w-4 h-4 text-[#13ec80]" />
                             <span className="text-sm font-bold text-slate-800">Drag to Select Bug Area</span>
                             <div className="w-px h-4 bg-slate-300 mx-1" />
-                            <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] text-slate-500 shadow-sm">ESC to Cancel</kbd>
+                            <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] text-slate-500 dark:text-slate-400 shadow-sm">ESC to Cancel</kbd>
                         </div>
 
                         {selectionRect && (
@@ -721,7 +721,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
 
                         <button
                             onClick={(e) => { e.stopPropagation(); handleCancelSelection(); }}
-                            className="fixed top-6 right-6 p-2 bg-white rounded-full shadow-lg text-slate-600 hover:text-red-500 transition-colors pointer-events-auto"
+                            className="fixed top-6 right-6 p-2 bg-white rounded-full shadow-lg text-slate-600 dark:text-slate-400 hover:text-red-500 transition-colors pointer-events-auto"
                         >
                             <X className="w-6 h-6" />
                         </button>

@@ -171,7 +171,7 @@ export default function SLADashboard({ compact = false, onViewAll }) {
       <div className="py-16 text-center" style={{ border: '2px dashed #FECACA', borderRadius: '16px' }}>
         <AlertCircle size={40} className="mx-auto mb-3 text-red-400" />
         <h3 className="text-sm font-bold text-red-600 mb-1">Connection Error</h3>
-        <p className="text-xs text-gray-500">{error}</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">{error}</p>
         <button
           onClick={fetchData}
           className="mt-4 px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-red-100 transition-colors"
@@ -189,7 +189,7 @@ export default function SLADashboard({ compact = false, onViewAll }) {
       <div className="py-16 text-center" style={{ border: '2px dashed #D1FAE5', borderRadius: '16px' }}>
         <ShieldCheck size={40} className="mx-auto mb-3 text-emerald-400" />
         <h3 className="text-sm font-bold text-emerald-700 mb-1">All SLA Targets Met</h3>
-        <p className="text-xs text-gray-500">No active SLA violations.</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400">No active SLA violations.</p>
       </div>
     );
   }
@@ -207,7 +207,7 @@ export default function SLADashboard({ compact = false, onViewAll }) {
         <button
           onClick={fetchData}
           disabled={refreshing}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
         >
           <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
           {refreshing ? 'Refreshing...' : 'Refresh'}
@@ -235,7 +235,7 @@ export default function SLADashboard({ compact = false, onViewAll }) {
             <p className="text-2xl font-bold" style={{ color: kpi.color }}>
               {kpi.value}
             </p>
-            <p className="text-xs font-semibold text-gray-600 mt-1">{kpi.label}</p>
+            <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mt-1">{kpi.label}</p>
             <p className="text-[10px] text-gray-400 mt-0.5">{kpi.subtitle}</p>
           </div>
         ))}
@@ -244,7 +244,7 @@ export default function SLADashboard({ compact = false, onViewAll }) {
       {/* Per-Priority Breakdown */}
       {stats?.by_priority && !compact && (
         <div className="rounded-2xl border border-gray-100 bg-white p-5">
-          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">
+          <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-4">
             SLA Breakdown by Priority
           </h4>
           <div className="space-y-3">
@@ -293,7 +293,7 @@ export default function SLADashboard({ compact = false, onViewAll }) {
                       />
                     )}
                   </div>
-                  <span className="text-xs font-semibold text-gray-600 min-w-[40px] text-right">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-400 min-w-[40px] text-right">
                     {total}
                   </span>
                   {breachPct > 0 && (
@@ -312,7 +312,7 @@ export default function SLADashboard({ compact = false, onViewAll }) {
       {escalations.length > 0 && !compact && (
         <div className="rounded-2xl border border-gray-100 bg-white p-5">
           <div className="flex items-center justify-between mb-4">
-            <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">
+            <h4 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
               Recent Escalations
             </h4>
             {onViewAll && (

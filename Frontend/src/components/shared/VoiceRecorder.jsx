@@ -316,13 +316,13 @@ const VoiceRecorder = ({
                             </span>
                         )}
                         {language && language !== 'en' && !isRecording && !isProcessing && (
-                            <span className="flex items-center gap-1 text-xs font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+                            <span className="flex items-center gap-1 text-xs font-medium text-blue-600 dark:text-blue-400 bg-blue-50 px-2 py-0.5 rounded-full">
                                 <Languages size={10} />
                                 {language.toUpperCase()}
                             </span>
                         )}
                     </div>
-                    <p className="text-xs text-gray-500 mt-0.5">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                         {isProcessing
                             ? 'Please wait while we convert your speech to text...'
                             : isRecording

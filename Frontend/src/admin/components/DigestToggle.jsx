@@ -245,7 +245,7 @@ export default function DigestToggle({ companyId }) {
             Recipient Admin Email
           </label>
           <div className="relative">
-            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500">
+            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-gray-500 dark:text-gray-400">
               <IconMail />
             </span>
             <input
@@ -326,7 +326,7 @@ export default function DigestToggle({ companyId }) {
         </div>
 
         {/* Info note */}
-        <p className="text-xs text-gray-500 leading-relaxed">
+        <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
           The digest includes ticket counts, resolution rates, SLA breaches, and an AI-generated
           performance summary. It is dispatched automatically on Monday mornings or manually
           via <strong className="text-gray-400">Send Now</strong>.

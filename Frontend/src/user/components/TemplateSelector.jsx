@@ -58,7 +58,7 @@ const CARD_COLORS = {
         border: 'border-blue-200',
         activeBorder: 'border-blue-400',
         iconBg: 'bg-blue-100',
-        iconColor: 'text-blue-600',
+        iconColor: 'text-blue-600 dark:text-blue-400',
         badge: 'bg-blue-100 text-blue-700',
         buttonBg: 'bg-blue-500 hover:bg-blue-600',
         previewBg: 'bg-blue-50/50',
@@ -229,7 +229,7 @@ const TemplateSelector = ({
                                     {/* Category badge */}
                                     <span
                                         className={`inline-block text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full
-                                            ${isHighlighted ? colors.badge : 'bg-gray-100 text-gray-500'}
+                                            ${isHighlighted ? colors.badge : 'bg-gray-100 text-gray-500 dark:text-gray-400'}
                                         `}
                                     >
                                         {template.category}
@@ -269,7 +269,7 @@ const TemplateSelector = ({
                                             </div>
                                             <div>
                                                 <h4 className="text-sm font-bold text-gray-900">{highlightedTemplate.label}</h4>
-                                                <p className="text-xs text-gray-500 mt-0.5">{highlightedTemplate.description_summary}</p>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{highlightedTemplate.description_summary}</p>
                                             </div>
                                         </div>
                                         <button
@@ -291,7 +291,7 @@ const TemplateSelector = ({
                                             {(highlightedTemplate.fields || []).map((field) => (
                                                 <span
                                                     key={field.key}
-                                                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 bg-white/80 border border-gray-100 rounded-lg px-2.5 py-1"
+                                                    className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-600 dark:text-gray-400 bg-white/80 border border-gray-100 rounded-lg px-2.5 py-1"
                                                 >
                                                     <FileText size={10} className="text-gray-400" />
                                                     {field.label}
@@ -326,7 +326,7 @@ const TemplateSelector = ({
                                         <button
                                             type="button"
                                             onClick={() => onHighlightTemplate(null)}
-                                            className="text-sm font-semibold text-gray-500 hover:text-gray-700 px-4 py-3 rounded-xl hover:bg-white/60 transition-colors"
+                                            className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-700 px-4 py-3 rounded-xl hover:bg-white/60 transition-colors"
                                         >
                                             Cancel
                                         </button>

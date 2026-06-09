@@ -226,7 +226,7 @@ export default function TicketTagManager({
 
       {/* ── Accepted Tags ───────────────────────────────────────────────────── */}
       <div>
-        <p className="text-xs font-semibold text-gray-600 mb-2">✅ Applied Tags</p>
+        <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">✅ Applied Tags</p>
         <div className="flex flex-wrap gap-2 min-h-[28px]">
           {acceptedTags.length > 0
             ? acceptedTags.map((tag) => (

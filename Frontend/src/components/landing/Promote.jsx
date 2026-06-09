@@ -60,7 +60,7 @@ function DemoModal({ onClose }) {
                 <div className="p-6 bg-gray-50 dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="text-left">
                         <h2 className="text-xl font-extrabold text-gray-900 dark:text-white uppercase tracking-tight">Full Platform Walkthrough</h2>
-                        <p className="text-gray-500 dark:text-slate-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
+                        <p className="text-gray-500 dark:text-gray-400 dark:text-slate-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
@@ -90,7 +90,7 @@ export default function Promote() {
             </h2>
 
             {/* Sub-headline */}
-            <p className="text-slate-500 dark:text-slate-400 text-xs sm:text-base md:text-lg mb-6 sm:mb-8 max-w-xl mx-auto px-2 font-medium">
+            <p className="text-slate-500 dark:text-slate-400 dark:text-slate-400 text-xs sm:text-base md:text-lg mb-6 sm:mb-8 max-w-xl mx-auto px-2 font-medium">
                 Start automating ticket triage today. No credit card required.
             </p>
 
@@ -115,7 +115,7 @@ export default function Promote() {
             <div className="mt-8">
                 <button
                     onClick={() => navigate('/login')}
-                    className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] transition-colors cursor-pointer bg-transparent border-none"
+                    className="text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] transition-colors cursor-pointer bg-transparent border-none"
                 >
                     Already have an account? <span className="underline underline-offset-8 decoration-slate-200 dark:decoration-slate-800">Sign in</span>
                 </button>

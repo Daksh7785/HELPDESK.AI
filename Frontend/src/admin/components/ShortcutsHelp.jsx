@@ -86,7 +86,7 @@ const ShortcutsHelp = ({ isOpen, onClose }) => {
 
                 {/* Footer */}
                 <div className="px-5 py-3 border-t border-gray-700 text-center">
-                    <p className="text-xs text-gray-500">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
                         Press <kbd className="px-1 py-0.5 text-xs font-mono bg-gray-700 border border-gray-600 rounded">Esc</kbd> to close
                     </p>
                 </div>

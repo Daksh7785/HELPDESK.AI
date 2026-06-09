@@ -106,7 +106,7 @@ const SavedSearches = ({ currentFilters, onLoad }) => {
                         aria-haspopup="listbox"
                         aria-expanded={dropdownOpen}
                         title="Saved Searches"
-                        className="flex items-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 hover:border-slate-300 hover:bg-white transition-all"
+                        className="flex items-center gap-2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-600 dark:text-slate-400 hover:border-slate-300 hover:bg-white transition-all"
                     >
                         <Bookmark className="w-4 h-4 text-amber-500" />
                         <span className="hidden sm:inline">Saved</span>
@@ -203,7 +203,7 @@ const SavedSearches = ({ currentFilters, onLoad }) => {
 
                         <form onSubmit={handleSave} className="space-y-4">
                             <div>
-                                <label htmlFor="saved-search-name" className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">
+                                <label htmlFor="saved-search-name" className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">
                                     Search Name
                                 </label>
                                 <input
@@ -233,7 +233,7 @@ const SavedSearches = ({ currentFilters, onLoad }) => {
                                 <button
                                     type="button"
                                     onClick={() => setModal(false)}
-                                    className="px-4 py-2.5 bg-slate-100 text-slate-600 text-sm font-bold rounded-xl hover:bg-slate-200 transition-all"
+                                    className="px-4 py-2.5 bg-slate-100 text-slate-600 dark:text-slate-400 text-sm font-bold rounded-xl hover:bg-slate-200 transition-all"
                                 >
                                     Cancel
                                 </button>

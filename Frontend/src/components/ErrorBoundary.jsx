@@ -43,10 +43,10 @@ const ErrorFallback = ({ error, resetError }) => {
         <div className="p-6">
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Error Details</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 dark:text-gray-400">Error Details</h3>
               <button 
                 onClick={handleCopy}
-                className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full"
+                className="flex items-center gap-1.5 text-xs font-medium text-blue-600 dark:text-blue-400 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors bg-blue-50 dark:bg-blue-900/30 px-3 py-1.5 rounded-full"
               >
                 {copied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? 'Copied Payload' : 'Copy Payload'}

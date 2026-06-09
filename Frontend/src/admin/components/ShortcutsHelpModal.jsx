@@ -65,7 +65,7 @@ const ShortcutsHelpModal = ({ isOpen, onClose, isAdmin = false }) => {
                                     className="flex items-center justify-between py-2 px-1 rounded-lg hover:bg-gray-50 transition-colors"
                                 >
                                     <span className="text-sm text-gray-700">{shortcut.label}</span>
-                                    <kbd className="inline-flex items-center gap-0.5 px-2 py-1 text-xs font-mono font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded-md">
+                                    <kbd className="inline-flex items-center gap-0.5 px-2 py-1 text-xs font-mono font-medium text-gray-600 dark:text-gray-400 bg-gray-100 border border-gray-200 rounded-md">
                                         {shortcut.keys.split(' + ').map((part, i) => (
                                             <React.Fragment key={i}>
                                                 {i > 0 && <span className="text-gray-400 mx-0.5">+</span>}

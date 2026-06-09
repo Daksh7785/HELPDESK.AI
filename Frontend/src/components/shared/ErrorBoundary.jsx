@@ -148,7 +148,7 @@ class ErrorBoundary extends Component {
                             <div className="bg-gray-50 rounded-lg p-4">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <p className="text-sm font-medium text-gray-500">Error ID</p>
+                                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Error ID</p>
                                         <p className="text-lg font-mono text-gray-800">{errorId}</p>
                                     </div>
                                     <button
@@ -165,7 +165,7 @@ class ErrorBoundary extends Component {
 
                             {/* Error Message */}
                             <div>
-                                <h3 className="text-sm font-medium text-gray-500 mb-2">Error Message</h3>
+                                <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Error Message</h3>
                                 <p className="text-gray-800 bg-red-50 p-3 rounded-lg font-mono text-sm">
                                     {error?.message || 'Unknown error'}
                                 </p>
@@ -206,7 +206,7 @@ class ErrorBoundary extends Component {
                             {/* Development Details */}
                             {import.meta.env.DEV && errorInfo && (
                                 <details className="mt-4">
-                                    <summary className="cursor-pointer text-sm font-medium text-gray-500 hover:text-gray-700">
+                                    <summary className="cursor-pointer text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700">
                                         Technical Details (Development Only)
                                     </summary>
                                     <div className="mt-3 p-4 bg-gray-900 rounded-lg overflow-auto max-h-64">

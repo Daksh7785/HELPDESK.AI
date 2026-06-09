@@ -109,7 +109,7 @@ export default function ContactSales() {
                         <CheckCircle2 className="w-10 h-10 text-emerald-600" />
                     </div>
                     <h2 className="text-3xl font-extrabold text-gray-900">Request Sent!</h2>
-                    <p className="text-gray-600">
+                    <p className="text-gray-600 dark:text-gray-400">
                         Thank you for your interest in HelpDesk.ai Enterprise. Our team will review your requirements and get back to you within 24 hours.
                     </p>
                     <button 
@@ -132,7 +132,7 @@ export default function ContactSales() {
                         <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
                         <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
                     </div>
-                    <button onClick={() => navigate('/')} className="text-sm font-semibold text-gray-500 hover:text-gray-900">
+                    <button onClick={() => navigate('/')} className="text-sm font-semibold text-gray-500 dark:text-gray-400 hover:text-gray-900">
                         Back to Home
                     </button>
                 </div>
@@ -181,7 +181,7 @@ export default function ContactSales() {
                     <div className="w-full max-w-xl mx-auto py-10">
                         <div className="mb-10 text-center lg:text-left">
                             <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">Contact Sales</h2>
-                            <p className="text-gray-500 mt-2">Fill out the form below and an Enterprise architect will be in touch shortly.</p>
+                            <p className="text-gray-500 dark:text-gray-400 mt-2">Fill out the form below and an Enterprise architect will be in touch shortly.</p>
                         </div>
                         
                         <form onSubmit={handleSubmit} className="space-y-5">

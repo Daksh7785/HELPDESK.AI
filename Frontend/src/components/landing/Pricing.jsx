@@ -38,7 +38,7 @@ export default function Pricing({
                     <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 dark:text-white mb-4">
                         Simple, Transparent Pricing
                     </h2>
-                    <p className="text-gray-500 dark:text-slate-400 mb-8">
+                    <p className="text-gray-500 dark:text-gray-400 dark:text-slate-400 mb-8">
                         All plans in Indian Rupees (₹) · GST applicable
                     </p>
 
@@ -48,7 +48,7 @@ export default function Pricing({
                             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all ${
                                 !billingAnnual 
                                 ? 'bg-emerald-600 text-white shadow' 
-                                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+                                : 'text-gray-500 dark:text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
                             }`}
                         >
                             Monthly
@@ -58,7 +58,7 @@ export default function Pricing({
                             className={`px-5 py-2 rounded-full text-sm font-semibold transition-all flex items-center gap-2 ${
                                 billingAnnual 
                                 ? 'bg-emerald-600 text-white shadow' 
-                                : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
+                                : 'text-gray-500 dark:text-gray-400 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
                             }`}
                         >
                             Annual 
@@ -89,11 +89,11 @@ export default function Pricing({
                                 {plan.priceLabel ? plan.priceLabel : (
                                     <>
                                         ₹{plan.price.toLocaleString('en-IN')}
-                                        <span className="text-base font-normal text-gray-500 dark:text-slate-400">{plan.period}</span>
+                                        <span className="text-base font-normal text-gray-500 dark:text-gray-400 dark:text-slate-400">{plan.period}</span>
                                     </>
                                 )}
                             </div>
-                            <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">{plan.desc}</p>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 dark:text-slate-400 mb-6">{plan.desc}</p>
                             <button
                                 onClick={() => handlePricingClick(plan.name)}
                                 disabled={isRedirecting && plan.name === 'Growth'}
@@ -110,7 +110,7 @@ export default function Pricing({
                             </button>
                             <ul className="space-y-3">
                                 {plan.features.map((feat) => (
-                                    <li key={feat} className="flex items-start gap-3 text-sm text-gray-600 dark:text-slate-300">
+                                    <li key={feat} className="flex items-start gap-3 text-sm text-gray-600 dark:text-gray-400 dark:text-slate-300">
                                         <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-px" />
                                         {feat}
                                     </li>

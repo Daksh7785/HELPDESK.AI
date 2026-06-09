@@ -176,7 +176,7 @@ function ScorecardCard({ data, rank }) {
                             </p>
                             <ul className="space-y-1">
                                 {(coaching?.strengths || []).map((s, i) => (
-                                    <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
+                                    <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5">
                                         <span className="mt-1 w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
                                         {s}
                                     </li>
@@ -194,7 +194,7 @@ function ScorecardCard({ data, rank }) {
                             </p>
                             <ul className="space-y-1">
                                 {(coaching?.improvement_areas || []).map((a, i) => (
-                                    <li key={i} className="text-xs text-gray-600 flex items-start gap-1.5">
+                                    <li key={i} className="text-xs text-gray-600 dark:text-gray-400 flex items-start gap-1.5">
                                         <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
                                         {a}
                                     </li>
@@ -366,7 +366,7 @@ const AdminScorecard = () => {
                     <div className="p-4 rounded-2xl bg-gray-50">
                         <Users size={32} className="text-gray-300" />
                     </div>
-                    <p className="font-semibold text-gray-600">No scorecard data yet</p>
+                    <p className="font-semibold text-gray-600 dark:text-gray-400">No scorecard data yet</p>
                     <p className="text-sm text-gray-400">Tickets need to be assigned to teams before scorecards can be generated.</p>
                 </div>
             )}

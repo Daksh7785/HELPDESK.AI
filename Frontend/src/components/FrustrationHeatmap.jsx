@@ -83,7 +83,7 @@ export default function FrustrationHeatmap({ companyId }) {
                   <span>{emoji}</span>
                   {label}
                 </span>
-                <span className="text-xs text-gray-500 font-medium">
+                <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">
                   {count} <span className="text-gray-300">({percentage}%)</span>
                 </span>
               </div>

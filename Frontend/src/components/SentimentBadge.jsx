@@ -6,8 +6,8 @@ export default function SentimentBadge({ ticket, showSignals = false }) {
   const level = ticket?.frustration_level || "neutral";
 
   const config = {
-    neutral: { emoji: "😊", label: "Neutral", bg: "bg-gray-50", border: "border-gray-200", text: "text-gray-600", ring: "" },
-    mild: { emoji: "😐", label: "Mild", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-600", ring: "" },
+    neutral: { emoji: "😊", label: "Neutral", bg: "bg-gray-50", border: "border-gray-200", text: "text-gray-600 dark:text-gray-400", ring: "" },
+    mild: { emoji: "😐", label: "Mild", bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-600 dark:text-blue-400", ring: "" },
     moderate: { emoji: "😤", label: "Frustrated", bg: "bg-amber-50", border: "border-amber-300", text: "text-amber-700", ring: "" },
     high: { emoji: "😡", label: "Very Upset", bg: "bg-orange-50", border: "border-orange-400", text: "text-orange-700", ring: "ring-1 ring-orange-300" },
     critical: { emoji: "🔴", label: "Critical", bg: "bg-red-50", border: "border-red-400", text: "text-red-700", ring: "ring-2 ring-red-400 ring-offset-1 animate-pulse" },

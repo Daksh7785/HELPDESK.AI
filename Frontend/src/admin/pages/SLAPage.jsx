@@ -166,7 +166,7 @@ export default function SLAPage() {
         <select
           value={filterStatus}
           onChange={e => setFilterStatus(e.target.value)}
-          className="text-xs font-semibold text-gray-600 bg-transparent border-none outline-none cursor-pointer"
+          className="text-xs font-semibold text-gray-600 dark:text-gray-400 bg-transparent border-none outline-none cursor-pointer"
         >
           <option value="all">All Status</option>
           <option value="breached">Breached</option>
@@ -180,7 +180,7 @@ export default function SLAPage() {
         <select
           value={filterPriority}
           onChange={e => setFilterPriority(e.target.value)}
-          className="text-xs font-semibold text-gray-600 bg-transparent border-none outline-none cursor-pointer"
+          className="text-xs font-semibold text-gray-600 dark:text-gray-400 bg-transparent border-none outline-none cursor-pointer"
         >
           <option value="all">All Priorities</option>
           <option value="critical">Critical</option>
@@ -191,7 +191,7 @@ export default function SLAPage() {
       </div>
       <button
         onClick={loadData}
-        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 dark:text-gray-400 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
       >
         <RefreshCw size={12} /> Refresh
       </button>
@@ -223,7 +223,7 @@ export default function SLAPage() {
         <div className="py-24 text-center" style={{ border: '2px dashed #D1FAE5', borderRadius: '16px' }}>
           <ShieldCheck size={48} className="mx-auto mb-3 text-emerald-400" />
           <h3 className="text-lg font-bold text-emerald-700">No Active Violations</h3>
-          <p className="text-sm text-gray-500 mt-1">All tickets within SLA limits.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">All tickets within SLA limits.</p>
         </div>
       );
     }
@@ -303,7 +303,7 @@ export default function SLAPage() {
       return (
         <div className="py-24 text-center" style={{ border: '2px dashed #E5E7EB', borderRadius: '16px' }}>
           <Bell size={40} className="mx-auto mb-3 text-gray-300" />
-          <h3 className="text-sm font-bold text-gray-500">No Escalations Logged</h3>
+          <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400">No Escalations Logged</h3>
           <p className="text-xs text-gray-400 mt-1">All tickets resolved within SLA.</p>
         </div>
       );
@@ -417,7 +417,7 @@ export default function SLAPage() {
       return (
         <div className="py-16 text-center" style={{ border: '2px dashed #E5E7EB', borderRadius: '16px' }}>
           <Settings size={40} className="mx-auto mb-3 text-gray-300" />
-          <h3 className="text-sm font-bold text-gray-500">Default Policies Active</h3>
+          <h3 className="text-sm font-bold text-gray-500 dark:text-gray-400">Default Policies Active</h3>
           <p className="text-xs text-gray-400 mt-1">Custom policies can be configured from the database.</p>
         </div>
       );
@@ -428,12 +428,12 @@ export default function SLAPage() {
         <table className="w-full border-collapse">
           <thead>
             <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
-              <th className="text-[10px] font-bold text-gray-500 uppercase tracking-wider p-4 text-left">Priority</th>
-              <th className="text-[10px] font-bold text-gray-500 uppercase tracking-wider p-4 text-left">Max Hours</th>
-              <th className="text-[10px] font-bold text-gray-500 uppercase tracking-wider p-4 text-left">Warning At</th>
-              <th className="text-[10px] font-bold text-gray-500 uppercase tracking-wider p-4 text-left">Auto Escalate</th>
-              <th className="text-[10px] font-bold text-gray-500 uppercase tracking-wider p-4 text-left">L2 Escalation</th>
-              <th className="text-[10px] font-bold text-gray-500 uppercase tracking-wider p-4 text-left">L3 Escalation</th>
+              <th className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider p-4 text-left">Priority</th>
+              <th className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider p-4 text-left">Max Hours</th>
+              <th className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider p-4 text-left">Warning At</th>
+              <th className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider p-4 text-left">Auto Escalate</th>
+              <th className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider p-4 text-left">L2 Escalation</th>
+              <th className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider p-4 text-left">L3 Escalation</th>
             </tr>
           </thead>
           <tbody>
@@ -454,14 +454,14 @@ export default function SLAPage() {
                   <td className="p-4">
                     <span
                       className={`text-xs font-bold px-2 py-0.5 rounded ${
-                        p.auto_escalate ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500'
+                        p.auto_escalate ? 'bg-emerald-50 text-emerald-600' : 'bg-gray-100 text-gray-500 dark:text-gray-400'
                       }`}
                     >
                       {p.auto_escalate ? 'Yes' : 'No'}
                     </span>
                   </td>
-                  <td className="p-4 text-sm text-gray-600">{p.l2_after_minutes > 0 ? `${p.l2_after_minutes}m` : 'Immediate'}</td>
-                  <td className="p-4 text-sm text-gray-600">{p.l3_after_minutes > 0 ? `${p.l3_after_minutes}m` : '—'}</td>
+                  <td className="p-4 text-sm text-gray-600 dark:text-gray-400">{p.l2_after_minutes > 0 ? `${p.l2_after_minutes}m` : 'Immediate'}</td>
+                  <td className="p-4 text-sm text-gray-600 dark:text-gray-400">{p.l3_after_minutes > 0 ? `${p.l3_after_minutes}m` : '—'}</td>
                 </tr>
               );
             })}
@@ -481,7 +481,7 @@ export default function SLAPage() {
           <h1 className="text-2xl font-extrabold text-gray-900" style={{ fontFamily: 'Syne, sans-serif' }}>
             SLA Monitor
           </h1>
-          <p className="text-sm text-gray-500 mt-1 flex items-center gap-2">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse" />
             Service-Level Agreement Management
           </p>
@@ -498,7 +498,7 @@ export default function SLAPage() {
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all ${
               activeTab === tab.id
                 ? 'bg-emerald-500 text-white shadow-sm'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
             <tab.icon size={14} />

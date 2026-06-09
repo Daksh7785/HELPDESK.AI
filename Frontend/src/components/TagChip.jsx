@@ -7,7 +7,7 @@ export default function TagChip({ tag, onRemove, variant = "default" }) {
     default:   "bg-indigo-50 text-indigo-700 border-indigo-200",
     suggested: "bg-amber-50 text-amber-700 border-amber-200",
     accepted:  "bg-green-50 text-green-700 border-green-200",
-    admin:     "bg-slate-100 text-slate-600 border-slate-200",
+    admin:     "bg-slate-100 text-slate-600 dark:text-slate-400 border-slate-200",
   };
 
   return (

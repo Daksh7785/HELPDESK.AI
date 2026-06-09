@@ -61,7 +61,7 @@ function DemoModal({ onClose }) {
                 <div className="p-6 bg-gray-50 dark:bg-slate-950 border-t border-gray-200 dark:border-slate-800 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="text-left">
                         <h2 className="text-xl font-extrabold text-gray-900 dark:text-white uppercase tracking-tight">Full Platform Walkthrough</h2>
-                        <p className="text-gray-500 dark:text-slate-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
+                        <p className="text-gray-500 dark:text-gray-400 dark:text-slate-400 text-xs font-medium">Experience the synergy of AI and human expertise.</p>
                     </div>
                     <div className="flex gap-3 w-full md:w-auto">
                         <button
@@ -99,7 +99,7 @@ export default function Hero() {
                         <span className="text-emerald-700 dark:text-emerald-400">Fully Automated.</span>
                     </h1>
 
-                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 dark:text-slate-300 mb-10 leading-relaxed">
+                    <p className="max-w-2xl mx-auto text-lg md:text-xl text-gray-500 dark:text-gray-400 dark:text-slate-300 mb-10 leading-relaxed">
                         Turn messy user complaints into structured, categorized, and prioritized support tickets — instantly. No manual triage. No missed urgencies.
                     </p>
 
@@ -142,14 +142,14 @@ export default function Hero() {
                                                 <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold text-sm">SC</div>
                                                 <div>
                                                     <div className="font-semibold text-gray-900 dark:text-slate-100 text-sm">Sarah Connors</div>
-                                                    <div className="text-xs text-gray-500 dark:text-slate-400">sarah@university.edu</div>
+                                                    <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-slate-400">sarah@university.edu</div>
                                                 </div>
                                             </div>
                                             <div className="text-xs text-gray-400 dark:text-slate-400">2 mins ago</div>
                                         </div>
                                         <div className="mb-4">
                                             <h3 className="text-sm font-bold text-gray-800 dark:text-slate-100 mb-1">Subject: Wifi down again in Lab 3??</h3>
-                                            <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed">
+                                            <p className="text-sm text-gray-600 dark:text-gray-400 dark:text-slate-300 leading-relaxed">
                                                 Hey support, the wifi in <span className="bg-yellow-100 dark:bg-yellow-950/40 dark:text-yellow-200 px-1 rounded">downstairs lab 3</span> is acting up again.
                                                 Can't connect at all. Class starts in 20 mins, need this fixed ASAP!<br /><br />
                                                 Thanks,<br />Sarah
@@ -168,7 +168,7 @@ export default function Hero() {
                                 <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-slate-700 overflow-hidden transform transition-all group-hover:-translate-y-1">
                                     <div className="bg-white dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 px-5 py-3 flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-mono text-xs font-bold text-gray-500 dark:text-slate-400">#T-4029</span>
+                                            <span className="font-mono text-xs font-bold text-gray-500 dark:text-gray-400 dark:text-slate-400">#T-4029</span>
                                             <span className="bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400 text-xs font-bold px-2 py-0.5 rounded-full border border-green-200 dark:border-green-900/30 uppercase tracking-wide">AI Processed</span>
                                         </div>
                                         <div className="flex gap-2 text-gray-400 dark:text-slate-400">
@@ -181,7 +181,7 @@ export default function Hero() {
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <h3 className="font-bold text-gray-800 dark:text-slate-100 text-lg mb-1">WiFi Connectivity Issue</h3>
-                                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
+                                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 dark:text-slate-400">
                                                     <Clock className="w-3 h-3" /> Created 1m ago
                                                     <span>•</span> via Email
                                                 </div>
@@ -192,7 +192,7 @@ export default function Hero() {
                                         </div>
                                         <div className="grid grid-cols-2 gap-3">
                                             <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg border border-gray-100 dark:border-slate-700">
-                                                <div className="text-xs uppercase font-bold text-gray-400 dark:text-slate-500 mb-1 flex items-center gap-1">
+                                                <div className="text-xs uppercase font-bold text-gray-400 dark:text-slate-400 mb-1 flex items-center gap-1">
                                                     <AlertCircle className="w-3 h-3" /> Priority
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -201,7 +201,7 @@ export default function Hero() {
                                                 </div>
                                             </div>
                                             <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg border border-gray-100 dark:border-slate-700">
-                                                <div className="text-xs uppercase font-bold text-gray-400 dark:text-slate-500 mb-1 flex items-center gap-1">
+                                                <div className="text-xs uppercase font-bold text-gray-400 dark:text-slate-400 mb-1 flex items-center gap-1">
                                                     <Folder className="w-3 h-3" /> Category
                                                 </div>
                                                 <div className="flex items-center gap-1">
@@ -209,14 +209,14 @@ export default function Hero() {
                                                 </div>
                                             </div>
                                             <div className="bg-gray-50 dark:bg-slate-900/50 p-3 rounded-lg border border-gray-100 dark:border-slate-700 col-span-2">
-                                                <div className="text-xs uppercase font-bold text-gray-400 dark:text-slate-500 mb-1 flex items-center gap-1">
+                                                <div className="text-xs uppercase font-bold text-gray-400 dark:text-slate-400 mb-1 flex items-center gap-1">
                                                     <MapPin className="w-3 h-3" /> Location
                                                 </div>
                                                 <div className="text-sm font-bold text-gray-800 dark:text-slate-100">Lab 3 (Downstairs)</div>
                                             </div>
                                         </div>
                                         <div className="border-t border-gray-100 dark:border-slate-700 pt-3 flex items-center justify-between">
-                                            <div className="text-xs text-gray-500 dark:text-slate-400 flex items-center gap-1">
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 dark:text-slate-400 flex items-center gap-1">
                                                 Assigned to <span className="font-bold text-gray-700 dark:text-slate-200">NetOps Team</span>
                                             </div>
                                             <div className="flex -space-x-1">
