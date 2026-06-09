@@ -27,6 +27,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
+import concurrent.futures
 from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -211,6 +212,12 @@ try:
 except ImportError:
     ocr_service = None
 
+# Shared thread pool for CPU-bound ML inference (classifier, NER, OCR, embeddings)
+# Offloads synchronous PyTorch / Transformers calls from the async event loop.
+_inference_pool = concurrent.futures.ThreadPoolExecutor(
+    max_workers=int(os.environ.get("INFERENCE_WORKERS", "4")),
+    thread_name_prefix="inference"
+)
 
 # ---------------------------------------------------------------------------
 # Lifespan (startup / shutdown)
@@ -257,6 +264,7 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
     yield
     print("[Shutdown] Cleaning up ...")
+    _inference_pool.shutdown(wait=False)
 
 
 # ---------------------------------------------------------------------------
@@ -435,10 +443,10 @@ async def troubleshoot(request: TroubleshootRequest):
             is_final=True
         )
     
-    result = gemini_service.get_troubleshooting_step(
-        request.text,
-        request.history,
-        request.category
+    loop = asyncio.get_running_loop()
+    result = await loop.run_in_executor(
+        _inference_pool,
+        lambda: gemini_service.get_troubleshooting_step(request.text, request.history, request.category)
     )
     return TroubleshootResponse(**result)
 
@@ -460,11 +468,12 @@ async def analyze_bug(request: BugReportAnalysisRequest):
             probable_cause="AI Diagnostics are currently unavailable."
         )
     
-    cause = gemini_service.analyze_bug_report(
-        request.bug_title,
-        request.description,
-        request.steps_to_reproduce,
-        request.console_errors
+    loop = asyncio.get_running_loop()
+    cause = await loop.run_in_executor(
+        _inference_pool,
+        lambda: gemini_service.analyze_bug_report(
+            request.bug_title, request.description, request.steps_to_reproduce, request.console_errors
+        )
     )
     return BugReportAnalysisResponse(probable_cause=cause)
 
@@ -702,7 +711,8 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     text = request_body.text
 
-    settings = get_system_settings(request_body.company)
+    loop = asyncio.get_running_loop()
+    settings = await loop.run_in_executor(_inference_pool, get_system_settings, request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -722,7 +732,9 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     local_ocr_text = ""
     if request_body.image_base64 and ocr_service:
         print("[AI] Extracting text via local OCR...")
-        local_ocr_text = ocr_service.extract_text(request_body.image_base64)
+        local_ocr_text = await loop.run_in_executor(
+            _inference_pool, ocr_service.extract_text, request_body.image_base64
+        )
         if local_ocr_text:
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
@@ -739,7 +751,8 @@ async def analyze_only(request_body: TicketRequest):
     """
     text = request_body.text
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(request_body.company)
+    loop = asyncio.get_running_loop()
+    settings = await loop.run_in_executor(_inference_pool, get_system_settings, request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
@@ -763,10 +776,12 @@ async def analyze_only(request_body: TicketRequest):
         "image_description": ""
     }
     
-    if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+    if request_body.image_base64 and not gemini_analysis["ocr_text"] and gemini_service:
         try:
             print("[AI] Detecting visual context via Gemini...")
-            vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+            vision_result = await loop.run_in_executor(
+                _inference_pool, gemini_service.analyze_image, request_body.image_base64
+            )
             gemini_analysis.update(vision_result)
         except Exception as e:
             print(f"[VISION ERROR] {e}")
@@ -775,10 +790,10 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Classification ---
     try:
-        classification_v3_res = classifier_v3.predict(text)
+        classification_v3_res = await loop.run_in_executor(_inference_pool, classifier_v3.predict, text)
         if "error" in classification_v3_res:
             # Fallback to V1
-            classification = classifier_service.predict(text)
+            classification = await loop.run_in_executor(_inference_pool, classifier_service.predict, text)
         else:
             # Parse V3 output
             cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
@@ -810,7 +825,7 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- NER ---
     try:
-        entities = ner_service.extract_entities(text)
+        entities = await loop.run_in_executor(_inference_pool, ner_service.extract_entities, text)
     except Exception:
         entities = []
     
@@ -818,14 +833,20 @@ async def analyze_only(request_body: TicketRequest):
 
     # --- Duplicate detection ---
     try:
-        dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+        dup_result = await loop.run_in_executor(
+            _inference_pool,
+            lambda: duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+        )
     except Exception:
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
     # --- RAG Knowledge Base Check ---
     rag_match = None
     try:
-        rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+        rag_match = await loop.run_in_executor(
+            _inference_pool,
+            lambda: rag_service.search_knowledge_base(text, threshold=0.85)
+        )
         if rag_match:
             classification["auto_resolve"] = True
             classification["assigned_team"] = "Auto-Resolve AI"
@@ -861,7 +882,7 @@ async def analyze_only(request_body: TicketRequest):
     
     # --- Gemini Summary ---
     if gemini_service and gemini_service._initialized:
-        summary = gemini_service.get_summary(text)
+        summary = await loop.run_in_executor(_inference_pool, gemini_service.get_summary, text)
     
     # Convert priority to SLA breached timestamp (for preview)
     hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
@@ -902,13 +923,14 @@ async def analyze_stream(request_body: TicketRequest):
 
     async def event_generator():
         text = request_body.text
+        loop = asyncio.get_running_loop()
         env_metadata = {
             "timestamp": get_now_ist(),
             "model_version": "3.0.0-PRO",
             "api_endpoint": "/ai/analyze_stream"
         }
         timeline = {"received": get_now_ist()} 
-        settings = get_system_settings(request_body.company)
+        settings = await loop.run_in_executor(_inference_pool, get_system_settings, request_body.company)
         confidence_threshold = settings["ai_confidence_threshold"]
         duplicate_sensitivity = settings["duplicate_sensitivity"]
         enable_auto_resolve = settings["enable_auto_resolve"]
@@ -918,9 +940,11 @@ async def analyze_stream(request_body: TicketRequest):
         await asyncio.sleep(0.5)
 
         gemini_analysis = {"ocr_text": request_body.image_text or "", "image_description": ""}
-        if request_body.image_base64 and not gemini_analysis["ocr_text"]:
+        if request_body.image_base64 and not gemini_analysis["ocr_text"] and gemini_service:
             try:
-                vision_result = gemini_service.analyze_image(request_body.image_base64, text)
+                vision_result = await loop.run_in_executor(
+                    _inference_pool, gemini_service.analyze_image, request_body.image_base64
+                )
                 gemini_analysis.update(vision_result)
             except Exception as e:
                 pass
@@ -931,7 +955,7 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Extracting technical entities', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            entities = ner_service.extract_entities(text)
+            entities = await loop.run_in_executor(_inference_pool, ner_service.extract_entities, text)
         except Exception:
             entities = []
         timeline["metadata_harvested"] = get_now_ist()
@@ -940,9 +964,9 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Detecting category and priority', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            classification_v3_res = classifier_v3.predict(text)
+            classification_v3_res = await loop.run_in_executor(_inference_pool, classifier_v3.predict, text)
             if "error" in classification_v3_res:
-                classification = classifier_service.predict(text)
+                classification = await loop.run_in_executor(_inference_pool, classifier_service.predict, text)
             else:
                 cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
                 sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
@@ -973,7 +997,10 @@ async def analyze_stream(request_body: TicketRequest):
         yield f"data: {json.dumps({'step': 'Checking duplicate issues', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
         try:
-            dup_result = duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+            dup_result = await loop.run_in_executor(
+                _inference_pool,
+                lambda: duplicate_service.check_duplicate(text, threshold=duplicate_sensitivity)
+            )
         except Exception:
             dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
@@ -982,7 +1009,10 @@ async def analyze_stream(request_body: TicketRequest):
         await asyncio.sleep(0.2)
         rag_match = None
         try:
-            rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+            rag_match = await loop.run_in_executor(
+                _inference_pool,
+                lambda: rag_service.search_knowledge_base(text, threshold=0.85)
+            )
             if rag_match:
                 classification["auto_resolve"] = True
                 classification["assigned_team"] = "Auto-Resolve AI"
@@ -1009,7 +1039,7 @@ async def analyze_stream(request_body: TicketRequest):
         timeline["routed"] = get_now_ist()
 
         if gemini_service and gemini_service._initialized:
-            summary = gemini_service.get_summary(text)
+            summary = await loop.run_in_executor(_inference_pool, gemini_service.get_summary, text)
         
         hours_map = {"Critical": 2, "High": 8, "Medium": 24, "Low": 72}
         sla_hours = hours_map.get(classification["priority"], 72)
@@ -1054,8 +1084,9 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
 @app.post("/ai/analyze-v2")
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
+    loop = asyncio.get_running_loop()
     try:
-        prediction = classifier_v2.predict(text)
+        prediction = await loop.run_in_executor(_inference_pool, classifier_v2.predict, text)
         return {
             "status": "success",
             "category": prediction["category"]["prediction"],
