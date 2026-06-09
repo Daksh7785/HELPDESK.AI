@@ -28,9 +28,9 @@ export function hasSequentialCharacters(password, span = 3) {
 export function getPasswordValidation(password, options = {}) {
   const {
     minLength = 8,
-    requireUppercase = false,
-    requireNumber = false,
-    requireSpecial = false,
+    requireUppercase = true,
+    requireNumber = true,
+    requireSpecial = true,
   } = options;
 
   return {
