@@ -385,7 +385,7 @@ class TokenManager:
                 "metadata": metadata,
             }).execute()
         except Exception as exc:
-            print(f"[TokenManager] Audit write failed (non-fatal): {exc}")
+            logger.warning("[TokenManager] Audit write failed (non-fatal): %s", exc)
 
     def record_usage(
         self,
@@ -410,4 +410,4 @@ class TokenManager:
                 "response_ms": response_ms,
             }).execute()
         except Exception as exc:
-            print(f"[TokenManager] Usage write failed (non-fatal): {exc}")
+            logger.warning("[TokenManager] Usage write failed (non-fatal): %s", exc)
