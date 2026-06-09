@@ -1,32 +1,32 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 
-const corsHeaders = {
+const CORS_HEADERS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req) => {
-    // Handle CORS preflight requests
     if (req.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers: corsHeaders });
+        return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
     try {
-        const { userId, email, name, company } = await req.json();
+        const { email, name, company } = await req.json();
+        if (!email) throw new Error('Email is required');
 
-        if (!email) {
-            throw new Error('Email is required');
+        const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+        if (!RESEND_API_KEY) {
+            console.error('RESEND_API_KEY not configured');
+            return new Response(
+                JSON.stringify({ error: 'Email service not configured' }),
+                { status: 500, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+            );
         }
 
-        // Initialize Resend or another mail provider (Assuming user configures this later)
-        // const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
-        // Currently simulating a successfully sent email.
+        const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'HELPDESK.AI <noreply@helpdeskai.com>';
+        const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://helpdeskaiv1.vercel.app';
 
-        console.log(`Sending approval email to ${email} for user ${name} in company ${company}...`);
-
-        // The email content could be sent via Resend:
-        /*
         const res = await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
@@ -34,36 +34,28 @@ serve(async (req) => {
                 'Authorization': `Bearer ${RESEND_API_KEY}`,
             },
             body: JSON.stringify({
-                from: 'HelpDesk.ai <noreply@yourdomain.com>',
+                from: FROM_EMAIL,
                 to: [email],
                 subject: 'Account Approved! Welcome to HelpDesk.ai',
                 html: `
                     <h2>Hello ${name},</h2>
                     <p>Your account for <strong>${company}</strong> has been approved by your administrator!</p>
                     <p>You can now log in to the system and access your dashboard.</p>
-                    <a href="https://your-frontend-url.com/dashboard" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Go to Dashboard</a>
+                    <a href="${FRONTEND_URL}/dashboard" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">Go to Dashboard</a>
                 `
-            })
-        });
-        */
-
-        return new Response(
-            JSON.stringify({
-                success: true,
-                message: `Approval email simulated for ${email}`
             }),
-            {
-                status: 200,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-        );
+        });
+
+        const data = await res.json();
+        console.log(`Approval email sent to ${email}: ${res.status}`);
+        return new Response(JSON.stringify({ success: true, message: `Approval email sent to ${email}`, data }), {
+            status: res.status,
+            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        });
     } catch (error) {
-        return new Response(
-            JSON.stringify({ error: error.message }),
-            {
-                status: 400,
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-            }
-        );
+        return new Response(JSON.stringify({ error: error.message }), {
+            status: 400,
+            headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' }
+        });
     }
 });

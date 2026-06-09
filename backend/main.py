@@ -92,7 +92,6 @@ class TicketRequest(BaseModel):
     duplicate_sensitivity: float = 0.85
 
 class TicketSaveRequest(BaseModel):
-    user_id: str
     subject: str
     description: str
     category: str
@@ -105,7 +104,6 @@ class TicketSaveRequest(BaseModel):
     confidence: float
     image_url: str | None = None
     company: str | None = None
-    company_id: str | None = None
     sla_breach_at: str
     metadata: dict
     entities: list = []
@@ -549,10 +547,16 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+@limiter.limit("10/minute")
+async def save_ticket(
+    request_body: TicketSaveRequest,
+    request: Request,
+    current_user: dict = Depends(get_current_user)
+):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
-    This is called AFTER the user confirms the analysis results.
+    Requires authentication. user_id and company_id are derived from the
+    authenticated user's JWT profile, never from the request body.
     """
     if not supabase:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
@@ -560,48 +564,41 @@ async def save_ticket(request_body: TicketSaveRequest):
     logger = logging.getLogger(__name__)
     try:
         final_data = request_body.dict()
+        auth_user_id = current_user["id"]
 
-        # Resolve tenant linkage from user profile with authorization validation.
+        # Resolve tenant linkage from the authenticated user's profile.
         profile = {}
-        if request_body.user_id:
-            try:
-                profile_res = (
-                    supabase.table("profiles")
-                    .select("company_id, company")
-                    .eq("id", request_body.user_id)
-                    .single()
-                    .execute()
-                )
-                profile = profile_res.data or {}
-                if not profile:
-                    raise HTTPException(status_code=404, detail="User profile not found")
-            except HTTPException:
-                raise
-            except Exception as profile_error:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
-                logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
-                raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
+        try:
+            profile_res = (
+                supabase.table("profiles")
+                .select("company_id, company")
+                .eq("id", auth_user_id)
+                .single()
+                .execute()
+            )
+            profile = profile_res.data or {}
+            if not profile:
+                raise HTTPException(status_code=404, detail="User profile not found")
+        except HTTPException:
+            raise
+        except Exception as profile_error:
+            user_hash = hashlib.sha256(str(auth_user_id).encode()).hexdigest()[:8]
+            logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
+            raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
 
-        # Validate tenant consistency and authorization.
+        # Override user_id and company_id from the authenticated profile.
+        final_data["user_id"] = auth_user_id
         profile_company_id = profile.get("company_id")
-        if final_data.get("company_id"):
-            # User provided company_id: verify it matches their profile.
-            if profile_company_id and final_data["company_id"] != profile_company_id:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
-                logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
-                raise HTTPException(status_code=403, detail="User not authorized for this tenant")
-        elif profile_company_id:
-            # Backfill company_id from profile.
+        if profile_company_id:
             final_data["company_id"] = profile_company_id
-        elif request_body.user_id:
-            # User has no tenant assignment.
+        else:
             raise HTTPException(status_code=400, detail="User has no tenant assignment")
 
         # Backfill company name if missing.
         if not final_data.get("company") and profile.get("company"):
             final_data["company"] = profile["company"]
 
-        user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+        user_hash = hashlib.sha256(str(auth_user_id).encode()).hexdigest()[:8]
         logger.info(f"Tenant linkage: user_hash={user_hash}, company_id={final_data.get('company_id')}")
 
 
@@ -731,6 +728,11 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     return await analyze_only(request_body)
 
 @app.post("/ai/analyze")
+@limiter.limit("30/minute")
+async def analyze_route(request_body: TicketRequest, request: Request):
+    """Rate-limited public route wrapping the analysis engine."""
+    return await analyze_only(request_body)
+
 async def analyze_only(request_body: TicketRequest):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
@@ -892,7 +894,8 @@ async def analyze_only(request_body: TicketRequest):
     )
 
 @app.post("/ai/analyze_stream")
-async def analyze_stream(request_body: TicketRequest):
+@limiter.limit("10/minute")
+async def analyze_stream(request_body: TicketRequest, request: Request):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
     """
