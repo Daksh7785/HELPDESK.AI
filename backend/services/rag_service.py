@@ -1,5 +1,4 @@
 import os
-from sentence_transformers import SentenceTransformer
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -28,14 +27,8 @@ class RagService:
         
         print("[RAG] Loading SentenceTransformer for Knowledge Base...")
         try:
-            # Check if a local model path is provided
-            model_path = os.environ.get("SENTENCE_TRANSFORMER_MODEL_PATH")
-            if model_path and os.path.exists(model_path):
-                print(f"[RAG] Loading from local path: {model_path}")
-                self.model = SentenceTransformer(model_path)
-            else:
-                # Download from HuggingFace
-                self.model = SentenceTransformer('all-MiniLM-L6-v2')
+            from backend.services.model_registry import get_sentence_transformer
+            self.model = get_sentence_transformer()
             self._loaded = True
             print("[RAG] Model loaded successfully.")
         except Exception as e:
