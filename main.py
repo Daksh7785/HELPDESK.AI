@@ -13,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-app.add_middleware(CSRFTokenMiddleware)
+# Initialize Supabase client
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
 # Initialize Supabase client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
@@ -155,7 +157,6 @@ async def security_report(
 async def get_csrf_token(response: JSONResponse):
     token = set_csrf_cookie(response)
     return {"csrf_token": token}
-
 
 @app.get("/docs", include_in_schema=False)
 async def get_docs():
