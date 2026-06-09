@@ -274,6 +274,14 @@ class SLAEngine:
             if result["sla_status"] == SLAStatus.WARNING.value and not ticket.get("sla_warning_at"):
                 update_fields["sla_warning_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z"
 
+            # Auto-escalate priority to High if within 2 hours of SLA breach
+            if result["remaining_seconds"] <= 7200:
+                current_priority = (ticket.get("priority") or "").lower()
+                if current_priority not in ("high", "critical"):
+                    update_fields["priority"] = "high"
+                    ticket["priority"] = "high"  # update in-memory object for downstream
+                    logger.info(f"[SLA] Escalated priority of ticket {ticket.get('id')} to high (<= 2h to breach)")
+
             # If needs notification, prepare escalation record
             if result["needs_notification"]:
                 update_fields["last_escalated_at"] = datetime.datetime.now(datetime.timezone.utc).isoformat() + "Z"
