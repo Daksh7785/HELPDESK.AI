@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, Response
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -268,6 +268,77 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
+# ---------------------------------------------------------------------------
+ACCESS_COOKIE = "access_token"
+REFRESH_COOKIE = "refresh_token"
+ACCESS_MAX_AGE = 60 * 60
+REFRESH_MAX_AGE = 60 * 60 * 24 * 7
+
+def _cookie_kwargs() -> dict:
+    secure = os.getenv("ENV", "production").lower() != "development"
+    return {
+        "httponly": True,
+        "secure": secure,
+        "samesite": "strict",
+        "path": "/",
+    }
+
+def extract_token(request: Request) -> str | None:
+    cookie_token = request.cookies.get(ACCESS_COOKIE)
+    if cookie_token:
+        return cookie_token
+    auth = request.headers.get("authorization") or request.headers.get("Authorization")
+    if auth and auth.lower().startswith("bearer "):
+        return auth.split(" ", 1)[1].strip() or None
+    return None
+
+def _set_session_cookies(response: Response, session) -> None:
+    if not session or not getattr(session, "access_token", None):
+        return
+    response.set_cookie(
+        ACCESS_COOKIE,
+        session.access_token,
+        max_age=ACCESS_MAX_AGE,
+        **_cookie_kwargs(),
+    )
+    refresh = getattr(session, "refresh_token", None)
+    if refresh:
+        response.set_cookie(
+            REFRESH_COOKIE,
+            refresh,
+            max_age=REFRESH_MAX_AGE,
+            **_cookie_kwargs(),
+        )
+
+def _clear_session_cookies(response: Response) -> None:
+    kwargs = _cookie_kwargs()
+    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
+    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+
+async def get_current_user(request: Request) -> dict:
+    token = extract_token(request)
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.get_user(token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=401,
+            detail=f"Invalid session: {exc}",
+        ) from exc
+    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
+    if not user or "id" not in user or "email" not in user:
+        raise HTTPException(status_code=401, detail="Invalid session: Missing user data")
+    if hasattr(user, "model_dump"):
+        return user.model_dump()
+    if hasattr(user, "dict"):
+        return user.dict()
+    return dict(user)
+
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 limiter = Limiter(key_func=get_remote_address)
@@ -536,20 +607,37 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
-    """Fetch persistent tickets from Supabase."""
+async def get_tickets(user: dict = Depends(get_current_user)):
+    """Fetch persistent tickets from Supabase, enforced by tenant isolation."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
-    if company_id:
-        query = query.eq("company_id", company_id)
-        
-    res = query.execute()
+    # Resolve user's company assignment
+    profile_res = (
+        supabase.table("profiles")
+        .select("company_id")
+        .eq("id", user["id"])
+        .maybe_single()
+        .execute()
+    )
+    profile = profile_res.data or {}
+    company_id = profile.get("company_id")
+    
+    if not company_id:
+        raise HTTPException(status_code=403, detail="User has no company assignment")
+
+    # Enforce tenant-level isolation at query time
+    res = (
+        supabase.table("tickets")
+        .select("*")
+        .eq("company_id", company_id)
+        .order("created_at", desc=True)
+        .execute()
+    )
     return res.data
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, user: dict = Depends(get_current_user)):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
@@ -560,42 +648,45 @@ async def save_ticket(request_body: TicketSaveRequest):
     logger = logging.getLogger(__name__)
     try:
         final_data = request_body.dict()
+        # Enforce authenticated user identity
+        authenticated_user_id = user["id"]
 
         # Resolve tenant linkage from user profile with authorization validation.
         profile = {}
-        if request_body.user_id:
-            try:
-                profile_res = (
-                    supabase.table("profiles")
-                    .select("company_id, company")
-                    .eq("id", request_body.user_id)
-                    .single()
-                    .execute()
-                )
-                profile = profile_res.data or {}
-                if not profile:
-                    raise HTTPException(status_code=404, detail="User profile not found")
-            except HTTPException:
-                raise
-            except Exception as profile_error:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
-                logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
-                raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
+        try:
+            profile_res = (
+                supabase.table("profiles")
+                .select("company_id, company")
+                .eq("id", authenticated_user_id)
+                .maybe_single()
+                .execute()
+            )
+            profile = profile_res.data or {}
+            if not profile:
+                raise HTTPException(status_code=404, detail="User profile not found")
+        except HTTPException:
+            raise
+        except Exception as profile_error:
+            user_hash = hashlib.sha256(str(authenticated_user_id).encode()).hexdigest()[:8]
+            logger.error(f"Tenant resolution error for user {user_hash}: {profile_error}")
+            raise HTTPException(status_code=503, detail="Failed to resolve tenant linkage") from profile_error
+
+        # Force correct user_id
+        final_data["user_id"] = authenticated_user_id
 
         # Validate tenant consistency and authorization.
         profile_company_id = profile.get("company_id")
         if final_data.get("company_id"):
             # User provided company_id: verify it matches their profile.
             if profile_company_id and final_data["company_id"] != profile_company_id:
-                user_hash = hashlib.sha256(str(request_body.user_id).encode()).hexdigest()[:8]
+                user_hash = hashlib.sha256(str(authenticated_user_id).encode()).hexdigest()[:8]
                 logger.warning(f"Tenant mismatch: user {user_hash} attempted {final_data['company_id']}, assigned to {profile_company_id}")
                 raise HTTPException(status_code=403, detail="User not authorized for this tenant")
         elif profile_company_id:
             # Backfill company_id from profile.
             final_data["company_id"] = profile_company_id
-        elif request_body.user_id:
-            # User has no tenant assignment.
-            raise HTTPException(status_code=400, detail="User has no tenant assignment")
+        else: # User has no tenant assignment.
+            raise HTTPException(status_code=400, detail="User has no company assignment")
 
         # Backfill company name if missing.
         if not final_data.get("company") and profile.get("company"):
@@ -652,15 +743,36 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
-    """Fetch single persistent ticket."""
+async def get_ticket_by_id(ticket_id: str, user: dict = Depends(get_current_user)):
+    """Fetch single persistent ticket with tenant validation."""
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
+    # Resolve user's company assignment
+    profile_res = (
+        supabase.table("profiles")
+        .select("company_id")
+        .eq("id", user["id"])
+        .maybe_single()
+        .execute()
+    )
+    profile = profile_res.data or {}
+    user_company_id = profile.get("company_id")
+    
+    if not user_company_id:
+        raise HTTPException(status_code=403, detail="User has no company assignment")
+
+    # Fetch ticket and verify ownership/tenant
     res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return res.data
+        
+    ticket = res.data
+    if ticket.get("company_id") != user_company_id:
+        # Prevent cross-tenant data leakage (IDOR)
+        raise HTTPException(status_code=403, detail="Not authorized to access this ticket")
+        
+    return ticket
 
 
 @app.post("/tickets", response_model=TicketRecord)
@@ -1069,76 +1181,6 @@ async def analyze_ticket_v2(request: TicketRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 # ---------------------------------------------------------------------------
-# Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
-# ---------------------------------------------------------------------------
-ACCESS_COOKIE = "access_token"
-REFRESH_COOKIE = "refresh_token"
-ACCESS_MAX_AGE = 60 * 60
-REFRESH_MAX_AGE = 60 * 60 * 24 * 7
-
-def _cookie_kwargs() -> dict:
-    secure = os.getenv("ENV", "production").lower() != "development"
-    return {
-        "httponly": True,
-        "secure": secure,
-        "samesite": "strict",
-        "path": "/",
-    }
-
-def extract_token(request: Request) -> str | None:
-    cookie_token = request.cookies.get(ACCESS_COOKIE)
-    if cookie_token:
-        return cookie_token
-    auth = request.headers.get("authorization") or request.headers.get("Authorization")
-    if auth and auth.lower().startswith("bearer "):
-        return auth.split(" ", 1)[1].strip() or None
-    return None
-
-def _set_session_cookies(response: Response, session) -> None:
-    if not session or not getattr(session, "access_token", None):
-        return
-    response.set_cookie(
-        ACCESS_COOKIE,
-        session.access_token,
-        max_age=ACCESS_MAX_AGE,
-        **_cookie_kwargs(),
-    )
-    refresh = getattr(session, "refresh_token", None)
-    if refresh:
-        response.set_cookie(
-            REFRESH_COOKIE,
-            refresh,
-            max_age=REFRESH_MAX_AGE,
-            **_cookie_kwargs(),
-        )
-
-def _clear_session_cookies(response: Response) -> None:
-    kwargs = _cookie_kwargs()
-    response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
-    response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
-
-async def get_current_user(request: Request) -> dict:
-    token = extract_token(request)
-    if not token:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    if not supabase:
-        raise HTTPException(status_code=503, detail="Database connection offline")
-    try:
-        result = supabase.auth.get_user(token)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=401,
-            detail=f"Invalid session: {exc}",
-        ) from exc
-    user = getattr(result, "user", None) or (result.get("user") if isinstance(result, dict) else None)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid session")
-    if hasattr(user, "model_dump"):
-        return user.model_dump()
-    if hasattr(user, "dict"):
-        return user.dict()
-    return dict(user)
-
 class LoginBody(BaseModel):
     email: str
     password: str
