@@ -128,6 +128,12 @@ class MockSupabaseTable:
                     company = "companyA"
                     role = "admin"
                 profile_data = {"id": user_id, "company_id": company, "role": role, "company": company}
+                # Enforce company_id filter for cross-tenant IDOR protection
+                comp_filter = self.filters.get("company_id")
+                if comp_filter and comp_filter != company:
+                    if self._is_single:
+                        return MockResult(None)
+                    return MockResult([])
                 if self._is_single:
                     return MockResult(profile_data)
                 return MockResult([profile_data])
@@ -226,8 +232,11 @@ TOKEN_COMPANY_B_USER = "mock-token-companyB-user-user456"
 TOKEN_MASTER_ADMIN = "mock-token-master-admin-master123"
 
 # Headers helper
-def get_auth_headers(token: str):
-    return {"Authorization": f"Bearer {token}"}
+def get_auth_headers(token: str, csrf_token: str = None):
+    headers = {"Authorization": f"Bearer {token}"}
+    if csrf_token:
+        headers["X-CSRF-Token"] = csrf_token
+    return headers
 
 
 def test_public_endpoints_accessible_without_token():
@@ -302,20 +311,25 @@ def test_save_ticket_context_spoofing_prevention():
         "metadata": {}
     }
 
-    # Successful save (matching owner and company)
-    # We mock the DB insert in offline mode or expect a 500/success from backend depending on DB state.
-    # But since save_ticket has a verify_tenant check at the top before hitting DB,
-    # let's check spoofing: changing company_id to companyB
+    # Provide CSRF token so the CSRFTokenMiddleware allows POST requests through.
+    csrf_token = "mock-csrf-token-for-testing"
+    client.cookies.set("csrf_token", csrf_token)
+    headers_with_csrf = get_auth_headers(TOKEN_COMPANY_A_USER, csrf_token)
+
+    # Spoofing: changing company_id to companyB
     spoofed_company_payload = save_payload.copy()
     spoofed_company_payload["company_id"] = "companyB"
-    response = client.post("/tickets/save", json=spoofed_company_payload, headers=get_auth_headers(TOKEN_COMPANY_A_USER))
+    response = client.post("/tickets/save", json=spoofed_company_payload, headers=headers_with_csrf)
     assert response.status_code == 403
 
     # Spoofing: changing user_id to user456
     spoofed_user_payload = save_payload.copy()
     spoofed_user_payload["user_id"] = "user456"
-    response = client.post("/tickets/save", json=spoofed_user_payload, headers=get_auth_headers(TOKEN_COMPANY_A_USER))
+    response = client.post("/tickets/save", json=spoofed_user_payload, headers=headers_with_csrf)
     assert response.status_code == 403
+
+    # Clean up CSRF cookie so other tests are not affected
+    client.cookies.clear()
 
 
 def test_idor_protection_on_ticket_retrieval():
