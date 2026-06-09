@@ -27,6 +27,8 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 
 const MAX_SECONDS = 120;
 
+const MICROPHONE_TIMEOUT_MS = 10000;
+
 const MIME_PRIORITY = [
   'audio/webm;codecs=opus',
   'audio/webm',
@@ -225,32 +227,67 @@ export default function VoiceRecorderV2({
   const startRecording = useCallback(async () => {
     setErrorMsg('');
     setTranscript('');
+
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime   = getSupportedMime();
+      // Gracefully handle stalled permission prompts / socket timeouts
+      const streamPromise = navigator.mediaDevices.getUserMedia({ audio: true });
+
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('MIC_PERMISSION_TIMEOUT'));
+        }, MICROPHONE_TIMEOUT_MS);
+      });
+
+      const stream = await Promise.race([streamPromise, timeoutPromise]);
+
+      const mime = getSupportedMime();
       const options = mime ? { mimeType: mime } : {};
+
       const recorder = new MediaRecorder(stream, options);
+
       mediaRecorderRef.current = recorder;
       chunksRef.current = [];
 
       recorder.ondataavailable = e => {
-        if (e.data?.size > 0) chunksRef.current.push(e.data);
+        if (e.data?.size > 0) {
+          chunksRef.current.push(e.data);
+        }
       };
 
       recorder.onstop = () => {
-        // Release mic
         stream.getTracks().forEach(t => t.stop());
         processAudio(chunksRef.current, recorder.mimeType);
       };
 
-      recorder.start(250); // collect every 250 ms
+      recorder.start(250);
+
       setState('recording');
+
       startTimer(() => stopRecording());
-    } catch (_err) {
-      setErrorMsg('Microphone access denied. Please allow microphone permission.');
+
+    } catch (err) {
+      console.error('Microphone access error:', err);
+
+      let message = 'Unable to access microphone. Please try again.';
+
+      if (err?.message === 'MIC_PERMISSION_TIMEOUT') {
+        message =
+          'Microphone permission request timed out. Please allow microphone access and try again.';
+      } else if (err?.name === 'NotAllowedError') {
+        message =
+          'Microphone access was denied. Please enable microphone permissions in your browser settings.';
+      } else if (err?.name === 'NotFoundError') {
+        message =
+          'No microphone device was detected. Please connect a microphone and try again.';
+      } else if (err?.name === 'NotReadableError') {
+        message =
+          'Your microphone is currently being used by another application.';
+      }
+
+      setErrorMsg(message);
       setState('error');
     }
-  }, [processAudio, startTimer]);
+  }, [processAudio, startTimer, stopRecording]);
 
   // ── Stop recording ───────────────────────────────────────────────────────
 
@@ -450,9 +487,35 @@ export default function VoiceRecorderV2({
             borderRadius: 10, padding: '14px 16px',
             display: 'flex', flexDirection: 'column', gap: 10,
           }}>
-            <p style={{ color: '#fca5a5', fontSize: 13, margin: 0 }}>
-              ⚠ {errorMsg || 'Something went wrong. Please try again.'}
-            </p>
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: 10,
+            }}>
+              <span style={{ fontSize: 18, lineHeight: 1 }}>
+                ⚠
+              </span>
+
+              <div>
+                <p style={{
+                  color: '#fca5a5',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  margin: '0 0 4px 0',
+                }}>
+                  Microphone Error
+                </p>
+
+                <p style={{
+                  color: '#fecaca',
+                  fontSize: 13,
+                  margin: 0,
+                  lineHeight: 1.5,
+                }}>
+                  {errorMsg || 'Something went wrong. Please try again.'}
+                </p>
+              </div>
+            </div>
             <button onClick={reset} style={{
               alignSelf: 'flex-start', padding: '8px 16px', borderRadius: 8,
               background: '#374151', color: '#f9fafb', border: 'none',

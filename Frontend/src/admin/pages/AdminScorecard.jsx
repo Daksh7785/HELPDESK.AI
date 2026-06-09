@@ -5,8 +5,7 @@ import {
     ChevronDown, ChevronUp, Star, BookOpen, Lightbulb
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
-
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+import { API_CONFIG } from '../../config';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -256,7 +255,7 @@ const AdminScorecard = () => {
             const params = profile?.company_id
                 ? `?company_id=${encodeURIComponent(profile.company_id)}`
                 : '';
-            const res = await fetch(`${BACKEND_URL}/ai/agent_scorecard${params}`);
+            const res = await fetch(`${API_CONFIG.BACKEND_URL}/ai/agent_scorecard${params}`);
             if (!res.ok) throw new Error(`Server responded with ${res.status}`);
             const json = await res.json();
             setScorecards(json.scorecards || []);

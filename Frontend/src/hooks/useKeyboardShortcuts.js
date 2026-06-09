@@ -183,7 +183,7 @@ export const useKeyboardShortcuts = (customShortcuts = {}, options = {}) => {
                 clearTimeout(timeoutRef.current);
             }
         };
-    }, [enabled, handleKeyDown]);
+    }, [enabled, handleKeyDown, navigate, location]);
 
     return {
         shortcuts,

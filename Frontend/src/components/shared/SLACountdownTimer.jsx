@@ -14,10 +14,10 @@ const SLACountdownTimer = ({ createdAt, priority = "medium" }) => {
   useEffect(() => {
     const calculate = () => {
       const created = new Date(createdAt).getTime();
-      const deadline = created + (SLA_RULES[priority.toLowerCase()] || SLA_RULES.medium);
+      const deadline = created + (SLA_RULES[(priority || 'medium').toLowerCase()] || SLA_RULES.medium);
       const now = Date.now();
       const remaining = deadline - now;
-      const total = SLA_RULES[priority.toLowerCase()] || SLA_RULES.medium;
+      const total = SLA_RULES[(priority || 'medium').toLowerCase()] || SLA_RULES.medium;
 
       if (remaining <= 0) {
         setStatus("red");

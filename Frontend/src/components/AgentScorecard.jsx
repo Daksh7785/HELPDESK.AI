@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { API_CONFIG } from "../../config";
 
 /**
  * AgentScorecard — individual agent performance card
@@ -9,7 +10,7 @@ export default function AgentScorecard({ agentId, companyId, agentName }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const BACKEND = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+  const BACKEND = API_CONFIG.BACKEND_URL;
 
   useEffect(() => {
     if (!agentId || !companyId) {

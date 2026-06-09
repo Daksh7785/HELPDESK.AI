@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import { supabase } from '../lib/supabaseClient';
+import useAuthStore from '../store/authStore';
 import useTicketStore from '../store/ticketStore';
 import {
     applyTicketRealtimePayload,
@@ -49,10 +50,20 @@ const useTicketsRealtime = ({
                     ));
 
                     const ticketStore = useTicketStore.getState();
+                    const { user } = useAuthStore.getState();
                     if (payload.eventType === 'DELETE') {
                         ticketStore.removeTicket(ticketId);
                     } else if (payload.new) {
                         ticketStore.upsertTicket(payload.new);
+                        // Create notification for ticket updates from other users
+                        if (payload.eventType === 'UPDATE' && user && payload.new.user_id !== user.id) {
+                            ticketStore.addNotification({
+                                type: 'message',
+                                ticketId: payload.new.ticket_id || ticketId,
+                                title: 'Ticket Updated',
+                                message: `Ticket "${payload.new.subject || 'Unknown'}" has been updated.`
+                            });
+                        }
                     }
 
                     if (payload.eventType === 'INSERT' && payload.new && onInsert) {

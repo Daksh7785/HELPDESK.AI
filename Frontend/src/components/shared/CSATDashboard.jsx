@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Star, TrendingUp, Users, MessageSquare } from 'lucide-react';
 import api from '../../services/api';
 
@@ -41,19 +41,21 @@ export default function CSATDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchCSAT = async () => {
-      try {
-        const res = await api.get('/admin/csat');
-        setData(res.data);
-      } catch (err) {
-        setError(err.response?.data?.detail || 'Failed to load CSAT data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchCSAT();
+  const fetchCSAT = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/admin/csat');
+      setData(res.data);
+    } catch (err) {
+      setError(err.response?.data?.detail || 'Failed to load CSAT data');
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchCSAT();
+  }, [fetchCSAT]);
 
   if (loading) {
     return (
