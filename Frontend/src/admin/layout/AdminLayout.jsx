@@ -11,12 +11,13 @@ import NotificationToast from '../../user/components/NotificationToast';
  */
 const AdminLayout = () => {
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
   const location = useLocation();
 
   useEffect(() => {
     setIsMobileNavOpen(false);
   }, [location.pathname]);
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   return (
     <div className='flex h-screen bg-[#f8faf9] overflow-hidden font-sans'>
