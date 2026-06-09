@@ -141,7 +141,9 @@ class NotificationRoutingMiddleware:
                 )
                 return False
 
-            if notification_type == NotificationType.WEEKLY_DIGEST and digest_frequency == "daily":
+            # Alternative: Directly reject any mismatched configurations
+            if (notification_type == NotificationType.WEEKLY_DIGEST and digest_frequency != "weekly") or \
+               (notification_type == NotificationType.DAILY_DIGEST and digest_frequency != "daily"):
                 self.log_notification_skipped(
                     company_id, notification_type, "digest_frequency_mismatch"
                 )
