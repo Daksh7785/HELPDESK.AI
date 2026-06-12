@@ -30,6 +30,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Admin Tickets** | Organizational ticket queue. | Bulk actions, advanced filtering, priority management. |
 | **Admin Users** | Workforce management. | Invite-only onboarding, user role auditing. |
 | **Admin Analytics** | Performance dashboard. | Sentiment heatmaps, tech-stack recurring issue analysis. |
+| **Admin Duplicates** | Real-time duplicate cluster management. | Hybrid similarity scoring, incremental DBSCAN clustering, tenant threshold tuning, feedback auto-tuning, KB recommendations. |
 | **Admin Settings** | Organizational configuration. | Custom branding, SLA threshold definitions. |
 | **Admin Profile** | Managerial settings. | Administrative credentials and settings. |
 

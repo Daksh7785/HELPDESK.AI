@@ -64,6 +64,7 @@ import AdminUsers from "./admin/pages/AdminUsers";
 import AdminAnalytics from "./admin/pages/AdminAnalytics";
 import AdminProfile from "./admin/pages/AdminProfile";
 import AdminSettings from "./admin/pages/AdminSettings";
+import AdminDuplicates from "./admin/pages/AdminDuplicates";
 import MasterBugReports from "./master-admin/pages/MasterBugReports";
 
 // Feature Pages
@@ -88,7 +89,6 @@ import MasterAdminDashboard from "./master-admin/pages/MasterAdminDashboard";
 import PendingAdminRequests from "./master-admin/pages/PendingAdminRequests";
 import AllCompanies from "./master-admin/pages/AllCompanies";
 import AllAdmins from "./master-admin/pages/AllAdmins";
-import Changelog from "./pages/Changelog";
 
 
 function TitleUpdater() {
@@ -106,6 +106,7 @@ function TitleUpdater() {
     else if (path.startsWith('/admin/analytics')) title = 'Analytics | Admin';
     else if (path.startsWith('/admin/profile')) title = 'Admin Profile';
     else if (path.startsWith('/admin/settings')) title = 'Settings | Admin';
+    else if (path.startsWith('/admin/duplicates')) title = 'Duplicate Detection | Admin';
     // Master Admin Routes
     else if (path.startsWith('/master-admin/dashboard')) title = 'Master Dashboard';
     else if (path.startsWith('/master-admin/admin-requests')) title = 'Pending Requests | Master Admin';
@@ -208,6 +209,7 @@ function AppLayout() {
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
+            <Route path="/admin/duplicates" element={<AdminDuplicates />} />
           </Route>
         </Route>
 

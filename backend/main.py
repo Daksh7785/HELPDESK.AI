@@ -1780,3 +1780,163 @@ async def auth_logout(response: Response):
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
 
+
+# ---------------------------------------------------------------------------
+# Issue #2807 — Duplicate Cluster & Threshold Management Endpoints
+# ---------------------------------------------------------------------------
+
+class ThresholdUpdateRequest(BaseModel):
+    company_id: str
+    threshold: float
+
+
+class FeedbackRequest(BaseModel):
+    company_id: str
+    feedback_type: str  # "false_positive" | "missed_duplicate"
+    ticket_id: str | None = None
+
+
+class PrimaryTicketRequest(BaseModel):
+    cluster_id: str
+    ticket_id: str
+
+
+@app.get("/ai/duplicate-clusters")
+async def get_duplicate_clusters(company_id: str | None = None):
+    """
+    Return all duplicate clusters for a tenant.
+    Supports real-time visibility into ticket groupings.
+    """
+    try:
+        clusters = duplicate_service.get_clusters(company_id)
+        return {"clusters": clusters, "total": len(clusters)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/ai/duplicate-analytics")
+async def get_duplicate_analytics(company_id: str | None = None):
+    """
+    Return analytics summary: top duplicate categories, cluster sizes, confidence scores.
+    """
+    try:
+        analytics = duplicate_service.get_cluster_analytics(company_id)
+        # Enrich with Supabase data if available
+        if supabase and company_id:
+            try:
+                res = supabase.table("tickets").select(
+                    "category, is_potential_duplicate"
+                ).eq("company_id", company_id).eq("is_potential_duplicate", True).execute()
+                rows = res.data or []
+                db_by_cat: dict = {}
+                for row in rows:
+                    cat = row.get("category", "Unknown")
+                    db_by_cat[cat] = db_by_cat.get(cat, 0) + 1
+                analytics["db_duplicate_by_category"] = [
+                    {"category": k, "count": v}
+                    for k, v in sorted(db_by_cat.items(), key=lambda x: x[1], reverse=True)
+                ]
+                analytics["db_total_duplicates"] = len(rows)
+            except Exception as db_err:
+                print(f"[Analytics] DB enrichment error: {db_err}")
+        return analytics
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/ai/duplicate-threshold")
+async def get_duplicate_threshold_endpoint(company_id: str):
+    """Get the current duplicate detection threshold for a tenant."""
+    threshold = duplicate_service.get_threshold(company_id)
+    # Also try Supabase system_settings
+    if supabase:
+        try:
+            res = supabase.table("system_settings").select(
+                "duplicate_sensitivity"
+            ).eq("company_id", company_id).single().execute()
+            if res.data and res.data.get("duplicate_sensitivity"):
+                threshold = float(res.data["duplicate_sensitivity"])
+        except Exception:
+            pass
+    return {
+        "company_id": company_id,
+        "threshold":  threshold,
+        "min":        0.70,
+        "max":        0.95,
+        "default":    0.85,
+    }
+
+
+@app.put("/ai/duplicate-threshold")
+async def update_duplicate_threshold_endpoint(body: ThresholdUpdateRequest):
+    """
+    Update the duplicate detection threshold for a tenant (range 0.70–0.95).
+    Persists to Supabase system_settings and updates the in-process cache.
+    """
+    new_threshold = duplicate_service.update_threshold(body.company_id, body.threshold)
+    # Persist to Supabase
+    if supabase:
+        try:
+            supabase.table("system_settings").upsert({
+                "company_id":           body.company_id,
+                "duplicate_sensitivity": new_threshold,
+            }, on_conflict="company_id").execute()
+        except Exception as db_err:
+            print(f"[ThresholdUpdate] Supabase persist error: {db_err}")
+    return {
+        "status":      "updated",
+        "company_id":  body.company_id,
+        "threshold":   new_threshold,
+    }
+
+
+@app.post("/ai/duplicate-feedback")
+async def process_duplicate_feedback(body: FeedbackRequest):
+    """
+    Process admin feedback to auto-tune the duplicate threshold.
+    feedback_type: "false_positive" | "missed_duplicate"
+    """
+    valid_types = {"false_positive", "missed_duplicate"}
+    if body.feedback_type not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"feedback_type must be one of {valid_types}",
+        )
+    result = duplicate_service.process_feedback(body.company_id, body.feedback_type)
+    # Persist updated threshold to Supabase
+    if supabase:
+        try:
+            supabase.table("system_settings").upsert({
+                "company_id":           body.company_id,
+                "duplicate_sensitivity": result["new_threshold"],
+            }, on_conflict="company_id").execute()
+            # Log feedback to duplicate_feedback table
+            supabase.table("duplicate_feedback").insert({
+                "company_id":    body.company_id,
+                "feedback_type": body.feedback_type,
+                "ticket_id":     body.ticket_id,
+                "old_threshold": result["previous_threshold"],
+                "new_threshold": result["new_threshold"],
+            }).execute()
+        except Exception as db_err:
+            print(f"[Feedback] Supabase persist error: {db_err}")
+    return result
+
+
+@app.post("/ai/duplicate-clusters/set-primary")
+async def set_primary_ticket(body: PrimaryTicketRequest):
+    """Designate a ticket as the primary/canonical record for a duplicate cluster."""
+    result = duplicate_service.set_primary_ticket(body.cluster_id, body.ticket_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Cluster not found")
+    # Persist to Supabase duplicate_groups table
+    if supabase:
+        try:
+            supabase.table("duplicate_groups").upsert({
+                "cluster_id":     body.cluster_id,
+                "primary_ticket": body.ticket_id,
+            }, on_conflict="cluster_id").execute()
+        except Exception as db_err:
+            print(f"[SetPrimary] Supabase persist error: {db_err}")
+    return result
+
