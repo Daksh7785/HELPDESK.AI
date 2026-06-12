@@ -16,6 +16,13 @@ backend/venv/
 data/low_confidence_log.json
 user_feedback_rows.csv
 
+# Ensemble model caches (rebuilt automatically on startup)
+backend/models/tfidf_classifier/
+backend/models/rf_classifier/
+
+# Ensemble monitoring logs (runtime data)
+backend/data/monitoring/*.jsonl
+
 # Git
 .git/
 
@@ -29,8 +36,3 @@ dist/
 docs/helpdesk*.pdf
 docs/logs/
 *.log
-
-# Scratch and local cache
-scratch/
-.npm-cache/
-
