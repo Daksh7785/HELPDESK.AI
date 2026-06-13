@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Star, CheckCircle2, X, Loader2, MessageSquare } from 'lucide-react';
-import { supabase } from '../../lib/supabaseClient';
 
 /**
  * CSATModal — shown when a ticket is resolved and no rating has been given yet.
@@ -18,28 +17,31 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const ratingLabels = {
-        1: 'Very Dissatisfied',
-        2: 'Dissatisfied',
-        3: 'Neutral',
-        4: 'Satisfied',
-        5: 'Very Satisfied',
+    const userLang = navigator.language?.split('-')[0] || 'en';
+    const translations = {
+        en: { title: "How was your resolution?", subtitle: "Your ticket has been resolved. Please rate our support.", commentLabel: "Leave a comment", commentPlaceholder: "What went well? What could be better?", skip: "Remind Me Later", submit: "Submit Feedback", thanks: "Thank you!", thanksSub: "Your feedback helps us improve.", opt: "(optional)", rating: {1: 'Very Dissatisfied', 2: 'Dissatisfied', 3: 'Neutral', 4: 'Satisfied', 5: 'Very Satisfied'} },
+        es: { title: "¿Qué tan satisfecho está con la resolución?", subtitle: "Su ticket ha sido resuelto. Califique nuestro soporte.", commentLabel: "Dejar un comentario", commentPlaceholder: "¿Qué salió bien? ¿Qué se podría mejorar?", skip: "Recordarme más tarde", submit: "Enviar comentarios", thanks: "¡Gracias!", thanksSub: "Sus comentarios nos ayudan a mejorar.", opt: "(opcional)", rating: {1: 'Muy Insatisfecho', 2: 'Insatisfecho', 3: 'Neutral', 4: 'Satisfecho', 5: 'Muy Satisfecho'} },
+        fr: { title: "Dans quelle mesure êtes-vous satisfait de la résolution ?", subtitle: "Votre ticket est résolu. Veuillez évaluer notre support.", commentLabel: "Laissez un commentaire", commentPlaceholder: "Qu'est-ce qui s'est bien passé ? Qu'est-ce qui pourrait être amélioré ?", skip: "Plus tard", submit: "Soumettre", thanks: "Merci !", thanksSub: "Vos commentaires nous aident à nous améliorer.", opt: "(facultatif)", rating: {1: 'Très Insatisfait', 2: 'Insatisfait', 3: 'Neutre', 4: 'Satisfait', 5: 'Très Satisfait'} }
     };
+    const t = translations[userLang] || translations.en;
+    const ratingLabels = t.rating;
 
     const handleSubmit = async () => {
         if (!selected) { setError('Please select a rating.'); return; }
         setLoading(true);
         setError('');
         try {
-            const { error: upError } = await supabase
-                .from('tickets')
-                .update({
-                    csat_rating: selected,
-                    csat_comment: comment.trim() || null,
+            const res = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/api/csat/submit`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticket_id: ticketId,
+                    rating: selected,
+                    comment: comment.trim() || null,
+                    language: userLang
                 })
-                .eq('id', ticketId);
-
-            if (upError) throw upError;
+            });
+            if (!res.ok) throw new Error('Failed to submit');
             setSubmitted(true);
             setTimeout(() => { onSubmit?.(selected); }, 1800);
         } catch (err) {
@@ -50,6 +52,19 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
         }
     };
 
+    const handleRemindLater = async () => {
+        try {
+            await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000'}/api/csat/remind-later`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticket_id: ticketId })
+            });
+        } catch (err) {
+            console.error('Failed to set remind later', err);
+        }
+        onDismiss();
+    };
+
     if (submitted) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
@@ -57,8 +72,8 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
                     <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <CheckCircle2 className="w-8 h-8 text-emerald-600" />
                     </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">Thank you!</h3>
-                    <p className="text-gray-500 text-sm">Your feedback helps us improve.</p>
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">{t.thanks}</h3>
+                    <p className="text-gray-500 text-sm">{t.thanksSub}</p>
                 </div>
             </div>
         );
@@ -78,8 +93,8 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
                     <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-3 backdrop-blur-sm border border-white/20">
                         <Star className="w-6 h-6 text-yellow-300 fill-yellow-300" />
                     </div>
-                    <h3 className="text-lg font-bold mb-1">How was your resolution?</h3>
-                    <p className="text-emerald-100/80 text-sm">Your ticket has been resolved. Please rate our support.</p>
+                    <h3 className="text-lg font-bold mb-1">{t.title}</h3>
+                    <p className="text-emerald-100/80 text-sm">{t.subtitle}</p>
                 </div>
 
                 {/* Body */}
@@ -116,11 +131,11 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
                     <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
                             <MessageSquare className="w-4 h-4" />
-                            Leave a comment <span className="text-gray-400 font-normal">(optional)</span>
+                            {t.commentLabel} <span className="text-gray-400 font-normal">{t.opt}</span>
                         </label>
                         <textarea
                             rows={3}
-                            placeholder="What went well? What could be better?"
+                            placeholder={t.commentPlaceholder}
                             value={comment}
                             onChange={(e) => setComment(e.target.value)}
                             className="w-full px-4 py-3 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 resize-none text-gray-800 placeholder:text-gray-400 transition-all"
@@ -134,10 +149,10 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
                     {/* Actions */}
                     <div className="flex gap-3">
                         <button
-                            onClick={onDismiss}
+                            onClick={handleRemindLater}
                             className="flex-1 py-3 border border-gray-200 text-gray-600 text-sm font-semibold rounded-xl hover:bg-gray-50 transition-colors"
                         >
-                            Skip for now
+                            {t.skip}
                         </button>
                         <button
                             onClick={handleSubmit}
@@ -145,7 +160,7 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
                             className="flex-2 flex-grow py-3 bg-emerald-900 text-white text-sm font-bold rounded-xl hover:bg-emerald-800 transition-colors shadow-lg shadow-emerald-900/20 disabled:opacity-70 flex items-center justify-center gap-2"
                         >
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                            Submit Feedback
+                            {t.submit}
                         </button>
                     </div>
                 </div>

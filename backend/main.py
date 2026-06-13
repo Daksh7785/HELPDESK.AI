@@ -1418,3 +1418,63 @@ async def query_knowledge_graph(payload: GraphQueryPayload):
         "latency_ms": round(duration_ms, 2)
     }
 
+
+# ---------------------------------------------------------------------------
+# CSAT Survey API Endpoints
+# ---------------------------------------------------------------------------
+
+from backend.services.auto_close_service import get_instance as get_auto_close_service
+
+class CSATSubmitRequest(BaseModel):
+    ticket_id: str
+    rating: int
+    comment: str = ""
+    language: str = "en"
+
+class CSATRemindRequest(BaseModel):
+    ticket_id: str
+
+@app.post("/api/csat/submit")
+async def submit_csat(req: CSATSubmitRequest):
+    service = get_auto_close_service()
+    if not service:
+        from backend.services.auto_close_service import load as load_auto_close
+        service = load_auto_close()
+    
+    success = service.submit_feedback(req.ticket_id, req.rating, req.comment, req.language)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to submit CSAT")
+    return {"status": "success"}
+
+@app.get("/api/csat/pending")
+async def pending_csat(user_id: str):
+    service = get_auto_close_service()
+    if not service:
+        from backend.services.auto_close_service import load as load_auto_close
+        service = load_auto_close()
+        
+    surveys = service.get_pending_surveys(user_id)
+    return {"status": "success", "surveys": surveys}
+
+@app.post("/api/csat/remind-later")
+async def remind_later_csat(req: CSATRemindRequest):
+    service = get_auto_close_service()
+    if not service:
+        from backend.services.auto_close_service import load as load_auto_close
+        service = load_auto_close()
+        
+    res = service.remind_later(req.ticket_id)
+    if not res:
+        raise HTTPException(status_code=500, detail="Failed to set remind later")
+    return {"status": "success", "data": res}
+
+@app.get("/api/admin/csat-metrics")
+async def admin_csat_metrics(company_id: str | None = None):
+    service = get_auto_close_service()
+    if not service:
+        from backend.services.auto_close_service import load as load_auto_close
+        service = load_auto_close()
+        
+    analytics = service.get_analytics(company_id)
+    return {"status": "success", "metrics": analytics}
+
