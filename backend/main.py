@@ -638,29 +638,353 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.get("/tickets/search")
-async def search_tickets(q: str | None = None, company_id: str | None = None, limit: int = 50, offset: int = 0):
-    """Search tickets using tenant-safe full-text search."""
+async def search_tickets(
+    q: str | None = None,
+    user_id: str | None = None,
+    company_id: str | None = None,
+    status: str | None = None,
+    priority: str | None = None,
+    category: str | None = None,
+    date_from: str | None = None,
+    date_to: str | None = None,
+    date_preset: str | None = None,
+    sort_by: str = "relevance",
+    limit: int = 50,
+    offset: int = 0,
+    export: str | None = None,
+):
+    """
+    Advanced ticket search with full-text matching, multi-field filters,
+    relevance ranking, and optional CSV export.
+
+    Filters:
+      q          – keyword search across subject, description, summary, category
+      user_id    – scope results to a single user (user-portal queries)
+      company_id – tenant isolation (required when user_id is absent)
+      status     – comma-separated list, e.g. "open,in progress"
+      priority   – comma-separated list, e.g. "high,critical"
+      category   – comma-separated list of categories
+      date_from  – ISO date string, inclusive lower bound on created_at
+      date_to    – ISO date string, inclusive upper bound on created_at
+      date_preset – "today" | "7d" | "30d"  (overrides date_from/date_to)
+      sort_by    – "relevance" (default) | "date_desc" | "date_asc" | "priority"
+      limit      – max results (default 50, max 200)
+      offset     – pagination offset
+      export     – "csv" to stream a CSV file
+    """
+    import datetime as _dt
+    import re as _re
+    import io
+    import csv as _csv
+
     if not supabase:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
-    if not q:
-        raise HTTPException(status_code=400, detail="Search query is required")
-    if not company_id:
-        raise HTTPException(status_code=400, detail="company_id is required for tenant-safe search")
+    if not user_id and not company_id:
+        raise HTTPException(status_code=400, detail="user_id or company_id is required")
+
+    limit = min(limit, 200)
+
+    # ── Build base query ──────────────────────────────────────────────────────
+    query = supabase.table("tickets").select(
+        "id, subject, description, summary, status, priority, category, "
+        "subcategory, assigned_team, created_at, updated_at, user_id, company_id"
+    )
+
+    if user_id:
+        query = query.eq("user_id", user_id)
+    elif company_id:
+        query = query.eq("company_id", company_id)
+
+    # ── Date preset (overrides date_from/date_to) ─────────────────────────────
+    now_utc = _dt.datetime.utcnow()
+    if date_preset == "today":
+        date_from = now_utc.strftime("%Y-%m-%d") + "T00:00:00Z"
+    elif date_preset == "7d":
+        date_from = (now_utc - _dt.timedelta(days=7)).isoformat() + "Z"
+    elif date_preset == "30d":
+        date_from = (now_utc - _dt.timedelta(days=30)).isoformat() + "Z"
+
+    if date_from:
+        query = query.gte("created_at", date_from)
+    if date_to:
+        query = query.lte("created_at", date_to)
+
+    # ── Apply structured filters ──────────────────────────────────────────────
+    if status:
+        statuses = [s.strip().lower() for s in status.split(",") if s.strip()]
+        if len(statuses) == 1:
+            query = query.ilike("status", statuses[0])
+        # multiple statuses handled in Python below after fetch
+
+    if priority:
+        priorities = [p.strip().lower() for p in priority.split(",") if p.strip()]
+        if len(priorities) == 1:
+            query = query.ilike("priority", priorities[0])
+
+    if category:
+        categories = [c.strip() for c in category.split(",") if c.strip()]
+        if len(categories) == 1:
+            query = query.ilike("category", categories[0])
+
+    # ── Fetch with a liberal upper-bound (filtering/scoring done in Python) ───
+    fetch_limit = min(limit * 4 + offset, 800)
+    query = query.order("created_at", desc=True).limit(fetch_limit)
 
     try:
-        result = supabase.rpc(
-            "search_tickets",
-            {
-                "query_text": q,
-                "company_id": company_id,
-                "limit_rows": limit,
-                "offset_rows": offset,
-            },
-        ).execute()
-        return result.data or []
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Search failed: {e}")
+        res = query.execute()
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Database query failed: {exc}")
+
+    tickets: list[dict] = res.data or []
+
+    # ── Python-side multi-value filter (for comma-separated lists) ────────────
+    if status:
+        statuses = [s.strip().lower() for s in status.split(",") if s.strip()]
+        if len(statuses) > 1:
+            tickets = [t for t in tickets if (t.get("status") or "").lower() in statuses]
+
+    if priority:
+        priorities = [p.strip().lower() for p in priority.split(",") if p.strip()]
+        if len(priorities) > 1:
+            tickets = [t for t in tickets if (t.get("priority") or "").lower() in priorities]
+
+    if category:
+        categories_lower = [c.strip().lower() for c in category.split(",") if c.strip()]
+        if len(categories_lower) > 1:
+            tickets = [t for t in tickets if (t.get("category") or "").lower() in categories_lower]
+
+    # ── Full-text relevance scoring ───────────────────────────────────────────
+    keyword = (q or "").strip().lower()
+    terms = _re.split(r"\s+", keyword) if keyword else []
+
+    def _relevance(ticket: dict) -> float:
+        if not terms:
+            return 0.0
+        subject = (ticket.get("subject") or ticket.get("summary") or "").lower()
+        description = (ticket.get("description") or "").lower()
+        summary = (ticket.get("summary") or "").lower()
+        category_val = (ticket.get("category") or "").lower()
+
+        score = 0.0
+        for term in terms:
+            # Exact title match → highest weight
+            if term in subject:
+                score += 3.0 if subject.startswith(term) else 2.0
+            # Exact summary match
+            if term in summary:
+                score += 1.5
+            # Description match
+            if term in description:
+                score += 1.0
+            # Category match
+            if term in category_val:
+                score += 0.8
+
+        # Recency boost: decay over 90 days
+        created_at_str = ticket.get("created_at") or ""
+        if created_at_str:
+            try:
+                created_dt = _dt.datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                age_days = (now_utc.replace(tzinfo=_dt.timezone.utc) - created_dt).days
+                recency_boost = max(0.0, 1.0 - age_days / 90)
+                score += recency_boost * 0.3
+            except (ValueError, TypeError):
+                pass
+
+        return round(score, 3)
+
+    if terms:
+        # Score and filter out zero-relevance results
+        scored = [(t, _relevance(t)) for t in tickets]
+        scored = [(t, s) for t, s in scored if s > 0]
+    else:
+        # No keyword: all tickets qualify, score=0
+        scored = [(t, 0.0) for t in tickets]
+
+    # ── Sort ──────────────────────────────────────────────────────────────────
+    PRIORITY_ORDER = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+
+    if sort_by == "relevance" and terms:
+        scored.sort(key=lambda x: -x[1])
+    elif sort_by == "priority":
+        scored.sort(key=lambda x: PRIORITY_ORDER.get((x[0].get("priority") or "").lower(), 99))
+    elif sort_by == "date_asc":
+        scored.sort(key=lambda x: x[0].get("created_at") or "")
+    else:  # date_desc (default when no keyword)
+        scored.sort(key=lambda x: x[0].get("created_at") or "", reverse=True)
+
+    total = len(scored)
+
+    # ── Pagination ────────────────────────────────────────────────────────────
+    page_results = scored[offset: offset + limit]
+
+    # ── Build response payload ────────────────────────────────────────────────
+    results = []
+    for ticket, score in page_results:
+        max_possible = len(terms) * 3.5 if terms else 1
+        relevance_pct = round(min(score / max_possible, 1.0) * 100) if terms and max_possible > 0 else None
+        results.append({**ticket, "relevance_score": relevance_pct})
+
+    # ── CSV Export ────────────────────────────────────────────────────────────
+    if export == "csv":
+        output = io.StringIO()
+        fieldnames = [
+            "id", "subject", "summary", "status", "priority",
+            "category", "subcategory", "assigned_team", "created_at", "updated_at",
+        ]
+        writer = _csv.DictWriter(output, fieldnames=fieldnames, extrasaction="ignore")
+        writer.writeheader()
+        for ticket, _ in scored:  # export all (no pagination)
+            writer.writerow({k: ticket.get(k, "") for k in fieldnames})
+        csv_bytes = output.getvalue().encode("utf-8")
+        return StreamingResponse(
+            iter([csv_bytes]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=tickets_export.csv"},
+        )
+
+    return {
+        "results": results,
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": (offset + limit) < total,
+        "keyword": q or "",
+    }
+
+
+# ── Search Suggestions ────────────────────────────────────────────────────────
+
+@app.get("/tickets/suggestions")
+async def ticket_search_suggestions(
+    q: str,
+    user_id: str | None = None,
+    company_id: str | None = None,
+    limit: int = 8,
+):
+    """
+    Return real-time autocomplete suggestions for the search bar.
+    Sources: ticket subjects, categories, and summaries matching the prefix.
+    Response time target: <100ms (single lightweight query, no AI).
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    if not q or len(q.strip()) < 2:
+        return {"suggestions": []}
+
+    if not user_id and not company_id:
+        raise HTTPException(status_code=400, detail="user_id or company_id is required")
+
+    try:
+        query = supabase.table("tickets").select(
+            "subject, summary, category"
+        )
+        if user_id:
+            query = query.eq("user_id", user_id)
+        elif company_id:
+            query = query.eq("company_id", company_id)
+
+        query = query.order("created_at", desc=True).limit(200)
+        res = query.execute()
+        tickets = res.data or []
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Suggestions query failed: {exc}")
+
+    prefix = q.strip().lower()
+    seen: set[str] = set()
+    suggestions: list[dict] = []
+
+    for ticket in tickets:
+        if len(suggestions) >= limit:
+            break
+        for field in ("subject", "summary", "category"):
+            val = (ticket.get(field) or "").strip()
+            if val and prefix in val.lower() and val not in seen:
+                seen.add(val)
+                suggestions.append({"text": val, "type": field})
+                break
+
+    return {"suggestions": suggestions[:limit]}
+
+
+# ── Saved Searches ────────────────────────────────────────────────────────────
+
+class SavedSearchRequest(BaseModel):
+    user_id: str
+    name: str
+    filters: dict
+
+
+@app.get("/tickets/saved-searches")
+async def get_saved_searches(user_id: str):
+    """Return all saved searches for a user (stored in user_preferences JSONB)."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        res = (
+            supabase.table("profiles")
+            .select("saved_searches")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        saved = (res.data or {}).get("saved_searches") or []
+        return {"saved_searches": saved}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch saved searches: {exc}")
+
+
+@app.post("/tickets/saved-searches")
+async def create_saved_search(body: SavedSearchRequest):
+    """Persist a new saved search to the user's profile."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        # Fetch existing saved searches
+        res = (
+            supabase.table("profiles")
+            .select("saved_searches")
+            .eq("id", body.user_id)
+            .single()
+            .execute()
+        )
+        existing: list = (res.data or {}).get("saved_searches") or []
+
+        new_entry = {
+            "id": str(uuid.uuid4()),
+            "name": body.name,
+            "filters": body.filters,
+            "created_at": datetime.datetime.utcnow().isoformat() + "Z",
+        }
+        existing.append(new_entry)
+
+        supabase.table("profiles").update({"saved_searches": existing}).eq("id", body.user_id).execute()
+        return {"status": "saved", "saved_search": new_entry}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to save search: {exc}")
+
+
+@app.delete("/tickets/saved-searches/{search_id}")
+async def delete_saved_search(search_id: str, user_id: str):
+    """Remove a saved search by ID from the user's profile."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        res = (
+            supabase.table("profiles")
+            .select("saved_searches")
+            .eq("id", user_id)
+            .single()
+            .execute()
+        )
+        existing: list = (res.data or {}).get("saved_searches") or []
+        updated = [s for s in existing if s.get("id") != search_id]
+        supabase.table("profiles").update({"saved_searches": updated}).eq("id", user_id).execute()
+        return {"status": "deleted"}
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"Failed to delete saved search: {exc}")
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
