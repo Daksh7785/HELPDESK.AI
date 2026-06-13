@@ -150,6 +150,8 @@ class TicketResponse(BaseModel):
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
+    rag_suggestions: list = []
+    rag_recommendations: list = []
 
 
 # --- Persistence Models ---
@@ -823,14 +825,19 @@ async def analyze_only(request_body: TicketRequest):
         dup_result = {"is_duplicate": False, "duplicate_ticket_id": None, "similarity": 0.0}
 
     # --- RAG Knowledge Base Check ---
+    rag_suggestions = []
+    rag_recommendations = []
     rag_match = None
     try:
-        rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+        rag_res = rag_service.search_enhanced(text, threshold=0.65, match_count=5, company_id=request_body.company)
+        rag_match = rag_res.get("best_match")
         if rag_match:
             classification["auto_resolve"] = True
             classification["assigned_team"] = "Auto-Resolve AI"
-            classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
+            classification["confidence"] = max(classification["confidence"], float(rag_match["confidence"]))
             print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
+        rag_suggestions = rag_res.get("suggestions") or []
+        rag_recommendations = rag_res.get("recommendations") or []
     except Exception as e:
         print(f"[RAG ERROR] {e}")
 
@@ -888,7 +895,9 @@ async def analyze_only(request_body: TicketRequest):
         highlights=entities, # Use entities as highlights for now
         timeline=timeline,
         env_metadata=env_metadata,
-        sla_breach_at=sla_breach_dt.isoformat() + "Z"
+        sla_breach_at=sla_breach_dt.isoformat() + "Z",
+        rag_suggestions=rag_suggestions,
+        rag_recommendations=rag_recommendations
     )
 
 @app.post("/ai/analyze_stream")
@@ -980,13 +989,18 @@ async def analyze_stream(request_body: TicketRequest):
         # 5. RAG / Solutions
         yield f"data: {json.dumps({'step': 'Finding possible solutions', 'status': 'in_progress'})}\n\n"
         await asyncio.sleep(0.2)
+        rag_suggestions = []
+        rag_recommendations = []
         rag_match = None
         try:
-            rag_match = rag_service.search_knowledge_base(text, threshold=0.85)
+            rag_res = rag_service.search_enhanced(text, threshold=0.65, match_count=5, company_id=request_body.company)
+            rag_match = rag_res.get("best_match")
             if rag_match:
                 classification["auto_resolve"] = True
                 classification["assigned_team"] = "Auto-Resolve AI"
-                classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
+                classification["confidence"] = max(classification["confidence"], float(rag_match["confidence"]))
+            rag_suggestions = rag_res.get("suggestions") or []
+            rag_recommendations = rag_res.get("recommendations") or []
         except Exception as e:
             pass
 
@@ -1035,7 +1049,9 @@ async def analyze_stream(request_body: TicketRequest):
             "highlights": entities,
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+            "sla_breach_at": sla_breach_dt.isoformat() + "Z",
+            "rag_suggestions": rag_suggestions,
+            "rag_recommendations": rag_recommendations
         }
 
         # 6. Final Result
