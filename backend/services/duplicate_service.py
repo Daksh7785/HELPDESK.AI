@@ -151,3 +151,103 @@ class DuplicateService:
             "duplicate_ticket_id": best_id if is_dup else None,
             "similarity": round(best_score, 4),
         }
+
+    def merge_tickets(self, supabase, primary_id: str, secondary_ids: list[str], admin_id: str) -> dict:
+        """
+        Merge secondary tickets into the primary ticket.
+        Transfers comments, attachments, and updates metadata.
+        Creates an immutable audit log.
+        """
+        from datetime import datetime, timezone
+        import json
+
+        # 1. Fetch Primary Ticket
+        primary_res = supabase.table("tickets").select("*").eq("id", primary_id).single().execute()
+        if not primary_res.data:
+            raise ValueError(f"Primary ticket {primary_id} not found.")
+        primary_ticket = primary_res.data
+        primary_metadata = primary_ticket.get("metadata") or {}
+        primary_attachments = primary_metadata.get("attachments", [])
+        if primary_ticket.get("image_url") and primary_ticket.get("image_url") not in primary_attachments:
+            primary_attachments.append(primary_ticket.get("image_url"))
+
+        merged_history = primary_metadata.get("merged_tickets", [])
+
+        # 2. Process Secondary Tickets
+        for sec_id in secondary_ids:
+            sec_res = supabase.table("tickets").select("*").eq("id", sec_id).single().execute()
+            if not sec_res.data:
+                continue
+            sec_ticket = sec_res.data
+            
+            # Transfer comments
+            supabase.table("ticket_messages").update({"ticket_id": primary_id}).eq("ticket_id", sec_id).execute()
+
+            # Transfer attachments
+            sec_metadata = sec_ticket.get("metadata") or {}
+            sec_attachments = sec_metadata.get("attachments", [])
+            if sec_ticket.get("image_url") and sec_ticket.get("image_url") not in sec_attachments:
+                sec_attachments.append(sec_ticket.get("image_url"))
+            
+            for att in sec_attachments:
+                if att not in primary_attachments:
+                    primary_attachments.append(att)
+
+            # Update Secondary Ticket Status
+            sec_metadata["merged_into"] = primary_id
+            supabase.table("tickets").update({
+                "status": "merged",
+                "is_duplicate": True,
+                "metadata": sec_metadata
+            }).eq("id", sec_id).execute()
+
+            # Add to history
+            merged_history.append({
+                "ticket_id": sec_id,
+                "merged_at": datetime.now(timezone.utc).isoformat(),
+                "merged_by": admin_id
+            })
+
+        # 3. Update Primary Ticket
+        primary_metadata["attachments"] = primary_attachments
+        primary_metadata["merged_tickets"] = merged_history
+        supabase.table("tickets").update({
+            "metadata": primary_metadata
+        }).eq("id", primary_id).execute()
+
+        # 4. Generate Audit Log
+        audit_file = os.path.join(os.path.dirname(__file__), "..", "data", "merge_audit_log.json")
+        audit_record = {
+            "action": "ticket_merge",
+            "primary_ticket_id": primary_id,
+            "secondary_ticket_ids": secondary_ids,
+            "admin_id": admin_id,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }
+        
+        audit_data = []
+        if os.path.exists(audit_file):
+            try:
+                with open(audit_file, "r") as f:
+                    audit_data = json.load(f)
+            except:
+                pass
+        
+        audit_data.append(audit_record)
+        with open(audit_file, "w") as f:
+            json.dump(audit_data, f, indent=2)
+
+        # 5. Insert System Message to Primary Ticket
+        supabase.table("ticket_messages").insert({
+            "ticket_id": primary_id,
+            "sender_id": "system",
+            "sender_name": "System Audit",
+            "sender_role": "system",
+            "message": f"System Alert: Merged {len(secondary_ids)} ticket(s) ({', '.join(secondary_ids)}) into this ticket."
+        }).execute()
+
+        return {
+            "success": True,
+            "primary_id": primary_id,
+            "merged_count": len(secondary_ids)
+        }

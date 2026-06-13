@@ -4,7 +4,7 @@ import {
     CheckCircle2, Clock, AlertCircle, User,
     Activity, ShieldCheck, Briefcase, Globe, BarChart3,
     ImageIcon, CornerUpLeft, CheckSquare, XCircle,
-    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser
+    Cpu, Eye, MessageSquare, MoveRight, Loader2, Star, Eraser, Layers
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import useAuthStore from "../../store/authStore";
@@ -197,6 +197,8 @@ const AdminTicketDetail = () => {
     const displayPriority = ticket.priority || 'Medium';
     const displaySummary = ticket.summary || ticket.subject || 'No Summary';
     const displayText = ticket.description || ticket.text || displaySummary;
+    const attachments = ticket.metadata?.attachments || [];
+    const mergedTickets = ticket.metadata?.merged_tickets || [];
 
     return (
         <div style={{ background: '#f8faf9', minHeight: '100vh', paddingBottom: '80px' }} className="-m-6 p-6 md:-m-10 md:p-10 space-y-6 animate-in fade-in duration-700">
@@ -319,6 +321,23 @@ const AdminTicketDetail = () => {
                                     </div>
                                 </div>
                             )}
+
+                            {attachments.length > 0 && (
+                                <div style={{ marginTop: '24px' }}>
+                                    <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.12em', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                                        <ImageIcon size={14} color="#16a34a" /> CONSOLIDATED ATTACHMENTS
+                                    </p>
+                                    <div style={{ display: 'grid', gap: '12px', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))' }}>
+                                        {attachments.map((url, idx) => {
+                                            if (url === imageUrl) return null;
+                                            return (
+                                            <div key={idx} style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #f0fdf4', background: '#f8faf9', cursor: 'zoom-in', height: '140px' }} onClick={() => window.open(url, '_blank')}>
+                                                <img src={url} alt={`Attachment ${idx+1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                            </div>
+                                        )})}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
 
@@ -421,6 +440,25 @@ const AdminTicketDetail = () => {
                             </div>
                         </div>
                     </div>
+
+                    {/* Merged Tickets */}
+                    {mergedTickets.length > 0 && (
+                        <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                            <div style={{ background: '#f8faf9', padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #f0fdf4' }}>
+                                <h3 style={{ fontSize: '11px', letterSpacing: '0.12em', color: '#9ca3af', fontWeight: 700, textTransform: 'uppercase', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Layers size={14} color="#6366f1" /> MERGED TICKETS ({mergedTickets.length})
+                                </h3>
+                            </div>
+                            <div style={{ padding: '16px 24px' }} className="space-y-3">
+                                {mergedTickets.map(mt => (
+                                    <div key={mt.ticket_id} className="flex items-center justify-between border-b border-slate-50 pb-2 last:border-0">
+                                        <span className="text-xs font-black text-indigo-600">#{formatTicketId(mt.ticket_id)}</span>
+                                        <span className="text-[10px] text-slate-400 font-bold">merged on {formatTimelineDate(mt.merged_at)}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {/* CSAT */}
                     {ticket.csat_rating && (

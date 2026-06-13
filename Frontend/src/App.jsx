@@ -50,6 +50,7 @@ import Help from "./user/pages/Help";
 import AdminDashboard from "./admin/pages/AdminDashboard";
 import AdminTickets from "./admin/pages/AdminTickets";
 import AdminTicketDetail from "./admin/pages/AdminTicketDetail";
+import AdminDuplicates from "./admin/pages/AdminDuplicates";
 import AdminUsers from "./admin/pages/AdminUsers";
 import AdminAnalytics from "./admin/pages/AdminAnalytics";
 import AdminProfile from "./admin/pages/AdminProfile";
@@ -186,6 +187,7 @@ function AppLayout() {
             <Route path="/admin/dashboard" element={<AdminDashboard />} />
             <Route path="/admin/tickets" element={<AdminTickets />} />
             <Route path="/admin/ticket/:ticket_id" element={<AdminTicketDetail />} />
+            <Route path="/admin/duplicates" element={<AdminDuplicates />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/analytics" element={<AdminAnalytics />} />
             <Route path="/admin/profile" element={<AdminProfile />} />
