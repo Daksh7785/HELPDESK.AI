@@ -16,6 +16,7 @@ import { formatTicketId } from "../../utils/format";
 import SLABadge from "../components/SLABadge";
 import { formatFullTimestamp } from "../../utils/dateUtils";
 import TicketTimeline from "../../user/components/TicketTimeline";
+import { API_CONFIG } from '../../config';
 
 const AdminTicketDetail = () => {
     const { ticket_id } = useParams();
@@ -34,6 +35,8 @@ const AdminTicketDetail = () => {
     const [imageUrl, setImageUrl] = useState(null);
     const [isUpdating, setIsUpdating] = useState(null);
     const [isLive, setIsLive] = useState(false);
+    const [rcaData, setRcaData] = useState(null);
+    const [isLoadingRca, setIsLoadingRca] = useState(false);
 
     const [correctionForm, setCorrectionForm] = useState({
         category: '',
@@ -91,8 +94,24 @@ const AdminTicketDetail = () => {
             }
         };
 
+        const fetchRca = async () => {
+            setIsLoadingRca(true);
+            try {
+                const res = await fetch(`${API_CONFIG.BACKEND_URL}/ai/rca/${ticket_id}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    setRcaData(data);
+                }
+            } catch (err) {
+                console.error("RCA fetch error:", err);
+            } finally {
+                setIsLoadingRca(false);
+            }
+        };
+
         fetchTicketDetail();
         fetchAgents();
+        fetchRca();
 
         const channel = supabase
             .channel(`admin_sync_${ticket_id}`)
@@ -321,6 +340,123 @@ const AdminTicketDetail = () => {
                             )}
                         </div>
                     </div>
+
+                    {/* AI Root Cause Analysis Section */}
+                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+                        <div style={{ padding: '20px 28px', borderBottom: '1px solid #f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'linear-gradient(135deg, #0f1f12, #1f3d24)', color: '#ffffff' }}>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', gap: '8px', textTransform: 'uppercase' }}>
+                                <Cpu size={16} color="#22c55e" /> AI-Powered Root Cause Analysis (RCA)
+                            </h3>
+                            <span style={{ fontSize: '9px', fontWeight: 700, background: '#22c55e', color: '#0f1f12', padding: '2px 8px', borderRadius: '100px' }}>ACTIVE DIAGNOSIS</span>
+                        </div>
+                        
+                        <div style={{ padding: '28px' }} className="space-y-6">
+                            {isLoadingRca ? (
+                                <div className="flex flex-col items-center justify-center py-10">
+                                    <Loader2 className="w-8 h-8 text-emerald-600 animate-spin mb-2" />
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Generating Root Cause Hypotheses...</p>
+                                </div>
+                            ) : rcaData ? (
+                                <div className="space-y-8">
+                                    {/* 1. Ranked Hypotheses */}
+                                    <div className="space-y-4">
+                                        <h4 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: '#9ca3af', textTransform: 'uppercase', margin: 0 }}>Ranked Root Cause Hypotheses</h4>
+                                        <div className="space-y-4">
+                                            {rcaData.hypotheses?.map((h, idx) => (
+                                                <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px 20px', background: '#fcfdfd' }} className="transition-all hover:shadow-md hover:border-emerald-500/20">
+                                                    <div className="flex justify-between items-start gap-4 mb-2 flex-wrap text-slate-900">
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2 flex-wrap">
+                                                                <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase' }}>
+                                                                    {idx + 1}. {h.hypothesis}
+                                                                </span>
+                                                                {h.evidence?.map((ev, eIdx) => (
+                                                                    <span key={eIdx} style={{ fontSize: '8px', fontWeight: 700, color: '#0f5132', background: '#d1e7dd', padding: '1px 6px', borderRadius: '100px', textTransform: 'uppercase' }}>
+                                                                        {ev}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                            <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>{h.explanation}</p>
+                                                        </div>
+                                                        <div style={{ textAlign: 'right' }}>
+                                                            <span style={{ fontSize: '12px', fontWeight: 800, color: h.confidence > 0.8 ? '#15803d' : h.confidence > 0.6 ? '#b45309' : '#b91c1c' }}>
+                                                                {(h.confidence * 100).toFixed(0)}% Match
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ width: '100%', height: '4px', background: '#f3f4f6', borderRadius: '100px', overflow: 'hidden' }}>
+                                                        <div style={{
+                                                            width: `${h.confidence * 100}%`,
+                                                            height: '100%',
+                                                            background: h.confidence > 0.8 ? 'linear-gradient(90deg, #10b981, #059669)' : h.confidence > 0.6 ? 'linear-gradient(90deg, #f59e0b, #d97706)' : 'linear-gradient(90deg, #ef4444, #dc2626)',
+                                                            borderRadius: '100px'
+                                                        }}></div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* 2. Timeline & Logs */}
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                        {/* Timeline */}
+                                        <div className="space-y-4">
+                                            <h4 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: '#9ca3af', textTransform: 'uppercase', margin: 0 }}>Incident Propagation Chain</h4>
+                                            <div className="relative border-l border-emerald-100 pl-4 space-y-4 ml-2 text-slate-800">
+                                                {rcaData.timeline?.map((item, idx) => (
+                                                    <div key={idx} className="relative">
+                                                        <div style={{
+                                                            position: 'absolute',
+                                                            left: '-21px',
+                                                            top: '4px',
+                                                            width: '10px',
+                                                            height: '10px',
+                                                            borderRadius: '50%',
+                                                            background: idx === 0 ? '#ef4444' : '#22c55e',
+                                                            border: '2px solid #ffffff',
+                                                            boxShadow: '0 0 4px rgba(0,0,0,0.1)'
+                                                        }}></div>
+                                                        <div style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 700 }}>{item.time}</div>
+                                                        <p style={{ fontSize: '12px', fontWeight: 600, color: '#374151', margin: 0 }}>{item.event}</p>
+                                                        <span style={{ fontSize: '9px', color: '#6b7280', fontFamily: 'monospace' }}>Node: {item.node}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Logs */}
+                                        <div className="space-y-4">
+                                            <h4 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: '#9ca3af', textTransform: 'uppercase', margin: 0 }}>Correlated Log Entries</h4>
+                                            <div style={{ background: '#0f172a', borderRadius: '12px', padding: '16px', color: '#e2e8f0', fontFamily: 'monospace', fontSize: '10px', maxHeight: '200px', overflowY: 'auto', border: '1px solid #1e293b' }}>
+                                                {rcaData.correlated_logs && rcaData.correlated_logs.length > 0 ? (
+                                                    <div className="space-y-2">
+                                                        {rcaData.correlated_logs.map((log, idx) => (
+                                                            <div key={idx} className="border-b border-slate-800 pb-2 last:border-0 last:pb-0">
+                                                                <div className="flex justify-between text-slate-500 mb-1">
+                                                                    <span>{log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : ''}</span>
+                                                                    <span style={{ color: log.level === 'CRITICAL' || log.level === 'ERROR' ? '#f87171' : '#fbbf24' }}>[{log.level}]</span>
+                                                                </div>
+                                                                <div className="text-slate-300 font-bold">{log.source}:</div>
+                                                                <div className="text-slate-400">{log.message}</div>
+                                                                {log.error_code && <div className="text-emerald-400/80">Code: {log.error_code}</div>}
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-slate-500 italic text-center py-10">No correlated log signatures found.</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center py-6">
+                                    <p style={{ fontSize: '12px', color: '#9ca3af', margin: 0 }}>Root cause analysis diagnostics offline.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
 
                     {/* Chat Hub */}
                     <div style={{ height: '500px', background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', overflow: 'hidden' }}>

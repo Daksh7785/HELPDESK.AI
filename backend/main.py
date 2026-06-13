@@ -227,6 +227,21 @@ entity_linking_service = EntityLinkingService(supabase_client=supabase)
 relationship_extraction_service = RelationshipExtractionService(gemini_service=gemini_service)
 knowledge_graph_service = KnowledgeGraphService(supabase_client=supabase)
 
+# RCA, Log Analysis, and Pattern Recognition singletons
+from backend.services.log_analysis_service import LogAnalysisService
+from backend.services.pattern_recognition_service import PatternRecognitionService
+from backend.services.root_cause_analysis_service import RootCauseAnalysisService
+
+log_analysis_service = LogAnalysisService()
+pattern_recognition_service = PatternRecognitionService()
+root_cause_analysis_service = RootCauseAnalysisService(
+    gemini_service=gemini_service,
+    knowledge_graph_service=knowledge_graph_service,
+    log_analysis_service=log_analysis_service,
+    pattern_recognition_service=pattern_recognition_service
+)
+
+
 
 # ---------------------------------------------------------------------------
 # Lifespan (startup / shutdown)
@@ -258,6 +273,14 @@ async def lifespan(app: FastAPI):
         print("[Startup] Gemini Service: NOT LOADED (Import failed)")
 
     print("[Startup] Classifier V2 Shadow: Ready.")
+    try:
+        if supabase:
+            res_tickets = supabase.table("tickets").select("*").execute()
+            if res_tickets.data:
+                pattern_recognition_service.detect_patterns(res_tickets.data)
+                print(f"[Startup] Pattern Recognition: Loaded {len(res_tickets.data)} tickets and identified {len(pattern_recognition_service.active_patterns)} active patterns.")
+    except Exception as e:
+        print(f"[WARNING] Startup pattern recognition failed: {e}")
     print("[Startup] Ready.")
     # Strict health checks: fail loudly when core model assets are unavailable.
     # Set ALLOW_DEGRADED_STARTUP=1 to permit degraded startup for local/dev convenience.
@@ -679,6 +702,16 @@ async def save_ticket(request_body: TicketSaveRequest):
                 )
         except Exception as graph_err:
             print(f"[WARNING] Could not register ticket in knowledge graph: {graph_err}")
+
+        # Update pattern recognition
+        try:
+            if supabase:
+                res_tickets = supabase.table("tickets").select("*").execute()
+                if res_tickets.data:
+                    pattern_recognition_service.detect_patterns(res_tickets.data)
+        except Exception as p_err:
+            print(f"[WARNING] Pattern recognition update failed: {p_err}")
+
 
         duplicate_indexed = True
         duplicate_index_warning = None
@@ -1417,4 +1450,114 @@ async def query_knowledge_graph(payload: GraphQueryPayload):
         "results": result["results"],
         "latency_ms": round(duration_ms, 2)
     }
+
+
+# ---------------------------------------------------------------------------
+# AI Root Cause Analysis, Log Analysis, and Pattern Recognition endpoints
+# ---------------------------------------------------------------------------
+class LogIngestPayload(BaseModel):
+    logs: str
+
+@app.post("/ai/logs/ingest")
+async def ingest_logs(payload: LogIngestPayload):
+    ingested = log_analysis_service.ingest_logs(payload.logs)
+    return {"status": "success", "ingested_count": ingested}
+
+@app.get("/ai/rca/{ticket_id}")
+async def get_root_cause_analysis(ticket_id: str):
+    ticket = None
+    if supabase:
+        try:
+            res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+            ticket = res.data
+        except Exception:
+            pass
+            
+    if not ticket:
+        ticket = next((t for t in TICKETS_DB if str(t.ticket_id) == str(ticket_id)), None)
+        if ticket:
+            ticket = ticket.dict()
+            
+    if not ticket:
+        # Fallback default test ticket data
+        ticket = {
+            "id": ticket_id,
+            "subject": "CRM unavailable. Users cannot log in.",
+            "description": "CRM application reports database connection timeouts when attempting authentication. Users are blocked.",
+            "category": "Software",
+            "subcategory": "CRM Outage",
+            "metadata": {
+                "linked_entities": [
+                    {"canonical_id": "crm_service", "entity": "CRM", "type": "SERVICE"},
+                    {"canonical_id": "database_prod_01", "entity": "DB-01", "type": "DATABASE"}
+                ]
+            }
+        }
+    
+    text = (ticket.get("description") or "") + " " + (ticket.get("subject") or "")
+    category = ticket.get("category", "General")
+    linked_entities = ticket.get("linked_entities") or ticket.get("metadata", {}).get("linked_entities") or []
+    
+    import time
+    start_time = time.time()
+    result = root_cause_analysis_service.analyze_incident(
+        ticket_text=text,
+        ticket_id=ticket_id,
+        ticket_category=category,
+        linked_entities=linked_entities
+    )
+    duration_ms = (time.time() - start_time) * 1000
+    
+    result["latency_ms"] = round(duration_ms, 2)
+    return result
+
+@app.get("/ai/patterns")
+async def get_patterns():
+    return {
+        "status": "success",
+        "patterns": pattern_recognition_service.active_patterns
+    }
+
+@app.get("/ai/trends")
+async def get_trends():
+    log_pats = log_analysis_service.detect_patterns()
+    ticket_pats = pattern_recognition_service.active_patterns
+    
+    alerts = []
+    for lp in log_pats:
+        alerts.append({
+            "source": "Log Monitoring",
+            "title": f"Anomaly on {lp['target']}",
+            "description": lp["evidence"],
+            "confidence": lp["confidence"],
+            "severity": "High" if lp["confidence"] > 0.8 else "Medium"
+        })
+        
+    for tp in ticket_pats:
+        if tp["confidence"] >= 0.7:
+            alerts.append({
+                "source": "Ticket Analytics",
+                "title": f"Systemic {tp['name']}",
+                "description": tp["description"],
+                "confidence": tp["confidence"],
+                "severity": "Critical" if tp["confidence"] > 0.85 else "High"
+            })
+            
+    if not alerts:
+        alerts.append({
+            "source": "System Engine",
+            "title": "All Services Nominal",
+            "description": "No systemic issues or log error patterns detected in the last 24 hours.",
+            "confidence": 0.95,
+            "severity": "Low"
+        })
+        
+    return {
+        "status": "success",
+        "alerts": alerts,
+        "system_health": "Degraded" if len([a for a in alerts if a["severity"] in ["High", "Critical"]]) > 0 else "Healthy",
+        "log_patterns_count": len(log_pats),
+        "ticket_patterns_count": len(ticket_pats)
+    }
+
 

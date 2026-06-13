@@ -6,13 +6,14 @@ import {
 import {
     BarChart3, PieChart as PieChartIcon, LineChart as LineChartIcon,
     TrendingUp, Users, ShieldCheck, Zap, AlertCircle, Clock, Activity,
-    Layers, Inbox, User, Loader2, Bot, Star, Target
+    Layers, Inbox, User, Loader2, Bot, Star, Target, ShieldAlert, Cpu
 } from 'lucide-react';
 import { supabase } from "../../lib/supabaseClient";
 import StatCard from '../components/StatCard';
 import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from "../../store/authStore";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import { API_CONFIG } from '../../config';
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#ec4899'];
 
@@ -20,6 +21,9 @@ const AdminAnalytics = () => {
     const { profile } = useAuthStore();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [patterns, setPatterns] = useState([]);
+    const [trends, setTrends] = useState(null);
+    const [loadingTrends, setLoadingTrends] = useState(false);
 
     const fetchAnalytics = async () => {
         setLoading(true);
@@ -57,8 +61,29 @@ const AdminAnalytics = () => {
     };
 
     useEffect(() => {
+        const fetchRcaAnalytics = async () => {
+            setLoadingTrends(true);
+            try {
+                const patRes = await fetch(`${API_CONFIG.BACKEND_URL}/ai/patterns`);
+                if (patRes.ok) {
+                    const patData = await patRes.json();
+                    setPatterns(patData.patterns || []);
+                }
+                const trendRes = await fetch(`${API_CONFIG.BACKEND_URL}/ai/trends`);
+                if (trendRes.ok) {
+                    const trendData = await trendRes.json();
+                    setTrends(trendData);
+                }
+            } catch (err) {
+                console.error("Fetch RCA Analytics error:", err);
+            } finally {
+                setLoadingTrends(false);
+            }
+        };
+
         if (profile) {
             fetchAnalytics();
+            fetchRcaAnalytics();
         }
      
     }, [profile]);
@@ -344,6 +369,113 @@ const AdminAnalytics = () => {
                             )}
                         </div>
                     </Card>
+
+                    {/* Proactive Trend Alerts Widget */}
+                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '28px' }} className="space-y-6">
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                            <div>
+                                <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                                    <ShieldAlert size={18} color="#22c55e" /> Proactive Trend Alerts
+                                </h3>
+                                <p style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', margin: '4px 0 0 0' }}>Anomalies & Emergent Warnings</p>
+                            </div>
+                            <span style={{
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                background: trends?.system_health === 'Healthy' ? '#dcfce7' : '#fef2f2',
+                                color: trends?.system_health === 'Healthy' ? '#15803d' : '#b91c1c',
+                                padding: '4px 12px',
+                                borderRadius: '100px',
+                                textTransform: 'uppercase'
+                            }}>
+                                System: {trends?.system_health || 'Healthy'}
+                            </span>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            {trends?.alerts && trends.alerts.length > 0 ? (
+                                trends.alerts.map((alert, idx) => (
+                                    <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '16px', padding: '16px 20px', background: '#fcfdfd' }}>
+                                        <div className="flex justify-between items-start gap-4 flex-wrap text-slate-800">
+                                            <div>
+                                                <div className="flex items-center gap-2 flex-wrap">
+                                                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#374151', textTransform: 'uppercase' }}>
+                                                        {alert.title}
+                                                    </span>
+                                                    <span style={{ fontSize: '8px', fontWeight: 700, color: alert.severity === 'Critical' ? '#742a2a' : alert.severity === 'High' ? '#7c2d12' : '#1e3a8a', background: alert.severity === 'Critical' ? '#fed7d7' : alert.severity === 'High' ? '#ffedd5' : '#dbeafe', padding: '1px 6px', borderRadius: '100px', textTransform: 'uppercase' }}>
+                                                        {alert.severity}
+                                                    </span>
+                                                </div>
+                                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 0 0' }}>{alert.description}</p>
+                                            </div>
+                                            <span style={{ fontSize: '10px', fontWeight: 700, color: '#6b7280' }}>
+                                                Source: {alert.source}
+                                            </span>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-10 text-slate-400 italic text-sm">No systemic anomalies reported.</div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Systemic Operational Patterns Widget */}
+                    <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #f0fdf4', boxShadow: '0 2px 16px rgba(0,0,0,0.05)', padding: '28px' }} className="space-y-6">
+                        <div>
+                            <h3 style={{ fontFamily: 'Syne, sans-serif', fontSize: '16px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                                <Cpu size={18} color="#22c55e" /> Systemic Operational Patterns
+                            </h3>
+                            <p style={{ fontSize: '10px', color: '#9ca3af', fontWeight: 600, textTransform: 'uppercase', margin: '4px 0 0 0' }}>Incident clustering & pattern analysis</p>
+                        </div>
+                        
+                        <div className="space-y-4">
+                            {patterns && patterns.length > 0 ? (
+                                patterns.map((p, idx) => (
+                                    <div key={idx} style={{ border: '1px solid #e5e7eb', borderRadius: '16px', padding: '20px', background: '#fcfdfd' }}>
+                                        <div className="flex justify-between items-start gap-4 flex-wrap mb-4 text-slate-800">
+                                            <div>
+                                                <h4 style={{ fontSize: '13px', fontWeight: 700, color: '#111827', margin: 0 }}>{p.name}</h4>
+                                                <p style={{ fontSize: '12px', color: '#6b7280', margin: '4px 0 0 0' }}>{p.description}</p>
+                                            </div>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ fontSize: '12px', fontWeight: 800, color: '#16a34a' }}>{(p.confidence * 100).toFixed(0)}% Confidence</div>
+                                                <div style={{ fontSize: '10px', color: '#6b7280', fontWeight: 600, marginTop: '2px' }}>{p.ticket_count} Linked Incidents</div>
+                                            </div>
+                                        </div>
+                                        
+                                        {p.affected_systems && p.affected_systems.length > 0 && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
+                                                <span style={{ fontSize: '9px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase' }}>Affected Systems:</span>
+                                                {p.affected_systems.map((sys, sIdx) => (
+                                                    <span key={sIdx} style={{ fontSize: '9px', fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: '100px', fontFamily: 'monospace' }}>
+                                                        {sys}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div style={{ borderTop: '1.5px dashed #f1f5f9', paddingTop: '12px' }}>
+                                            <span style={{ fontSize: '9px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Incidents Evidence Checklist</span>
+                                            <ul className="space-y-1.5 list-none p-0 m-0">
+                                                {p.evidence?.map((ev, eIdx) => (
+                                                    <li key={eIdx} className="flex items-center gap-2 text-slate-800 text-xs">
+                                                        <span style={{ width: '4px', height: '4px', borderRadius: '50%', background: '#f59e0b' }}></span>
+                                                        <span>{ev}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="text-center py-12 flex flex-col items-center justify-center gap-3">
+                                    <ShieldCheck className="w-12 h-12 text-emerald-200" />
+                                    <p className="text-slate-300 font-bold uppercase text-[10px] italic tracking-widest text-center">No recurring systemic issues identified.</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 </div>
 
                 {/* Live Activity (4 cols) */}
