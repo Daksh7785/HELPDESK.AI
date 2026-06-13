@@ -17,7 +17,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **User Lobby** | Central entry point for employees. | Quick-start actions, high-level ticket status. |
 | **Create Ticket** | The core submission engine. | AI Processing simulator, OCR image analysis, semantic duplicate detection, parent-ticket warnings. |
 | **My Tickets** | Personal ticket ledger. | Live status tracking, filterable history. |
-| **Ticket Detail** | Deep-dive into a specific issue. | Timeline tracking, resolution summaries. |
+| **Ticket Detail** | Deep-dive into a specific issue. | Timeline tracking, resolution summaries, real-time SLA status indicator. |
 | **AI Processing** | Real-time analysis view. | Visual feedback of DistilBERT and NER extraction in progress, semantic duplicate scoring. |
 | **Auto-Resolve** | AI troubleshooting hub. | Interactive chat for self-resolution. |
 | **Notifications** | Activity center. | Real-time updates on ticket movement. |

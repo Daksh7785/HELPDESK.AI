@@ -72,6 +72,7 @@ from backend.services.sla_service import (
     calculate_sla_breach_at,
     calculate_sla_response_at,
     classify_sla_status,
+    get_sla_status,
     load as load_sla_service,
     run_sla_escalation_loop,
 )
@@ -851,6 +852,43 @@ async def get_ticket_by_id(ticket_id: str):
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
+
+
+@app.get("/api/tickets/{ticket_id}/sla-status")
+async def get_ticket_sla_status(ticket_id: str):
+    """Return real-time SLA status for a single ticket.
+
+    Fetches only the lightweight SLA columns (priority, sla_breach_at) and
+    computes remaining time and severity on the fly so the frontend poller
+    always receives fresh data without a full ticket reload.
+
+    Returns:
+        ticket_id       : str
+        status          : "active" | "warning" | "critical" | "breached"
+        remaining_seconds : int  (negative when breached)
+        percentage_used : int  (0-100, capped at 100)
+        severity        : "healthy" | "warning" | "critical" | "breached"
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    res = (
+        supabase.table("tickets")
+        .select("id, priority, sla_breach_at, status")
+        .eq("id", ticket_id)
+        .single()
+        .execute()
+    )
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    ticket_row = res.data
+    sla_data = get_sla_status(ticket_row)
+
+    return {
+        "ticket_id": ticket_id,
+        **sla_data,
+    }
 
 
 @app.post("/tickets", response_model=TicketRecord)

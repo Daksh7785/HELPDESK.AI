@@ -9,6 +9,7 @@ import { formatFullTimestamp } from '../../utils/dateUtils';
 import { supabase } from "../../lib/supabaseClient";
 import { Card } from "../../components/ui/card";
 import TicketStatusBadge from "../components/TicketStatusBadge";
+import SlaStatusBadge from "../components/SlaStatusBadge";
 import TicketTimeline from "../components/TicketTimeline";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
@@ -168,6 +169,7 @@ const TicketDetail = () => {
                                 #{formatTicketId(ticket.ticket_id)}
                             </span>
                             <TicketStatusBadge status={ticket.status} />
+                            <SlaStatusBadge ticketId={ticket.ticket_id} ticketStatus={ticket.status} />
                             <span className="hidden sm:flex items-center gap-1.5 text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-lg border border-gray-100">
                                 <History size={12} className="text-gray-300" /> Unified Timeline Active
                             </span>
