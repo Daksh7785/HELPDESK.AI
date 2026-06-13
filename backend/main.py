@@ -111,15 +111,21 @@ class TicketSaveRequest(BaseModel):
     company: str | None = None
     company_id: str | None = None
     sla_breach_at: str
-    metadata: dict
+    metadata: dict = {}
     entities: list = []
     solution_steps: list = []
     ocr_text: str = ""
+
     needs_review: bool = False
     routing_confidence: float
     linked_entities: list = []
     relationships: list = []
     cause_effect_chain: list = []
+
+class TicketMergeRequest(BaseModel):
+    primary_ticket: str
+    secondary_tickets: list[str]
+    admin_id: str
 
 
 class DuplicateInfo(BaseModel):
@@ -563,6 +569,28 @@ async def get_tickets(company_id: str | None = None):
         
     res = query.execute()
     return res.data
+
+@app.post("/tickets/merge")
+async def merge_tickets_endpoint(request_body: TicketMergeRequest):
+    """
+    Consolidates secondary tickets into a primary ticket.
+    Transfers comments, attachments, and audit trails.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database not configured.")
+    
+    try:
+        result = duplicate_service.merge_tickets(
+            supabase=supabase,
+            primary_id=request_body.primary_ticket,
+            secondary_ids=request_body.secondary_tickets,
+            admin_id=request_body.admin_id
+        )
+        return result
+    except Exception as e:
+        print(f"[Merge Tickets Error] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):

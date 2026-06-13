@@ -10,7 +10,8 @@ import {
     LogOut,
     Activity,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Layers
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 
@@ -18,6 +19,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
     const navItems = [
         { label: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
         { label: 'Tickets', path: '/admin/tickets', icon: Inbox },
+        { label: 'Duplicates', path: '/admin/duplicates', icon: Layers },
         { label: 'Users', path: '/admin/users', icon: Users },
         { label: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
         { label: 'Profile', path: '/admin/profile', icon: UserCircle },
