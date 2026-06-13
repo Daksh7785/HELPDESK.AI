@@ -13,6 +13,7 @@ import StatCard from '../components/StatCard';
 import { Card, CardContent } from "../../components/ui/card";
 import useAuthStore from "../../store/authStore";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import { API_CONFIG } from "../../config";
 
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#a855f7', '#ec4899'];
 
@@ -20,6 +21,7 @@ const AdminAnalytics = () => {
     const { profile } = useAuthStore();
     const [tickets, setTickets] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [tagAnalytics, setTagAnalytics] = useState(null);
 
     const fetchAnalytics = async () => {
         setLoading(true);
@@ -56,9 +58,28 @@ const AdminAnalytics = () => {
         }
     };
 
+    const fetchTagAnalytics = async () => {
+        try {
+            const token = (await supabase.auth.getSession()).data.session?.access_token;
+            if (!token) return;
+            const res = await fetch(`${API_CONFIG.BACKEND_URL}/api/admin/tag-analytics`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setTagAnalytics(data);
+            }
+        } catch (err) {
+            console.error("Failed to fetch tag analytics:", err);
+        }
+    };
+
     useEffect(() => {
         if (profile) {
             fetchAnalytics();
+            fetchTagAnalytics();
         }
      
     }, [profile]);
@@ -344,6 +365,76 @@ const AdminAnalytics = () => {
                             )}
                         </div>
                     </Card>
+
+                    {/* Tag Analytics Dashboard */}
+                    {tagAnalytics && (
+                        <Card className="p-8 border-none shadow-xl shadow-slate-200/50 rounded-[2rem] bg-white">
+                            <div className="mb-8 flex justify-between items-end">
+                                <div>
+                                    <h3 className="text-lg font-black text-slate-900 tracking-tight flex items-center gap-2 uppercase italic">
+                                        <Target size={18} className="text-purple-500" /> Tagging Analytics
+                                    </h3>
+                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">System-wide tag usage & trends</p>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-2xl font-black text-slate-800">{tagAnalytics.total_tags}</p>
+                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest">Total Tags Assigned</p>
+                                </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                {/* Top Tags */}
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Most Used Tags</h4>
+                                    <div className="space-y-3">
+                                        {tagAnalytics.most_used.length > 0 ? tagAnalytics.most_used.slice(0, 5).map((t, idx) => (
+                                            <div key={t.tag} className="flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-black text-slate-300 w-4">{idx + 1}.</span>
+                                                    <span className="text-sm font-semibold bg-purple-50 text-purple-700 px-2 py-0.5 rounded border border-purple-100">#{t.tag}</span>
+                                                </div>
+                                                <span className="text-xs font-bold text-slate-600">{t.count}</span>
+                                            </div>
+                                        )) : <p className="text-xs text-slate-400 italic">No tags data yet</p>}
+                                    </div>
+                                </div>
+                                
+                                {/* Fastest Growing */}
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Trending (Last 7 Days)</h4>
+                                    <div className="space-y-3">
+                                        {tagAnalytics.fastest_growing.length > 0 ? tagAnalytics.fastest_growing.slice(0, 5).map((t, idx) => (
+                                            <div key={t.tag} className="flex justify-between items-center">
+                                                <div className="flex items-center gap-2">
+                                                    <TrendingUp size={14} className="text-emerald-500" />
+                                                    <span className="text-sm font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100">#{t.tag}</span>
+                                                </div>
+                                                <span className="text-xs font-bold text-emerald-600">+{t.new_count}</span>
+                                            </div>
+                                        )) : <p className="text-xs text-slate-400 italic">No recent trending tags</p>}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            {/* Bar Chart for top tags */}
+                            <div className="mt-8 h-[200px]">
+                                <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-4 border-b border-slate-100 pb-2">Tag Volume Distribution</h4>
+                                {tagAnalytics.most_used.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <BarChart data={tagAnalytics.most_used} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                            <XAxis dataKey="tag" axisLine={false} tickLine={false} tick={{ fill: '#64748b', fontSize: 10, fontWeight: 700 }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94a3b8', fontSize: 10 }} allowDecimals={false} />
+                                            <Tooltip cursor={{ fill: '#f8fafc' }} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }} />
+                                            <Bar dataKey="count" name="Count" fill="#a855f7" radius={[4, 4, 0, 0]} barSize={32} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-300 font-black uppercase text-[10px] italic tracking-widest">Insufficient data</div>
+                                )}
+                            </div>
+                        </Card>
+                    )}
                 </div>
 
                 {/* Live Activity (4 cols) */}

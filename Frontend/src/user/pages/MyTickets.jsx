@@ -29,6 +29,7 @@ function MyTickets() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [priorityFilter, setPriorityFilter] = useState('All');
+    const [selectedTags, setSelectedTags] = useState([]);
 
     // Fetch tickets from Supabase
     const fetchTickets = useCallback(async () => {
@@ -41,7 +42,10 @@ function MyTickets() {
         setError(null);
         const { data, error: sbError } = await supabase
             .from('tickets')
-            .select('*') // Select all columns
+            .select(`
+                *,
+                ticket_tags(tag_name)
+            `) // Select all columns and joined tags
             .eq('user_id', user.id) // Filter by the current user's ID
             .order('created_at', { ascending: false });
 
@@ -75,7 +79,7 @@ function MyTickets() {
                 (payload) => {
                     console.log("User tickets real-time event:", payload.eventType, payload.new);
                     if (payload.eventType === 'INSERT') {
-                        setTickets(prev => [payload.new, ...prev]);
+                        setTickets(prev => [{ ...payload.new, ticket_tags: [] }, ...prev]);
                     } else if (payload.eventType === 'UPDATE') {
                         setTickets(prev => prev.map(t => t.id === payload.new.id ? { ...t, ...payload.new } : t));
                     } else if (payload.eventType === 'DELETE') {
@@ -85,12 +89,54 @@ function MyTickets() {
             )
             .subscribe();
 
+        // Real-time subscription for ticket tags
+        const tagsChannel = supabase
+            .channel(`user_ticket_tags_${user.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'ticket_tags'
+                },
+                (payload) => {
+                    console.log("Ticket tags real-time event:", payload.eventType, payload.new || payload.old);
+                    if (payload.eventType === 'INSERT') {
+                        setTickets(prev => prev.map(t => {
+                            if (t.id === payload.new.ticket_id) {
+                                return { ...t, ticket_tags: [...(t.ticket_tags || []), { tag_name: payload.new.tag_name }] };
+                            }
+                            return t;
+                        }));
+                    } else if (payload.eventType === 'DELETE') {
+                        setTickets(prev => prev.map(t => {
+                            if (t.id === payload.old.ticket_id) {
+                                return { ...t, ticket_tags: (t.ticket_tags || []).filter(tag => tag.tag_name !== payload.old.tag_name) };
+                            }
+                            return t;
+                        }));
+                    }
+                }
+            )
+            .subscribe();
+
         return () => {
             supabase.removeChannel(channel);
+            supabase.removeChannel(tagsChannel);
         };
     }, [user, fetchTickets]); // Re-subscribe when user changes
 
     // Filtering logic
+    const availableTags = useMemo(() => {
+        const tags = new Set();
+        tickets.forEach(ticket => {
+            if (ticket.ticket_tags) {
+                ticket.ticket_tags.forEach(t => tags.add(t.tag_name));
+            }
+        });
+        return Array.from(tags).sort();
+    }, [tickets]);
+
     const filteredTickets = useMemo(() => {
         return tickets
             .filter(ticket => {
@@ -107,9 +153,12 @@ function MyTickets() {
                 const ticketPriority = ticket.priority || 'medium';
                 const matchesPriority = priorityFilter === 'All' ? true : ticketPriority.toLowerCase() === priorityFilter.toLowerCase();
 
-                return matchesSearch && matchesStatus && matchesPriority;
+                const ticketTags = ticket.ticket_tags?.map(t => t.tag_name) || [];
+                const matchesTags = selectedTags.length === 0 || selectedTags.every(tag => ticketTags.includes(tag));
+
+                return matchesSearch && matchesStatus && matchesPriority && matchesTags;
             });
-    }, [tickets, searchQuery, statusFilter, priorityFilter]);
+    }, [tickets, searchQuery, statusFilter, priorityFilter, selectedTags]);
 
 
     const getPriorityColor = (priority) => {
@@ -139,42 +188,80 @@ function MyTickets() {
             </div>
 
             {/* Toolbar section */}
-            <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                        type="text"
-                        placeholder="Search tickets by ID or subject..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-gray-900 font-medium"
-                    />
+            <div className="flex flex-col gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+                <div className="flex flex-col md:flex-row gap-4">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
+                        <input
+                            type="text"
+                            placeholder="Search tickets by ID or subject..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all text-gray-900 font-medium"
+                        />
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <Select
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                            options={[
+                                { value: 'All', label: 'All Statuses' },
+                                { value: 'Resolved', label: 'Resolved' },
+                                { value: 'Pending', label: 'Pending' },
+                                { value: 'In Progress', label: 'In Progress' },
+                                { value: 'Escalated', label: 'Escalated' }
+                            ]}
+                        />
+                        <Select
+                            value={priorityFilter}
+                            onChange={(e) => setPriorityFilter(e.target.value)}
+                            options={[
+                                { value: 'All', label: 'All Priorities' },
+                                { value: 'Critical', label: 'Critical' },
+                                { value: 'High', label: 'High' },
+                                { value: 'Medium', label: 'Medium' },
+                                { value: 'Low', label: 'Low' }
+                            ]}
+                        />
+                    </div>
                 </div>
-                <div className="flex items-center gap-3">
-                    <Select
-                        value={statusFilter}
-                        onChange={(e) => setStatusFilter(e.target.value)}
-                        options={[
-                            { value: 'All', label: 'All Statuses' },
-                            { value: 'Resolved', label: 'Resolved' },
-                            { value: 'Pending', label: 'Pending' },
-                            { value: 'In Progress', label: 'In Progress' },
-                            { value: 'Escalated', label: 'Escalated' }
-                        ]}
-                    />
-                    <Select
-                        value={priorityFilter}
-                        onChange={(e) => setPriorityFilter(e.target.value)}
-                        options={[
-                            { value: 'All', label: 'All Priorities' },
-                            { value: 'Critical', label: 'Critical' },
-                            { value: 'High', label: 'High' },
-                            { value: 'Medium', label: 'Medium' },
-                            { value: 'Low', label: 'Low' }
-                        ]}
-                    />
-                </div>
+                {availableTags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-sm text-gray-500 font-medium mr-2"><Filter className="w-4 h-4 inline mr-1" /> Filter by Tags:</span>
+                        {availableTags.map(tag => {
+                            const isSelected = selectedTags.includes(tag);
+                            return (
+                                <button
+                                    key={tag}
+                                    onClick={() => {
+                                        if (isSelected) {
+                                            setSelectedTags(prev => prev.filter(t => t !== tag));
+                                        } else {
+                                            setSelectedTags(prev => [...prev, tag]);
+                                        }
+                                    }}
+                                    className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors border ${
+                                        isSelected
+                                            ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                                            : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
+                                    }`}
+                                >
+                                    #{tag}
+                                </button>
+                            );
+                        })}
+                        {selectedTags.length > 0 && (
+                            <button
+                                onClick={() => setSelectedTags([])}
+                                className="text-xs font-semibold text-red-500 hover:text-red-700 ml-2"
+                            >
+                                Clear Tags
+                            </button>
+                        )}
+                    </div>
+                )}
             </div>
+
 
             {/* Main Content */}
 
@@ -251,6 +338,7 @@ function MyTickets() {
                             setSearchQuery('');
                             setStatusFilter('All');
                             setPriorityFilter('All');
+                            setSelectedTags([]);
                         }}
                         className="text-emerald-600 font-semibold hover:text-emerald-700 text-sm"
                     >
@@ -317,6 +405,15 @@ function MyTickets() {
                                                  <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-emerald-700 transition-colors">
                                                      {ticket.summary || ticket.subject || ticket.description || "No subject"}
                                                  </p>
+                                                 {ticket.ticket_tags && ticket.ticket_tags.length > 0 && (
+                                                     <div className="flex flex-wrap gap-1 mt-1.5">
+                                                         {ticket.ticket_tags.map(t => (
+                                                             <span key={t.tag_name} className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-100">
+                                                                 #{t.tag_name}
+                                                             </span>
+                                                         ))}
+                                                     </div>
+                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <span className="text-sm font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded-md">

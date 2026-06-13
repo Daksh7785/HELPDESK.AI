@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
     ArrowLeft, Clock, Bot, UserCog,
@@ -13,6 +13,8 @@ import TicketTimeline from "../components/TicketTimeline";
 import TicketChat from "../../components/shared/TicketChat";
 import { formatTicketId } from "../../utils/format";
 import CSATModal from "../components/CSATModal";
+import { API_CONFIG } from "../../config";
+
 
 const TicketDetail = () => {
     const { ticket_id } = useParams();
@@ -22,6 +24,177 @@ const TicketDetail = () => {
     const [isReopening, setIsReopening] = useState(false);
     const [showCsat, setShowCsat] = useState(false);
     const [csatHasBeenDismissed, setCsatHasBeenDismissed] = useState(false);
+
+    // Ticket tagging states
+    const [tags, setTags] = useState([]);
+    const [suggestedTags, setSuggestedTags] = useState([]);
+    const [tagInput, setTagInput] = useState('');
+    const [autocompleteSuggestions, setAutocompleteSuggestions] = useState([]);
+    const [showAutocomplete, setShowAutocomplete] = useState(false);
+    const [isAddingTag, setIsAddingTag] = useState(false);
+    const debounceTimeout = useRef(null);
+
+    const fetchTagsAndSuggestions = async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) return;
+
+            // Fetch current tags
+            const tagsRes = await fetch(`${API_CONFIG.BACKEND_URL}/api/tickets/${ticket_id}/tags`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (tagsRes.ok) {
+                const data = await tagsRes.json();
+                setTags(data);
+            }
+
+            // Fetch suggested tags
+            const suggestRes = await fetch(`${API_CONFIG.BACKEND_URL}/api/tickets/${ticket_id}/suggested-tags`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (suggestRes.ok) {
+                const sData = await suggestRes.json();
+                setSuggestedTags(sData);
+            }
+        } catch (err) {
+            console.error("Error fetching tags:", err);
+        }
+    };
+
+    const fetchAutocomplete = async (query) => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) return;
+
+            const res = await fetch(`${API_CONFIG.BACKEND_URL}/api/tags/autocomplete?q=${encodeURIComponent(query)}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                setAutocompleteSuggestions(data);
+                setShowAutocomplete(true);
+            }
+        } catch (err) {
+            console.error("Autocomplete fetch error:", err);
+        }
+    };
+
+    const handleTagInputChange = (e) => {
+        const val = e.target.value;
+        setTagInput(val);
+
+        if (debounceTimeout.current) {
+            clearTimeout(debounceTimeout.current);
+        }
+
+        if (val.trim()) {
+            debounceTimeout.current = setTimeout(() => {
+                fetchAutocomplete(val);
+            }, 300);
+        } else {
+            setAutocompleteSuggestions([]);
+            setShowAutocomplete(false);
+        }
+    };
+
+    const addTag = async (tagName) => {
+        const cleaned = tagName.trim().toLowerCase();
+        if (!cleaned) return;
+
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) return;
+
+            const res = await fetch(`${API_CONFIG.BACKEND_URL}/api/tickets/${ticket_id}/tags`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ tag: cleaned })
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                if (data.status === 'success') {
+                    setTags(prev => [...prev, data.tag]);
+                    setSuggestedTags(prev => prev.filter(t => t !== cleaned));
+                }
+            } else {
+                const errData = await res.json();
+                alert(errData.detail || "Failed to add tag");
+            }
+        } catch (err) {
+            console.error("Error adding tag:", err);
+        } finally {
+            setTagInput('');
+            setAutocompleteSuggestions([]);
+            setShowAutocomplete(false);
+            setIsAddingTag(false);
+        }
+    };
+
+    const handleAddTagSubmit = async (e) => {
+        e.preventDefault();
+        await addTag(tagInput);
+    };
+
+    const handleSelectSuggestion = async (suggestion) => {
+        setTagInput('');
+        setAutocompleteSuggestions([]);
+        setShowAutocomplete(false);
+        await addTag(suggestion);
+    };
+
+    const handleAddSuggestedTag = async (sTag) => {
+        await addTag(sTag);
+    };
+
+    const handleRemoveTag = async (tagName) => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
+            if (!token) return;
+
+            const res = await fetch(`${API_CONFIG.BACKEND_URL}/api/tickets/${ticket_id}/tags/${encodeURIComponent(tagName)}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (res.ok) {
+                setTags(prev => prev.filter(t => t.tag_name !== tagName));
+                // Refetch suggestions
+                const suggestRes = await fetch(`${API_CONFIG.BACKEND_URL}/api/tickets/${ticket_id}/suggested-tags`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (suggestRes.ok) {
+                    const sData = await suggestRes.json();
+                    setSuggestedTags(sData);
+                }
+            }
+        } catch (err) {
+            console.error("Error removing tag:", err);
+        }
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Escape') {
+            setShowAutocomplete(false);
+        }
+    };
 
     useEffect(() => {
         window.scrollTo(0, 0);
@@ -43,6 +216,8 @@ const TicketDetail = () => {
                         text: data.description,
                         summary: data.subject,
                     });
+                    // Fetch tags and suggestions after ticket loaded
+                    fetchTagsAndSuggestions();
                 }
             } catch (err) {
                 console.error("Error fetching ticket:", err);
@@ -223,6 +398,110 @@ const TicketDetail = () => {
                                     {ticket.assigned_team || 'General Support'}
                                 </p>
                             </div>
+                        </div>
+
+                        {/* Tag Section */}
+                        <div className="mt-8 pt-8 border-t border-gray-100">
+                            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-widest mb-4">
+                                Ticket Tags
+                            </h3>
+
+                            {/* Tags display */}
+                            <div className="flex flex-wrap gap-2 mb-4 items-center">
+                                {tags.map((tag) => (
+                                    <span
+                                        key={tag.id || tag.tag_name}
+                                        className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs font-bold border border-emerald-100 hover:bg-emerald-100 transition-colors cursor-default"
+                                    >
+                                        {tag.tag_name}
+                                        <button
+                                            onClick={() => handleRemoveTag(tag.tag_name)}
+                                            className="text-emerald-500 hover:text-emerald-800 transition-colors ml-1 focus:outline-none text-sm leading-none"
+                                            aria-label={`Remove tag ${tag.tag_name}`}
+                                        >
+                                            &times;
+                                        </button>
+                                    </span>
+                                ))}
+
+                                {/* Add Tag Input */}
+                                <div className="relative inline-block">
+                                    {isAddingTag ? (
+                                        <form onSubmit={handleAddTagSubmit} className="flex items-center gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="new-tag"
+                                                value={tagInput}
+                                                onChange={handleTagInputChange}
+                                                onKeyDown={handleKeyDown}
+                                                autoFocus
+                                                className="px-3 py-1 bg-gray-50 border border-gray-200 rounded-full text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-gray-900 font-semibold w-28 transition-all"
+                                            />
+                                            <button
+                                                type="submit"
+                                                className="px-2.5 py-1 bg-emerald-600 text-white text-xs font-bold rounded-full hover:bg-emerald-700 transition"
+                                            >
+                                                Add
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setIsAddingTag(false);
+                                                    setTagInput('');
+                                                    setAutocompleteSuggestions([]);
+                                                }}
+                                                className="text-gray-400 hover:text-gray-600 text-xs font-bold px-1"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </form>
+                                    ) : (
+                                        <button
+                                            onClick={() => setIsAddingTag(true)}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-50 border border-dashed border-gray-300 text-gray-500 rounded-full text-xs font-bold hover:bg-gray-100 hover:text-gray-700 transition-all cursor-pointer"
+                                        >
+                                            + Add Tag
+                                        </button>
+                                    )}
+
+                                    {/* Autocomplete Dropdown */}
+                                    {showAutocomplete && autocompleteSuggestions.length > 0 && (
+                                        <div className="absolute left-0 mt-1 bg-white border border-gray-100 rounded-xl shadow-lg z-50 min-w-[150px] overflow-hidden py-1">
+                                            {autocompleteSuggestions.map((suggestion) => (
+                                                <button
+                                                    key={suggestion}
+                                                    type="button"
+                                                    onClick={() => handleSelectSuggestion(suggestion)}
+                                                    className="w-full text-left px-4 py-2 text-xs font-semibold text-gray-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors"
+                                                >
+                                                    {suggestion}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Suggested Tags (AI suggestions) */}
+                            {suggestedTags.length > 0 && (
+                                <div className="flex flex-col gap-2 bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                                    <span className="text-[10px] font-black text-emerald-800 uppercase tracking-widest flex items-center gap-1.5">
+                                        <Bot size={12} /> AI Suggestions
+                                    </span>
+                                    <div className="flex flex-wrap gap-2 mt-1">
+                                        {suggestedTags.map((sTag) => (
+                                            <button
+                                                key={sTag}
+                                                type="button"
+                                                onClick={() => handleAddSuggestedTag(sTag)}
+                                                className="inline-flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 text-gray-600 rounded-full text-xs font-semibold hover:border-emerald-500 hover:bg-emerald-50 hover:text-emerald-700 transition-all cursor-pointer shadow-sm active:scale-95"
+                                            >
+                                                + {sTag}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </Card>
 

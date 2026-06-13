@@ -63,6 +63,8 @@ from backend.services.relationship_extraction_service import RelationshipExtract
 from backend.services.knowledge_graph_service import KnowledgeGraphService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
+from backend.services.tag_suggestion_service import TagSuggestionService
+
 
 
 # ---------------------------------------------------------------------------
@@ -226,6 +228,8 @@ advanced_ner_service = AdvancedNERService(gemini_service=gemini_service)
 entity_linking_service = EntityLinkingService(supabase_client=supabase)
 relationship_extraction_service = RelationshipExtractionService(gemini_service=gemini_service)
 knowledge_graph_service = KnowledgeGraphService(supabase_client=supabase)
+tag_suggestion_service = TagSuggestionService(ner_service)
+
 
 
 # ---------------------------------------------------------------------------
@@ -757,6 +761,218 @@ async def update_ticket(ticket_id: str, updates: dict):
             return updated_ticket
     
     raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+# ---------------------------------------------------------------------------
+# Ticket Tagging & Autocomplete & Analytics APIs
+# ---------------------------------------------------------------------------
+class TagRequest(BaseModel):
+    tag: str
+
+
+@app.get("/api/tags/autocomplete")
+async def autocomplete_tags(q: str = "", current_user: dict = Depends(get_current_user)):
+    """Get autocomplete suggestions for tags."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    
+    if not q:
+        return []
+        
+    try:
+        # Search unique tag names matching the query prefix or containing it
+        res = supabase.table("ticket_tags").select("tag_name").ilike("tag_name", f"%{q}%").execute()
+        
+        # Get unique tag names
+        tags = list(set([item["tag_name"] for item in res.data])) if res.data else []
+        tags.sort()
+        return tags[:10]
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Autocomplete failed: {e}")
+
+
+@app.get("/api/tickets/{ticket_id}/tags")
+async def get_ticket_tags(ticket_id: str, current_user: dict = Depends(get_current_user)):
+    """Get all tags associated with a specific ticket."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    try:
+        res = supabase.table("ticket_tags").select("*").eq("ticket_id", ticket_id).execute()
+        return res.data or []
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/tickets/{ticket_id}/tags")
+async def add_tag_to_ticket(ticket_id: str, body: TagRequest, current_user: dict = Depends(get_current_user)):
+    """Add a tag to a ticket with duplicate prevention and validation."""
+    import re
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+        
+    tag_cleaned = body.tag.strip().lower()
+    if not tag_cleaned:
+        raise HTTPException(status_code=400, detail="Tag name cannot be blank")
+        
+    if not re.match(r"^[a-z0-9\-_.]+$", tag_cleaned):
+        raise HTTPException(status_code=400, detail="Tag name contains invalid characters. Only alphanumeric, hyphens, underscores, and dots are allowed.")
+        
+    try:
+        # Check if tag already exists for this ticket
+        existing = supabase.table("ticket_tags").select("*").eq("ticket_id", ticket_id).eq("tag_name", tag_cleaned).execute()
+        if existing.data:
+            return {"status": "already_exists", "message": f"Tag '{tag_cleaned}' is already associated with this ticket."}
+            
+        user_id = current_user.get("id")
+        
+        res = supabase.table("ticket_tags").insert({
+            "ticket_id": ticket_id,
+            "tag_name": tag_cleaned,
+            "created_by": user_id
+        }).execute()
+        
+        if not res.data:
+            raise HTTPException(status_code=500, detail="Failed to add tag to database")
+            
+        return {"status": "success", "tag": res.data[0]}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.delete("/api/tickets/{ticket_id}/tags/{tag}")
+async def remove_tag_from_ticket(ticket_id: str, tag: str, current_user: dict = Depends(get_current_user)):
+    """Remove a tag from a ticket."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+        
+    tag_cleaned = tag.strip().lower()
+    try:
+        res = supabase.table("ticket_tags").delete().eq("ticket_id", ticket_id).eq("tag_name", tag_cleaned).execute()
+        return {"status": "success", "message": f"Tag '{tag_cleaned}' removed from ticket."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/tickets/{ticket_id}/suggested-tags")
+async def get_suggested_tags(ticket_id: str, current_user: dict = Depends(get_current_user)):
+    """Suggest top 3 tags for a ticket using local ML pipelines."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+        
+    try:
+        res = supabase.table("tickets").select("subject, description").eq("id", ticket_id).single().execute()
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Ticket not found")
+            
+        ticket = res.data
+        title = ticket.get("subject", "")
+        description = ticket.get("description", "")
+        
+        # Fetch ticket messages/comments
+        msg_res = supabase.table("ticket_messages").select("message").eq("ticket_id", ticket_id).execute()
+        comments = [msg.get("message", "") for msg in msg_res.data] if msg_res.data else []
+        
+        suggested = tag_suggestion_service.suggest_tags(title, description, comments)
+        
+        # Filter out existing tags
+        existing_res = supabase.table("ticket_tags").select("tag_name").eq("ticket_id", ticket_id).execute()
+        existing_tags = set([t["tag_name"] for t in existing_res.data]) if existing_res.data else set()
+        
+        filtered_suggestions = [tag for tag in suggested if tag not in existing_tags]
+        
+        return filtered_suggestions[:3]
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/admin/tag-analytics")
+async def get_tag_analytics(current_user: dict = Depends(get_current_user)):
+    """Generate tag metrics for the admin analytics dashboard."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+        
+    try:
+        res = supabase.table("ticket_tags").select(
+            "tag_name, created_at, ticket:tickets(category, priority, assigned_team)"
+        ).execute()
+        
+        tag_data = res.data or []
+        total_tags = len(tag_data)
+        
+        most_used = {}
+        tags_by_category = {}
+        tags_by_priority = {}
+        tags_by_department = {}
+        growth_metrics = {}
+        
+        now = datetime.datetime.now(datetime.timezone.utc)
+        seven_days_ago = now - datetime.timedelta(days=7)
+        
+        for item in tag_data:
+            tag = item["tag_name"]
+            created_at_str = item["created_at"]
+            ticket = item.get("ticket") or {}
+            
+            most_used[tag] = most_used.get(tag, 0) + 1
+            
+            try:
+                created_dt = datetime.datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                if created_dt >= seven_days_ago:
+                    growth_metrics[tag] = growth_metrics.get(tag, 0) + 1
+            except Exception:
+                pass
+                
+            cat = ticket.get("category") or "Unknown"
+            if tag not in tags_by_category:
+                tags_by_category[tag] = {}
+            tags_by_category[tag][cat] = tags_by_category[tag].get(cat, 0) + 1
+            
+            pri = ticket.get("priority") or "Medium"
+            if tag not in tags_by_priority:
+                tags_by_priority[tag] = {}
+            tags_by_priority[tag][pri] = tags_by_priority[tag].get(pri, 0) + 1
+            
+            dept = ticket.get("assigned_team") or "General Support"
+            if tag not in tags_by_department:
+                tags_by_department[tag] = {}
+            tags_by_department[tag][dept] = tags_by_department[tag].get(dept, 0) + 1
+            
+        most_used_list = [{"tag": k, "count": v} for k, v in most_used.items()]
+        most_used_list.sort(key=lambda x: x["count"], reverse=True)
+        
+        growing_list = [{"tag": k, "new_count": v} for k, v in growth_metrics.items()]
+        growing_list.sort(key=lambda x: x["new_count"], reverse=True)
+        
+        cat_breakdown = []
+        for tag, cats in tags_by_category.items():
+            for cat, count in cats.items():
+                cat_breakdown.append({"tag": tag, "category": cat, "count": count})
+                
+        pri_breakdown = []
+        for tag, priorities in tags_by_priority.items():
+            for pri, count in priorities.items():
+                pri_breakdown.append({"tag": tag, "priority": pri, "count": count})
+                
+        dept_breakdown = []
+        for tag, depts in tags_by_department.items():
+            for dept, count in depts.items():
+                dept_breakdown.append({"tag": tag, "department": dept, "count": count})
+                
+        return {
+            "total_tags": total_tags,
+            "most_used": most_used_list[:10],
+            "fastest_growing": growing_list[:5],
+            "tags_by_category": cat_breakdown,
+            "tags_by_priority": pri_breakdown,
+            "tags_by_department": dept_breakdown
+        }
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------------------------------------------------------------------------
