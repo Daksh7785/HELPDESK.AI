@@ -84,6 +84,11 @@ const useTicketStore = create(
             markNotificationsRead: () => set((state) => ({
                 notifications: (state.notifications || []).map(n => ({ ...n, read: true }))
             })),
+            updateNotificationDeliveryStatus: (notificationId, deliveryUpdate) => set((state) => ({
+                notifications: (state.notifications || []).map(n =>
+                    n.id === notificationId ? { ...n, ...deliveryUpdate } : n
+                )
+            })),
             clearTicket: () => set({ aiTicket: null, activeTicket: null, autoResolvedTickets: [] }),
         }),
         {

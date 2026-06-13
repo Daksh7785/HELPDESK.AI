@@ -44,6 +44,7 @@ const AIProcessing = () => {
 
         const analyzeTicket = async () => {
             console.log("[AIProcessing] Starting analysis for:", text);
+            let uploadedImageUrl = null;
 
             try {
 
@@ -52,7 +53,6 @@ const AIProcessing = () => {
 
 
                 // ── Upload Image if present ──
-                let uploadedImageUrl = null;
 
                 if (image_base64) {
 

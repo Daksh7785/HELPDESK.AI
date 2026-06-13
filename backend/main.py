@@ -1418,3 +1418,68 @@ async def query_knowledge_graph(payload: GraphQueryPayload):
         "latency_ms": round(duration_ms, 2)
     }
 
+
+# ---------------------------------------------------------------------------
+# Notification delivery status tracking endpoints
+# ---------------------------------------------------------------------------
+
+class NotificationResendRequest(BaseModel):
+    user_id: str
+
+
+@app.get("/notifications/{notification_id}/delivery-status")
+async def get_notification_delivery_status(notification_id: str):
+    """
+    Return the current email delivery status for a notification.
+
+    Possible statuses: pending | sent | delivered | failed
+    On failed status the response also includes a user-friendly error message
+    and the raw error code for debugging.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    try:
+        from backend.services.notification_routing import load as load_notification_router
+        router = load_notification_router()
+        status = router.get_delivery_status(notification_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not retrieve delivery status: {e}")
+
+    if status is None:
+        raise HTTPException(status_code=404, detail="Delivery status not found for this notification")
+
+    return status
+
+
+@app.post("/notifications/{notification_id}/resend")
+async def resend_notification(notification_id: str, body: NotificationResendRequest):
+    """
+    Resend a failed email notification.
+
+    Validates that:
+    - The notification exists
+    - The requesting user owns the notification
+    - The current delivery status is 'failed'
+
+    On success, marks status as 'pending' for retry and returns a confirmation.
+    """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    try:
+        from backend.services.notification_routing import load as load_notification_router
+        router = load_notification_router()
+        result = router.resend_notification(notification_id, body.user_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Resend failed: {e}")
+
+    if result.get("status") == "not_found":
+        raise HTTPException(status_code=404, detail=result["message"])
+    if result.get("status") == "forbidden":
+        raise HTTPException(status_code=403, detail=result["message"])
+    if not result.get("success"):
+        raise HTTPException(status_code=400, detail=result["message"])
+
+    return result
+

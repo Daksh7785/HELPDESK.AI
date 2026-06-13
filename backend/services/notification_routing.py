@@ -11,12 +11,15 @@ Features:
 - Audit logging for all notification decisions
 - Fail-open design (allow notification if settings unavailable)
 - Reusable for all notification trigger points
+- Email delivery status tracking (sent, delivered, failed)
+- User-friendly error message mapping for SMTP failures
+- Resend support for failed notifications
 """
 
 import os
 import logging
 from datetime import datetime, timezone
-from typing import Optional, Dict
+from typing import Optional, Dict, Any
 from enum import Enum
 
 from supabase import create_client
@@ -40,6 +43,50 @@ class NotificationType(str, Enum):
     TICKET_ALERT = "ticket_alert"
     ADMIN_ALERT = "admin_alert"
     PUSH_NOTIFICATION = "push_notification"
+
+
+class EmailDeliveryStatus(str, Enum):
+    """Possible states of an email notification delivery lifecycle."""
+    PENDING = "pending"
+    SENT = "sent"
+    DELIVERED = "delivered"
+    FAILED = "failed"
+
+
+# Maps known technical SMTP / provider error codes to user-friendly messages.
+SMTP_ERROR_MESSAGES: Dict[str, str] = {
+    "SMTP_550": "Recipient email address appears invalid.",
+    "SMTP_421": "Email service is temporarily unavailable. Please try again shortly.",
+    "SMTP_452": "Recipient mailbox cannot receive new messages.",
+    "SMTP_554": "Email was rejected by the recipient server.",
+    "RATE_LIMIT": "Too many emails sent recently. Please wait before retrying.",
+    "TIMEOUT": "Email service is temporarily unavailable. Please try again shortly.",
+    "DNS_ERROR": "Email delivery failed due to a network issue. Please try again.",
+    "INVALID_ADDRESS": "Recipient email address appears invalid.",
+    "MAILBOX_FULL": "Recipient mailbox cannot receive new messages.",
+    "CONNECTION_REFUSED": "Email service is temporarily unavailable. Please try again shortly.",
+}
+
+DEFAULT_ERROR_MESSAGE = "We couldn't deliver this email. Please try again."
+
+
+def map_error_to_user_message(error_code: Optional[str]) -> str:
+    """
+    Convert a technical SMTP / provider error code into a human-readable message.
+
+    Args:
+        error_code: Raw error code string from the mail provider.
+
+    Returns:
+        A user-friendly explanation string.
+    """
+    if not error_code:
+        return DEFAULT_ERROR_MESSAGE
+    normalized = error_code.upper().strip()
+    for key, message in SMTP_ERROR_MESSAGES.items():
+        if key in normalized:
+            return message
+    return DEFAULT_ERROR_MESSAGE
 
 
 class NotificationRoutingMiddleware:
@@ -184,6 +231,147 @@ class NotificationRoutingMiddleware:
 
         self.log_notification_sent(company_id, NotificationType.PUSH_NOTIFICATION)
         return True
+
+    # -----------------------------------------------------------------------
+    # Delivery status tracking
+    # -----------------------------------------------------------------------
+
+    def record_delivery_status(
+        self,
+        notification_id: str,
+        status: EmailDeliveryStatus,
+        error_code: Optional[str] = None,
+        error_message: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Persist the delivery status for a notification in the database.
+
+        Stores `sent_at` when transitioning to SENT, `delivered_at` when
+        transitioning to DELIVERED, and error metadata when FAILED.
+
+        Args:
+            notification_id: UUID of the notification record.
+            status: New delivery status.
+            error_code: Optional raw provider error code (e.g. "SMTP_550").
+            error_message: Optional raw provider error message.
+
+        Returns:
+            Dict with the stored delivery metadata.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
+        payload: Dict[str, Any] = {
+            "notification_id": notification_id,
+            "status": status.value,
+            "updated_at": now_iso,
+        }
+
+        if status == EmailDeliveryStatus.SENT:
+            payload["sent_at"] = now_iso
+        elif status == EmailDeliveryStatus.DELIVERED:
+            payload["delivered_at"] = now_iso
+        elif status == EmailDeliveryStatus.FAILED:
+            payload["failed_at"] = now_iso
+            payload["error_code"] = error_code or "UNKNOWN"
+            payload["error_message"] = error_message or ""
+            payload["user_error_message"] = map_error_to_user_message(error_code)
+
+        try:
+            # Upsert so a re-delivery attempt updates the existing row.
+            self.supabase.table("notification_delivery_status").upsert(
+                payload, on_conflict="notification_id"
+            ).execute()
+            logger.info(
+                f"Delivery status recorded | notification={notification_id} | status={status.value}"
+            )
+        except Exception as e:
+            logger.error(
+                f"Failed to record delivery status | notification={notification_id} | error={e}"
+            )
+
+        return payload
+
+    def get_delivery_status(self, notification_id: str) -> Optional[Dict[str, Any]]:
+        """
+        Retrieve the current delivery status for a notification.
+
+        Args:
+            notification_id: UUID of the notification record.
+
+        Returns:
+            Dict with delivery metadata, or None if not found.
+        """
+        try:
+            response = (
+                self.supabase.table("notification_delivery_status")
+                .select("*")
+                .eq("notification_id", notification_id)
+                .single()
+                .execute()
+            )
+            return response.data or None
+        except Exception as e:
+            logger.warning(f"Could not fetch delivery status for {notification_id}: {e}")
+            return None
+
+    def resend_notification(self, notification_id: str, user_id: str) -> Dict[str, Any]:
+        """
+        Validate and initiate a resend for a failed notification.
+
+        Checks ownership and that the current status is FAILED before
+        attempting re-delivery.  Marks status as PENDING, then delegates
+        the actual send to the caller via the returned metadata dict.
+
+        Args:
+            notification_id: UUID of the notification to resend.
+            user_id: UUID of the requesting user (ownership check).
+
+        Returns:
+            Dict with ``{"success": bool, "message": str, "status": str}``.
+        """
+        try:
+            # Ownership + existence check
+            notif_res = (
+                self.supabase.table("notifications")
+                .select("id, user_id, status")
+                .eq("id", notification_id)
+                .single()
+                .execute()
+            )
+            if not notif_res.data:
+                return {"success": False, "message": "Notification not found.", "status": "not_found"}
+
+            notification = notif_res.data
+            if notification.get("user_id") != user_id:
+                return {"success": False, "message": "Not authorized.", "status": "forbidden"}
+
+            # Fetch delivery status
+            delivery = self.get_delivery_status(notification_id)
+            current_status = delivery.get("status") if delivery else None
+
+            if current_status != EmailDeliveryStatus.FAILED.value:
+                return {
+                    "success": False,
+                    "message": "Only failed notifications can be resent.",
+                    "status": current_status or "unknown",
+                }
+
+            # Mark as pending for retry
+            self.record_delivery_status(notification_id, EmailDeliveryStatus.PENDING)
+            logger.info(f"Resend initiated | notification={notification_id} | user={user_id}")
+
+            return {
+                "success": True,
+                "message": "Resend initiated. Status will update shortly.",
+                "status": EmailDeliveryStatus.PENDING.value,
+            }
+
+        except Exception as e:
+            logger.error(f"Resend error | notification={notification_id} | error={e}")
+            return {"success": False, "message": "An error occurred. Please try again.", "status": "error"}
+
+    # -----------------------------------------------------------------------
+    # Logging helpers (unchanged)
+    # -----------------------------------------------------------------------
 
     def log_notification_sent(self, company_id: str, notification_type: NotificationType) -> None:
         """Log that a notification was sent."""
