@@ -1418,3 +1418,89 @@ async def query_knowledge_graph(payload: GraphQueryPayload):
         "latency_ms": round(duration_ms, 2)
     }
 
+
+# ---------------------------------------------------------------------------
+# Predictive SLA Monitoring Endpoints
+# ---------------------------------------------------------------------------
+from backend.services.sla_predictor_service import predictor_service as sla_predictor
+from backend.services.sla_escalation_service import PredictiveSlaEscalationService
+
+_ACTIVE_STATUSES = ["open", "in_progress", "pending"]
+
+
+@app.get("/api/sla/predictions")
+async def get_sla_predictions():
+    """Return breach-probability predictions for all active tickets."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    res = supabase.table("tickets").select(
+        "id, priority, assigned_team, sla_breach_at, escalation_level, metadata"
+    ).in_("status", _ACTIVE_STATUSES).execute()
+    tickets = res.data or []
+    return sla_predictor.predict_risk(tickets)
+
+
+@app.post("/api/sla/escalate/{ticket_id}")
+async def escalate_ticket_sla(ticket_id: str):
+    """Manually trigger predictive escalation for a specific ticket."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    escalation_service = PredictiveSlaEscalationService(supabase)
+    result = escalation_service.process_ticket(res.data)
+    return {"status": "success", "escalation": result}
+
+
+@app.get("/api/admin/sla-analytics")
+async def get_sla_analytics():
+    """Aggregate SLA breach analytics by category and team."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    res = supabase.table("tickets").select(
+        "category, priority, sla_status, assigned_team"
+    ).execute()
+    tickets = res.data or []
+
+    breached = [t for t in tickets if t.get("sla_status") == "BREACHED"]
+    by_category: dict[str, int] = {}
+    by_team: dict[str, int] = {}
+    for t in breached:
+        cat = t.get("category") or "Unknown"
+        team = t.get("assigned_team") or "Unassigned"
+        by_category[cat] = by_category.get(cat, 0) + 1
+        by_team[team] = by_team.get(team, 0) + 1
+
+    return {
+        "total_tickets": len(tickets),
+        "breached_count": len(breached),
+        "breach_rate": round(len(breached) / len(tickets), 4) if tickets else 0.0,
+        "by_category": by_category,
+        "by_team": by_team,
+    }
+
+
+@app.get("/api/admin/sla-risk-queue")
+async def get_sla_risk_queue():
+    """Return at-risk tickets (>40% breach probability) sorted by risk descending."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database not connected")
+    res = supabase.table("tickets").select("*").in_("status", _ACTIVE_STATUSES).execute()
+    tickets = res.data or []
+
+    predictions = {
+        str(p["ticket_id"]): p["risk"]
+        for p in sla_predictor.predict_risk(tickets)
+    }
+
+    at_risk = []
+    for t in tickets:
+        risk = predictions.get(str(t.get("id")), 0.0)
+        if risk > 0.40:
+            t["risk_probability"] = risk
+            at_risk.append(t)
+
+    at_risk.sort(key=lambda x: x.get("risk_probability", 0.0), reverse=True)
+    return at_risk
+

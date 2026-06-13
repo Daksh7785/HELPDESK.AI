@@ -43,5 +43,20 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | **Pending Requests** | Onboarding queue. | Approve/Reject new company registrations. |
 | **Master Bug Reports** | Platform diagnostics. | System-wide error tracking and resolution. |
 
+## ⏱️ Predictive SLA Monitoring (Issue #2851)
+| Component | Description | Key Features |
+| :--- | :--- | :--- |
+| **SLADashboard.jsx** | Admin-facing risk monitoring panel. | Live risk queue sorted by breach probability, per-ticket escalation trigger, stat cards, and category/team analytics. Auto-refreshes every 60 s. |
+| **sla_predictor_service.py** | Breach probability engine. | Heuristic model scoring tickets on time-remaining, priority, assignment status, and escalation level. Sub-millisecond per ticket. |
+| **sla_escalation_service.py** | Automated escalation rule engine. | Three-tier logic: auto-assign senior team (>80%), priority upgrade + manager alert (>60%), watch-queue flagging (>40%). Writes audit log + timeline message. |
+
+### New API Endpoints
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/sla/predictions` | Returns risk predictions for all active tickets. |
+| `POST` | `/api/sla/escalate/{ticket_id}` | Manually triggers predictive escalation for a ticket. |
+| `GET` | `/api/admin/sla-analytics` | Returns breach counts aggregated by category and team. |
+| `GET` | `/api/admin/sla-risk-queue` | Returns active at-risk tickets (>40%) sorted by risk desc. |
+
 ---
 *Documented with millisecond precision for Helpdesk.ai Platform.*
