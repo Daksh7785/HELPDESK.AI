@@ -7,6 +7,7 @@ import { supabase } from "../../lib/supabaseClient";
 import StatCard from "../components/StatCard";
 import TicketTable from "../components/TicketTable";
 import { formatTimelineDate } from "../../utils/dateUtils";
+import KnowledgeGraphViewer from '../../components/KnowledgeGraphViewer';
 
 // Inline SVG icon components
 const TicketIcon = () => (
@@ -218,6 +219,15 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* Knowledge Graph visualizer section */}
+            <div className="space-y-4">
+                <h2 style={{ fontFamily: 'Syne, sans-serif', fontSize: '15px', fontWeight: 700, color: '#0f1f12', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/></svg>
+                    Infrastructure Knowledge Graph
+                </h2>
+                <KnowledgeGraphViewer />
             </div>
 
             {/* Pulse dot animation */}

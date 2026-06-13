@@ -57,6 +57,10 @@ from backend.services.classifier_service import ClassifierService
 from backend.services.classifier_v2 import classifier_v2
 from backend.services.classifier_v3 import classifier_v3 # V3 Power Model
 from backend.services.ner_service import NERService
+from backend.services.advanced_ner_service import AdvancedNERService
+from backend.services.entity_linking_service import EntityLinkingService
+from backend.services.relationship_extraction_service import RelationshipExtractionService
+from backend.services.knowledge_graph_service import KnowledgeGraphService
 from backend.services.duplicate_service import DuplicateService
 from backend.services.rag_service import RagService
 
@@ -113,6 +117,9 @@ class TicketSaveRequest(BaseModel):
     ocr_text: str = ""
     needs_review: bool = False
     routing_confidence: float
+    linked_entities: list = []
+    relationships: list = []
+    cause_effect_chain: list = []
 
 
 class DuplicateInfo(BaseModel):
@@ -150,6 +157,9 @@ class TicketResponse(BaseModel):
     env_metadata: dict = {} # IP, Hostname, Browser/OS
     sla_breach_at: str | None = None
     version: str = "2.1.0-Neural-Diagnostic"
+    linked_entities: list = []
+    relationships: list = []
+    cause_effect_chain: list = []
 
 
 # --- Persistence Models ---
@@ -210,6 +220,12 @@ try:
     ocr_service = OCRService()
 except ImportError:
     ocr_service = None
+
+# Advanced entity intelligence singletons
+advanced_ner_service = AdvancedNERService(gemini_service=gemini_service)
+entity_linking_service = EntityLinkingService(supabase_client=supabase)
+relationship_extraction_service = RelationshipExtractionService(gemini_service=gemini_service)
+knowledge_graph_service = KnowledgeGraphService(supabase_client=supabase)
 
 
 # ---------------------------------------------------------------------------
@@ -612,6 +628,58 @@ async def save_ticket(request_body: TicketSaveRequest):
             
         ticket_id = res.data[0]["id"]
 
+        # Register Ticket in Knowledge Graph
+        try:
+            ticket_node_id = f"ticket_{ticket_id}"
+            # Add Ticket Node
+            knowledge_graph_service.add_node(
+                node_id=ticket_node_id,
+                name=f"Ticket #{str(ticket_id)[:8]}",
+                type_name="TICKET",
+                company_id=final_data.get("company_id"),
+                metadata={
+                    "subject": request_body.subject,
+                    "priority": request_body.priority,
+                    "category": request_body.category,
+                    "assigned_team": request_body.assigned_team
+                }
+            )
+            
+            # Extract and link entities
+            desc_text = request_body.description or request_body.subject
+            adv_ents = advanced_ner_service.extract_entities(desc_text)
+            linked_ents = entity_linking_service.link_entities(adv_ents)
+            
+            for le in linked_ents:
+                target_id = le["canonical_id"]
+                # Insert the target node if it doesn't exist
+                knowledge_graph_service.add_node(
+                    node_id=target_id,
+                    name=le["entity"],
+                    type_name=le["type"],
+                    company_id=final_data.get("company_id")
+                )
+                # Link ticket to this node (e.g. ticket affects target, or ticket caused_by target)
+                rel_type = "affects" if le["type"] in ["SERVICE", "APPLICATION"] else "caused_by"
+                knowledge_graph_service.add_edge(
+                    source_id=ticket_node_id,
+                    target_id=target_id,
+                    rel_type=rel_type,
+                    company_id=final_data.get("company_id")
+                )
+                
+            # Add relationships extracted between components in the ticket
+            rel_data = relationship_extraction_service.extract_relationships(desc_text, linked_ents)
+            for rel in rel_data.get("relationships", []):
+                knowledge_graph_service.add_edge(
+                    source_id=rel["source"],
+                    target_id=rel["target"],
+                    rel_type=rel["type"],
+                    company_id=final_data.get("company_id")
+                )
+        except Exception as graph_err:
+            print(f"[WARNING] Could not register ticket in knowledge graph: {graph_err}")
+
         duplicate_indexed = True
         duplicate_index_warning = None
         description_text = (request_body.description or "").strip()
@@ -814,6 +882,38 @@ async def analyze_only(request_body: TicketRequest):
     except Exception:
         entities = []
     
+    # --- Advanced NER, Entity Linking, and Relationship Extraction ---
+    advanced_entities = []
+    linked_entities = []
+    relationships = []
+    cause_effect_chain = []
+    try:
+        advanced_entities = advanced_ner_service.extract_entities(text)
+        linked_entities = entity_linking_service.link_entities(advanced_entities)
+        rel_data = relationship_extraction_service.extract_relationships(text, linked_entities)
+        relationships = rel_data.get("relationships", [])
+        cause_effect_chain = rel_data.get("cause_effect_chain", [])
+    except Exception as e:
+        print(f"[ADVANCED NER ERROR] {e}")
+
+    # --- Intelligent Routing based on Entities/Relationships ---
+    routing_override_reason = ""
+    entity_types = [le["type"] for le in linked_entities]
+    
+    is_database_issue = "DATABASE" in entity_types or any(x in text.lower() for x in ["mysql", "postgres", "db-01", "database", "query failure", "db error"])
+    is_infra_issue = "SERVER" in entity_types or "NETWORK_DEVICE" in entity_types or "HOSTNAME" in entity_types or any(x in text.lower() for x in ["server failure", "host offline", "network timeout", "switch", "router", "vlan", "srv-"])
+    is_iam_issue = "PERMISSION" in entity_types or "IAM_POLICY" in entity_types or "AUTHENTICATION_METHOD" in entity_types or any(x in text.lower() for x in ["permission denied", "access revoked", "authentication failure", "mfa", "login error", "credential"])
+
+    if is_database_issue:
+        classification["assigned_team"] = "Database Administration Team"
+        routing_override_reason = "Routed to Database Administration Team based on Database Entity detection."
+    elif is_iam_issue:
+        classification["assigned_team"] = "IAM Team"
+        routing_override_reason = "Routed to IAM Team based on IAM/Identity Entity detection."
+    elif is_infra_issue:
+        classification["assigned_team"] = "Infrastructure Team"
+        routing_override_reason = "Routed to Infrastructure Team based on Infrastructure/Server Entity detection."
+
     timeline["metadata_harvested"] = get_now_ist()
 
     # --- Duplicate detection ---
@@ -840,12 +940,16 @@ async def analyze_only(request_body: TicketRequest):
         decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
     if entities:
         decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
+    if routing_override_reason:
+        decision_factors.append(routing_override_reason)
     if dup_result["is_duplicate"]:
         decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
     if rag_match:
         decision_factors.append(f"Found solution article: '{rag_match['title']}'")
 
     reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
+    if routing_override_reason:
+        reasoning += f" {routing_override_reason}"
     if (
         enable_auto_resolve
         and classification["confidence"] >= confidence_threshold
@@ -885,10 +989,13 @@ async def analyze_only(request_body: TicketRequest):
         image_description=gemini_analysis["image_description"],
         ocr_text=gemini_analysis["ocr_text"],
         image_url=request_body.image_url,
-        highlights=entities, # Use entities as highlights for now
+        highlights=[e["text"] for e in entities],
         timeline=timeline,
         env_metadata=env_metadata,
-        sla_breach_at=sla_breach_dt.isoformat() + "Z"
+        sla_breach_at=sla_breach_dt.isoformat() + "Z",
+        linked_entities=linked_entities,
+        relationships=relationships,
+        cause_effect_chain=cause_effect_chain
     )
 
 @app.post("/ai/analyze_stream")
@@ -934,6 +1041,19 @@ async def analyze_stream(request_body: TicketRequest):
             entities = ner_service.extract_entities(text)
         except Exception:
             entities = []
+
+        advanced_entities = []
+        linked_entities = []
+        relationships = []
+        cause_effect_chain = []
+        try:
+            advanced_entities = advanced_ner_service.extract_entities(text)
+            linked_entities = entity_linking_service.link_entities(advanced_entities)
+            rel_data = relationship_extraction_service.extract_relationships(text, linked_entities)
+            relationships = rel_data.get("relationships", [])
+            cause_effect_chain = rel_data.get("cause_effect_chain", [])
+        except Exception as e:
+            print(f"[ADVANCED NER ERROR] {e}")
         timeline["metadata_harvested"] = get_now_ist()
 
         # 3. Classification
@@ -966,6 +1086,25 @@ async def analyze_stream(request_body: TicketRequest):
                 "category": "Unknown", "subcategory": "Unknown", "priority": "Medium",
                 "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
             }
+        
+        # Intelligent routing override
+        routing_override_reason = ""
+        entity_types = [le["type"] for le in linked_entities]
+        
+        is_database_issue = "DATABASE" in entity_types or any(x in text.lower() for x in ["mysql", "postgres", "db-01", "database", "query failure", "db error"])
+        is_infra_issue = "SERVER" in entity_types or "NETWORK_DEVICE" in entity_types or "HOSTNAME" in entity_types or any(x in text.lower() for x in ["server failure", "host offline", "network timeout", "switch", "router", "vlan", "srv-"])
+        is_iam_issue = "PERMISSION" in entity_types or "IAM_POLICY" in entity_types or "AUTHENTICATION_METHOD" in entity_types or any(x in text.lower() for x in ["permission denied", "access revoked", "authentication failure", "mfa", "login error", "credential"])
+
+        if is_database_issue:
+            classification["assigned_team"] = "Database Administration Team"
+            routing_override_reason = "Routed to Database Administration Team based on Database Entity detection."
+        elif is_iam_issue:
+            classification["assigned_team"] = "IAM Team"
+            routing_override_reason = "Routed to IAM Team based on IAM/Identity Entity detection."
+        elif is_infra_issue:
+            classification["assigned_team"] = "Infrastructure Team"
+            routing_override_reason = "Routed to Infrastructure Team based on Infrastructure/Server Entity detection."
+
         timeline["ai_analyzed"] = get_now_ist()
         timeline["triaged"] = get_now_ist()
 
@@ -995,6 +1134,8 @@ async def analyze_stream(request_body: TicketRequest):
             decision_factors.append(f"High confidence match for '{classification['subcategory']}'")
         if entities:
             decision_factors.append(f"Detected entities: {', '.join([e['text'] for e in entities[:2]])}")
+        if routing_override_reason:
+            decision_factors.append(routing_override_reason)
         if dup_result["is_duplicate"]:
             decision_factors.append(f"Found similar incident ({int(dup_result['similarity']*100)}%)")
         if rag_match:
@@ -1003,6 +1144,8 @@ async def analyze_stream(request_body: TicketRequest):
         if not enable_auto_resolve:
             classification["auto_resolve"] = False
         reasoning = f"Categorized as '{classification['category']}' - {classification['subcategory']}."
+        if routing_override_reason:
+            reasoning += f" {routing_override_reason}"
         if classification["auto_resolve"]:
             reasoning += " Flagged for AI auto-resolution via Knowledge Base." if rag_match else " Flagged for auto-resolution."
         
@@ -1032,10 +1175,13 @@ async def analyze_stream(request_body: TicketRequest):
             "image_description": gemini_analysis["image_description"],
             "ocr_text": gemini_analysis["ocr_text"],
             "image_url": request_body.image_url,
-            "highlights": entities,
+            "highlights": [e["text"] for e in entities],
             "timeline": timeline,
             "env_metadata": env_metadata,
-            "sla_breach_at": sla_breach_dt.isoformat() + "Z"
+            "sla_breach_at": sla_breach_dt.isoformat() + "Z",
+            "linked_entities": linked_entities,
+            "relationships": relationships,
+            "cause_effect_chain": cause_effect_chain
         }
 
         # 6. Final Result
@@ -1208,4 +1354,67 @@ async def auth_logout(response: Response):
 @app.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
+
+
+# ---------------------------------------------------------------------------
+# Knowledge Graph REST endpoints
+# ---------------------------------------------------------------------------
+class GraphNodePayload(BaseModel):
+    id: str
+    name: str
+    type: str
+    company_id: str | None = None
+    metadata: dict = {}
+
+class GraphEdgePayload(BaseModel):
+    source_id: str
+    target_id: str
+    relationship_type: str
+    company_id: str | None = None
+    metadata: dict = {}
+
+class GraphQueryPayload(BaseModel):
+    query_type: str
+    parameter: str
+
+@app.get("/ai/knowledge_graph/nodes")
+async def get_graph_nodes():
+    return knowledge_graph_service.get_nodes()
+
+@app.get("/ai/knowledge_graph/edges")
+async def get_graph_edges():
+    return knowledge_graph_service.get_edges()
+
+@app.post("/ai/knowledge_graph/node")
+async def add_graph_node(node: GraphNodePayload):
+    return knowledge_graph_service.add_node(
+        node_id=node.id,
+        name=node.name,
+        type_name=node.type,
+        company_id=node.company_id,
+        metadata=node.metadata
+    )
+
+@app.post("/ai/knowledge_graph/edge")
+async def add_graph_edge(edge: GraphEdgePayload):
+    return knowledge_graph_service.add_edge(
+        source_id=edge.source_id,
+        target_id=edge.target_id,
+        rel_type=edge.relationship_type,
+        company_id=edge.company_id,
+        metadata=edge.metadata
+    )
+
+@app.post("/ai/knowledge_graph/query")
+async def query_knowledge_graph(payload: GraphQueryPayload):
+    import time
+    start_time = time.time()
+    result = knowledge_graph_service.query_graph(payload.query_type, payload.parameter)
+    duration_ms = (time.time() - start_time) * 1000
+    return {
+        "query_type": payload.query_type,
+        "parameter": payload.parameter,
+        "results": result["results"],
+        "latency_ms": round(duration_ms, 2)
+    }
 
