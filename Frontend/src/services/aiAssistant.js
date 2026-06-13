@@ -2,6 +2,30 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { API_CONFIG } from "../config";
 
 // ============================================================
+// TIMEOUT CONFIGURATION
+// ============================================================
+
+/** Maximum wait time (ms) for a single /ai/analyze_ticket request. */
+export const ANALYSIS_TIMEOUT_MS = 60_000; // 60 seconds
+
+/** Priority-based timeout overrides (ms). Mirrors backend policy. */
+const PRIORITY_TIMEOUTS = {
+    Low: 30_000,
+    Medium: 45_000,
+    High: 60_000,
+    Critical: 90_000,
+};
+
+/**
+ * Returns the appropriate timeout in ms for the given ticket priority.
+ * Falls back to ANALYSIS_TIMEOUT_MS when priority is unknown.
+ * @param {'Low'|'Medium'|'High'|'Critical'|string} [priority]
+ * @returns {number}
+ */
+export const getTimeoutForPriority = (priority) =>
+    PRIORITY_TIMEOUTS[priority] ?? ANALYSIS_TIMEOUT_MS;
+
+// ============================================================
 // MULTI-API FAILOVER CONFIGURATION
 // Priority: Gemini Keys (1-4) → OpenRouter Keys (1-4) → Groq Keys (1-3)
 // If a provider hits a 429 / quota / error, it tries the next automatically.
@@ -16,37 +40,37 @@ const buildConfigList = () => {
         env.VITE_GEMINI_API_KEY_1, env.VITE_GEMINI_API_KEY_2,
         env.VITE_GEMINI_API_KEY_3, env.VITE_GEMINI_API_KEY_4
     ].filter(Boolean);
-    // Try each key with gemini-2.5-flash first (most robust, active free tier), then gemini-2.5-flash-lite
+    // Dynamically retrieve configured model slugs or fallback to stable defaults
+    const geminiModels = (env.VITE_AI_GEMINI_MODELS || 'gemini-2.5-flash,gemini-2.5-flash-lite,gemini-2.0-flash').split(',');
+    
     geminiKeys.forEach(key => {
-        configs.push({ provider: 'gemini', key, model: 'gemini-2.5-flash' });
-        configs.push({ provider: 'gemini', key, model: 'gemini-2.5-flash-lite' });
-        configs.push({ provider: 'gemini', key, model: 'gemini-2.0-flash' });
+        geminiModels.forEach(model => {
+            configs.push({ provider: 'gemini', key, model: model.trim() });
+        });
     });
 
-    // Priority 2: OpenRouter — updated model slugs (verified working as of 2025)
+    // Priority 2: OpenRouter — updated model slugs
     const openrouterKeys = [
         env.VITE_OPENROUTER_API_KEY_1, env.VITE_OPENROUTER_API_KEY_2,
         env.VITE_OPENROUTER_API_KEY_3, env.VITE_OPENROUTER_API_KEY_4,
     ].filter(Boolean);
-    const openrouterModels = [
-        'meta-llama/llama-3.2-3b-instruct:free',
-        'microsoft/phi-3-mini-128k-instruct:free',
-        'mistralai/mistral-7b-instruct:free',
-        'google/gemma-2-9b-it:free',
-    ];
+    const openrouterModels = (env.VITE_AI_OPENROUTER_MODELS || 'meta-llama/llama-3.2-3b-instruct:free,microsoft/phi-3-mini-128k-instruct:free,mistralai/mistral-7b-instruct:free,google/gemma-2-9b-it:free').split(',');
+    
     openrouterKeys.forEach((key, idx) => {
-        // Each key tries two models for extra redundancy
-        configs.push({ provider: 'openrouter', key, model: openrouterModels[idx % openrouterModels.length] });
-        configs.push({ provider: 'openrouter', key, model: openrouterModels[(idx + 1) % openrouterModels.length] });
+        const primaryModel = openrouterModels[idx % openrouterModels.length].trim();
+        const secondaryModel = openrouterModels[(idx + 1) % openrouterModels.length].trim();
+        configs.push({ provider: 'openrouter', key, model: primaryModel });
+        configs.push({ provider: 'openrouter', key, model: secondaryModel });
     });
 
-    // Priority 3: Groq — use stable, currently-available models
+    // Priority 3: Groq — use stable models
     const groqKeys = [
         env.VITE_GROQ_API_KEY_1, env.VITE_GROQ_API_KEY_2, env.VITE_GROQ_API_KEY_3
     ].filter(Boolean);
-    const groqModels = ['llama-3.1-8b-instant', 'mixtral-8x7b-32768', 'gemma2-9b-it'];
+    const groqModels = (env.VITE_AI_GROQ_MODELS || 'llama-3.1-8b-instant,mixtral-8x7b-32768,gemma2-9b-it').split(',');
+    
     groqKeys.forEach((key, idx) => {
-        configs.push({ provider: 'groq', key, model: groqModels[idx % groqModels.length] });
+        configs.push({ provider: 'groq', key, model: groqModels[idx % groqModels.length].trim() });
     });
 
     return configs;
@@ -54,10 +78,30 @@ const buildConfigList = () => {
 
 
 // ============================================================
+// TIMEOUT TELEMETRY
+// ============================================================
+
+/**
+ * Logs a timeout event for observability.
+ * @param {'frontend_timeout'|'retry_attempt'|'user_cancel'} event
+ * @param {object} [meta]
+ */
+export const logTimeoutEvent = (event, meta = {}) => {
+    const payload = {
+        event,
+        timestamp: new Date().toISOString(),
+        ...meta,
+    };
+    // Structured console output for log aggregators
+    console.warn(`[Timeout Telemetry]`, JSON.stringify(payload));
+};
+
+
+// ============================================================
 // PROVIDER HANDLERS
 // ============================================================
 
-const callGemini = async (config, promptText, history, image) => {
+const callGemini = async (config, promptText, history, image, signal) => {
     const genAI = new GoogleGenerativeAI(config.key);
     const model = genAI.getGenerativeModel({ model: config.model });
 
@@ -83,11 +127,18 @@ const callGemini = async (config, promptText, history, image) => {
         messageParts.push({ inlineData: { mimeType: mime.split(':')[1] || 'image/png', data } });
     }
 
+    // Abort check before dispatching to Gemini SDK (SDK does not natively support AbortSignal)
+    if (signal?.aborted) {
+        const err = new Error("Request aborted");
+        err.name = "AbortError";
+        throw err;
+    }
+
     const result = await chat.sendMessage(messageParts);
     return result.response.text();
 };
 
-const callOpenAICompat = async (config, promptText, history, image, baseUrl, extraHeaders = {}) => {
+const callOpenAICompat = async (config, promptText, history, image, baseUrl, extraHeaders = {}, signal) => {
     const messages = history.map(msg => ({
         role: msg.role === 'bot' ? 'assistant' : 'user',
         content: msg.text || ""
@@ -102,7 +153,8 @@ const callOpenAICompat = async (config, promptText, history, image, baseUrl, ext
     const response = await fetch(`${baseUrl}/chat/completions`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${config.key}`, ...extraHeaders },
-        body: JSON.stringify({ model: config.model, messages, max_tokens: 2048 })
+        body: JSON.stringify({ model: config.model, messages, max_tokens: 2048 }),
+        signal,
     });
 
     if (!response.ok) {
@@ -115,33 +167,67 @@ const callOpenAICompat = async (config, promptText, history, image, baseUrl, ext
 };
 
 // Core failover runner — shared by both exported functions
-const runWithFailover = async (promptText, history, image) => {
+const runWithFailover = async (promptText, history, image, signal) => {
     const configList = buildConfigList();
     if (configList.length === 0) throw new Error("No AI API keys configured in .env");
 
+    const blacklistedKeys = new Set();
+
     for (let i = 0; i < configList.length; i++) {
+        // Honour external abort (e.g. user cancel or timeout)
+        if (signal?.aborted) {
+            const err = new Error("Request aborted");
+            err.name = "AbortError";
+            throw err;
+        }
+
         const config = configList[i];
+        if (blacklistedKeys.has(config.key)) {
+            console.log(`[AI Failover] Skipping blacklisted key for ${config.provider} (${config.model})`);
+            continue;
+        }
+
         console.log(`[AI Failover] Trying ${i + 1}/${configList.length}: ${config.provider} (${config.model})`);
 
         try {
             if (config.provider === 'gemini') {
-                return await callGemini(config, promptText, history, image);
+                return await callGemini(config, promptText, history, image, signal);
             } else if (config.provider === 'openrouter') {
                 return await callOpenAICompat(config, promptText, history, image,
                     'https://openrouter.ai/api/v1',
-                    { 'HTTP-Referer': API_CONFIG.FRONTEND_URL, 'X-Title': 'AI Helpdesk' }
+                    { 'HTTP-Referer': API_CONFIG.FRONTEND_URL, 'X-Title': 'AI Helpdesk' },
+                    signal
                 );
             } else if (config.provider === 'groq') {
                 return await callOpenAICompat(config, promptText, history, null, // Groq = text only
-                    'https://api.groq.com/openai/v1'
+                    'https://api.groq.com/openai/v1',
+                    {},
+                    signal
                 );
             }
         } catch (error) {
+            // Propagate abort immediately — no point trying other providers
+            if (error.name === "AbortError" || signal?.aborted) {
+                throw error;
+            }
+
             const isRateLimit = error.status === 429
                 || error.message?.includes('429')
                 || error.message?.includes('quota')
                 || error.message?.includes('RESOURCE_EXHAUSTED')
                 || error.message?.includes('rate_limit');
+
+            const isExpiredOrInvalid = error.message?.includes('API_KEY_INVALID')
+                || error.message?.includes('API key expired')
+                || error.message?.includes('invalid')
+                || error.message?.includes('expired')
+                || error.status === 401
+                || error.status === 403;
+
+            if (isExpiredOrInvalid) {
+                blacklistedKeys.add(config.key);
+                console.warn(`[AI Failover] Blacklisted invalid/expired key for ${config.provider}`);
+            }
 
             console.warn(`[AI Failover] ❌ ${config.provider} key ${i + 1}: ${isRateLimit ? 'Quota exceeded' : error.message}`);
         }
@@ -157,6 +243,12 @@ const localFallbackSummary = (issueText) => {
     // Capitalise first letter, truncate at 100 chars
     const summary = (text.charAt(0).toUpperCase() + text.slice(1)).substring(0, 100) + (text.length > 100 ? '…' : '');
     return { summary, image_description: '' };
+};
+
+const getSlaBreachAt = (priority = 'Medium') => {
+    const hoursMap = { Critical: 2, High: 8, Medium: 24, Low: 72 };
+    const slaHours = hoursMap[priority] || 24;
+    return new Date(Date.now() + slaHours * 60 * 60 * 1000).toISOString();
 };
 
 
@@ -186,14 +278,30 @@ Context:
         ? `${systemPrompt}\n\nUSER REQUEST: ${prompt}`
         : `${prompt}\n\n(Reminder: Follow all system formatting and context rules)`;
 
-    return runWithFailover(effectivePrompt, history, image);
+    return runWithFailover(effectivePrompt, history, image, null);
 };
 
 // ============================================================
 // EXPORT 2: analyzeTicketWithAI — Used in AIProcessing.jsx
-// Generates a smart AI summary and optional image description.
+// Enforces ANALYSIS_TIMEOUT_MS (60 s) via AbortController.
+// Supports retry: call with the same arguments; the previous
+// AbortController is independent of each invocation.
 // ============================================================
-export const analyzeTicketWithAI = async (issueText, ocrText = '', image = null) => {
+
+/**
+ * Analyzes a ticket using the multi-provider AI failover chain.
+ *
+ * @param {string} issueText      - User-submitted ticket description.
+ * @param {string} [ocrText='']   - Text extracted from an uploaded screenshot.
+ * @param {string|null} [image=null] - Base64-encoded screenshot (data URI).
+ * @param {AbortSignal} [externalSignal] - Optional external AbortSignal (e.g. from user cancel).
+ * @returns {Promise<{summary:string, image_description:string, category?:string,
+ *   subcategory?:string, priority?:string, assigned_team?:string,
+ *   confidence?:number, sla_breach_at:string}>}
+ */
+export const analyzeTicketWithAI = async (issueText, ocrText = '', image = null, externalSignal = null) => {
+    const startTime = Date.now();
+
     const imageNote = ocrText ? `\nExtracted text from uploaded screenshot: "${ocrText}"` : '';
     const imageInstruction = image
         ? '\nAn image has also been provided. Analyze it and describe the visible error or issue.'
@@ -217,8 +325,32 @@ Respond in this EXACT JSON format (no markdown, just raw JSON):
 
 User Issue: "${issueText}"${imageNote}${imageInstruction}`;
 
+    // Internal timeout controller (60 s)
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => {
+        timeoutController.abort();
+        const durationMs = Date.now() - startTime;
+        logTimeoutEvent('frontend_timeout', {
+            endpoint: 'analyzeTicketWithAI',
+            duration_ms: durationMs,
+        });
+        console.warn(`[analyzeTicketWithAI] Request aborted after ${durationMs}ms (timeout: ${ANALYSIS_TIMEOUT_MS}ms)`);
+    }, ANALYSIS_TIMEOUT_MS);
+
+    // Merge internal timeout signal with any external signal (e.g. component unmount)
+    let effectiveSignal = timeoutController.signal;
+    if (externalSignal) {
+        // If either aborts, the merged signal aborts
+        const merged = new AbortController();
+        const onAbort = () => merged.abort();
+        timeoutController.signal.addEventListener('abort', onAbort, { once: true });
+        externalSignal.addEventListener('abort', onAbort, { once: true });
+        effectiveSignal = merged.signal;
+    }
+
     try {
-        const raw = await runWithFailover(prompt, [], image);
+        const raw = await runWithFailover(prompt, [], image, effectiveSignal);
+        clearTimeout(timeoutId);
 
         // Strip any markdown code fences the model might add
         const cleaned = raw.replace(/```json|```/g, '').trim();
@@ -231,11 +363,33 @@ User Issue: "${issueText}"${imageNote}${imageInstruction}`;
             subcategory: parsed.subcategory,
             priority: parsed.priority,
             assigned_team: parsed.assigned_team,
-            confidence: parsed.confidence || 0.9
+            confidence: parsed.confidence || 0.9,
+            sla_breach_at: getSlaBreachAt(parsed.priority)
         };
     } catch (err) {
+        clearTimeout(timeoutId);
+        const durationMs = Date.now() - startTime;
+
+        // Re-throw AbortErrors so callers can distinguish timeout from provider exhaustion
+        if (err.name === 'AbortError' || timeoutController.signal.aborted) {
+            logTimeoutEvent('frontend_timeout', {
+                endpoint: 'analyzeTicketWithAI',
+                duration_ms: durationMs,
+                reason: 'AbortError',
+            });
+            const timeoutError = new Error(
+                `Analysis timed out after ${Math.round(durationMs / 1000)}s. Please retry.`
+            );
+            timeoutError.name = 'AnalysisTimeoutError';
+            timeoutError.duration_ms = durationMs;
+            throw timeoutError;
+        }
+
         // All providers failed — use smart local fallback so ticket flow never breaks
         console.warn('[analyzeTicketWithAI] All providers exhausted, using local fallback:', err.message);
-        return localFallbackSummary(issueText);
+        return {
+            ...localFallbackSummary(issueText),
+            sla_breach_at: getSlaBreachAt()
+        };
     }
 };

@@ -66,6 +66,76 @@ from backend.services.rag_service import RagService
 
 
 # ---------------------------------------------------------------------------
+# Request timeout configuration
+# ---------------------------------------------------------------------------
+
+#: Default analysis timeout (seconds) — applied when no priority is known yet.
+DEFAULT_ANALYSIS_TIMEOUT: int = 45
+
+#: Priority-based timeout map.  Values match frontend PRIORITY_TIMEOUTS (ms/1000).
+PRIORITY_ANALYSIS_TIMEOUTS: dict[str, int] = {
+    "Low": 30,
+    "Medium": 45,
+    "High": 60,
+    "Critical": 90,
+}
+
+_timeout_logger = logging.getLogger("timeout")
+
+
+def _log_timeout_event(event: str, endpoint: str, duration_s: float, **extra) -> None:
+    """Emit a structured timeout metric that can be consumed by log aggregators."""
+    import json as _json
+    payload = {
+        "event": event,
+        "endpoint": endpoint,
+        "duration_s": round(duration_s, 3),
+        **extra,
+    }
+    _timeout_logger.warning("[Timeout Telemetry] %s", _json.dumps(payload))
+
+
+async def _run_analysis_with_timeout(
+    coro,
+    *,
+    endpoint: str,
+    priority: str = "Medium",
+) -> "TicketResponse":
+    """
+    Execute an AI analysis coroutine with a priority-based hard timeout.
+
+    On timeout, logs a structured metric and raises an HTTP 408 response
+    so the frontend retry handler activates immediately.
+    """
+    timeout_s = PRIORITY_ANALYSIS_TIMEOUTS.get(priority, DEFAULT_ANALYSIS_TIMEOUT)
+    import time as _time
+    start = _time.monotonic()
+    try:
+        result = await asyncio.wait_for(coro, timeout=timeout_s)
+        return result
+    except asyncio.TimeoutError:
+        elapsed = _time.monotonic() - start
+        _log_timeout_event(
+            "backend_timeout",
+            endpoint=endpoint,
+            duration_s=elapsed,
+            priority=priority,
+            limit_s=timeout_s,
+        )
+        raise HTTPException(
+            status_code=408,
+            detail={
+                "success": False,
+                "error": "Request Timeout",
+                "message": "Ticket analysis exceeded maximum processing time.",
+                "duration_s": round(elapsed, 3),
+                "limit_s": timeout_s,
+                "priority": priority,
+            },
+        )
+
+
+# ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
 def get_system_settings(company_id: str) -> dict:
@@ -767,6 +837,9 @@ async def update_ticket(ticket_id: str, updates: dict):
 async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
     Main endpoint for analyzing a new ticket using the cascade of local AI models.
+
+    Enforces a priority-based execution timeout (30–90 s).  On timeout a 408
+    response is returned so the frontend retry handler can activate immediately.
     """
     text = request_body.text
 
@@ -795,15 +868,26 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
-    # Initalize Timeline
-    return await analyze_only(request_body)
+    # Derive optimistic priority for timeout selection.
+    # We use the request field if supplied; otherwise default to Medium.
+    priority_hint: str = getattr(request_body, "priority", "Medium") or "Medium"
+
+    # Enforce execution timeout and delegate to the shared analysis coroutine.
+    return await _run_analysis_with_timeout(
+        analyze_only(request_body),
+        endpoint="/ai/analyze_ticket",
+        priority=priority_hint,
+    )
 
 @app.post("/ai/analyze")
 async def analyze_only(request_body: TicketRequest):
     """
-    PERFORMANCE UPGRADE: AI Analysis phase only. 
-    Does NOT persist to DB. This allows the user to review the analysis 
+    PERFORMANCE UPGRADE: AI Analysis phase only.
+    Does NOT persist to DB. This allows the user to review the analysis
     and duplicate check before committing to a ticket creation.
+
+    When called directly (not via analyze_ticket) it also enforces the
+    priority-based timeout so standalone callers get identical protection.
     """
     text = request_body.text
     print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 

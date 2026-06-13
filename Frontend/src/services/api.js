@@ -1,11 +1,18 @@
 import axios from 'axios';
 import { MOCK_TICKETS } from './mockData';
 import { API_CONFIG } from '../config';
+import { logTimeoutEvent, ANALYSIS_TIMEOUT_MS } from './aiAssistant';
 
 const USE_MOCK = true;
 const API_BASE_URL = API_CONFIG.BACKEND_URL;
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const getSlaBreachAt = (priority = 'Low') => {
+  const hoursMap = { Critical: 2, High: 8, Medium: 24, Low: 72 };
+  const slaHours = hoursMap[priority] || 72;
+  return new Date(Date.now() + slaHours * 60 * 60 * 1000).toISOString();
+};
 
 // Safe helper to get data from storage or default
 const getStorage = (key, defaultData) => {
@@ -67,14 +74,61 @@ export const api = {
     }
   },
 
-  predictTicket: async (issueText, imageBase64 = "") => {
+  /**
+   * Calls POST /ai/analyze_ticket with a 60-second client-side timeout.
+   *
+   * If the request exceeds ANALYSIS_TIMEOUT_MS the AbortController fires,
+   * cancels the in-flight network request, and throws an error whose
+   * `.name === 'AnalysisTimeoutError'` so callers can show a retry prompt.
+   *
+   * @param {string} issueText
+   * @param {string} [imageBase64='']
+   * @param {AbortSignal} [externalSignal] – Pass a component-level signal
+   *   to cancel when the user navigates away or closes the modal.
+   * @returns {Promise<{data: object}>}
+   */
+  predictTicket: async (issueText, imageBase64 = "", externalSignal = null) => {
+    const startTime = Date.now();
+
+    // Per-request AbortController for client-side timeout
+    const timeoutController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      timeoutController.abort();
+      const durationMs = Date.now() - startTime;
+      logTimeoutEvent('frontend_timeout', {
+        endpoint: '/ai/analyze_ticket',
+        duration_ms: durationMs,
+      });
+      console.warn(
+        `[api.predictTicket] Request aborted after ${durationMs}ms ` +
+        `(timeout: ${ANALYSIS_TIMEOUT_MS}ms)`
+      );
+    }, ANALYSIS_TIMEOUT_MS);
+
+    // Merge internal timeout signal with optional external signal
+    let effectiveSignal = timeoutController.signal;
+    if (externalSignal) {
+      const merged = new AbortController();
+      const onAbort = () => merged.abort();
+      timeoutController.signal.addEventListener('abort', onAbort, { once: true });
+      externalSignal.addEventListener('abort', onAbort, { once: true });
+      effectiveSignal = merged.signal;
+    }
+
     try {
+      const currentUser = JSON.parse(sessionStorage.getItem("currentUser") || "{}");
       // ALWAYS call the real backend for prediction if possible
       const response = await axios.post(`${API_BASE_URL}/ai/analyze_ticket`, {
         text: issueText,
         image_base64: imageBase64,
-        image_text: ""
+        image_text: "",
+        company_id: currentUser.company_id || currentUser.companyId || null
+      }, {
+        signal: effectiveSignal,
+        timeout: ANALYSIS_TIMEOUT_MS,
       });
+
+      clearTimeout(timeoutId);
 
       const result = response.data;
 
@@ -95,10 +149,37 @@ export const api = {
           reasoning: result.reasoning,
           decision_factors: result.decision_factors,
           image_description: result.image_description,
-          ocr_text: result.ocr_text
+          ocr_text: result.ocr_text,
+          is_potential_duplicate: result.is_potential_duplicate || false,
+          parent_ticket_id: result.parent_ticket_id || result.duplicate_ticket?.duplicate_ticket_id || null,
+          sla_breach_at: result.sla_breach_at || getSlaBreachAt(result.priority)
         }
       };
     } catch (error) {
+      clearTimeout(timeoutId);
+      const durationMs = Date.now() - startTime;
+
+      // Distinguish timeout / cancel from generic failure
+      const isAbort =
+        error.name === 'AbortError' ||
+        error.name === 'CanceledError' ||   // axios cancel
+        error.code === 'ERR_CANCELED' ||
+        timeoutController.signal.aborted;
+
+      if (isAbort) {
+        logTimeoutEvent('frontend_timeout', {
+          endpoint: '/ai/analyze_ticket',
+          duration_ms: durationMs,
+          reason: error.name,
+        });
+        const timeoutError = new Error(
+          `Ticket analysis timed out after ${Math.round(durationMs / 1000)}s. Please retry.`
+        );
+        timeoutError.name = 'AnalysisTimeoutError';
+        timeoutError.duration_ms = durationMs;
+        throw timeoutError;
+      }
+
       console.error("AI Backend Error, falling back to mock:", error);
       // Fallback to mock logic if backend fails
       await delay(1000);
@@ -112,7 +193,10 @@ export const api = {
           routing_confidence: 0.5,
           duplicate_probability: 0.0,
           summary: issueText.substring(0, 50) + "...",
-          entities: []
+          entities: [],
+          is_potential_duplicate: false,
+          parent_ticket_id: null,
+          sla_breach_at: getSlaBreachAt("Medium")
         }
       };
     }
