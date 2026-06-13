@@ -289,4 +289,63 @@ export const api = {
       console.warn('[Correction Log] Failed to save correction:', error);
     }
   },
+
+  saveDraft: (userId, draftData) => {
+    const key = `helpdesk_drafts_${userId || 'anonymous'}`;
+    let drafts = api.getDrafts(userId);
+    
+    const now = new Date().toISOString();
+    let updatedDraft = { ...draftData };
+
+    if (!updatedDraft.draft_id) {
+      updatedDraft.draft_id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    }
+    
+    updatedDraft.updated_at = now;
+
+    // Remove existing draft with same ID if it exists
+    drafts = drafts.filter(d => d.draft_id !== updatedDraft.draft_id);
+    
+    // Add to the front of the list
+    drafts.unshift(updatedDraft);
+
+    // Limit to 5 drafts
+    if (drafts.length > 5) {
+      drafts = drafts.slice(0, 5);
+    }
+
+    setStorage(key, drafts);
+    return updatedDraft;
+  },
+
+  getDrafts: (userId) => {
+    const key = `helpdesk_drafts_${userId || 'anonymous'}`;
+    const drafts = getStorage(key, []);
+    
+    // Automatic cleanup for drafts older than 30 days
+    const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    const activeDrafts = drafts.filter(draft => {
+      const updatedAt = new Date(draft.updated_at).getTime();
+      return updatedAt >= thirtyDaysAgo;
+    });
+
+    if (activeDrafts.length !== drafts.length) {
+      setStorage(key, activeDrafts);
+    }
+
+    // Sort by updated_at descending
+    return activeDrafts.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+  },
+
+  deleteDraft: (userId, draftId) => {
+    const key = `helpdesk_drafts_${userId || 'anonymous'}`;
+    const drafts = api.getDrafts(userId);
+    const remainingDrafts = drafts.filter(d => d.draft_id !== draftId);
+    setStorage(key, remainingDrafts);
+  },
+
+  cleanupDrafts: (userId) => {
+    api.getDrafts(userId);
+  },
 };
+

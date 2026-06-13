@@ -23,6 +23,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../..
 import { Textarea } from "../../components/ui/textarea";
 import Tesseract from 'tesseract.js';
 import { translateText, SUPPORTED_LANGUAGES } from '../../services/translationService';
+import useAuthStore from '../../store/authStore';
+import { api } from '../../services/api';
 
 const CreateTicket = () => {
     const [issue, setIssue] = useState('');
@@ -41,6 +43,22 @@ const CreateTicket = () => {
     const [isTranslating, setIsTranslating] = useState(false);
     const [isLangOpen, setIsLangOpen] = useState(false);
     const langRef = useRef(null);
+
+    // ── Smart Auto-Save & Draft Recovery state ──
+    const { user } = useAuthStore();
+    const userId = user?.id || 'anonymous';
+    const [draftId, setDraftId] = useState(null);
+    const [saveStatus, setSaveStatus] = useState(''); // 'saving' | 'saved' | ''
+    const [lastSavedTime, setLastSavedTime] = useState(null);
+    const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+    const [recoveryDraft, setRecoveryDraft] = useState(null);
+    const [showDiscardModal, setShowDiscardModal] = useState(false);
+    const [isDirty, setIsDirty] = useState(false);
+    const [allDrafts, setAllDrafts] = useState([]);
+    const [showDraftSwitcher, setShowDraftSwitcher] = useState(false);
+    const draftSwitcherRef = useRef(null);
+    const autoSaveTimerRef = useRef(null);
+    const autoSaveIntervalRef = useRef(null);
 
     // Voice UI states
     const [showVoiceModal, setShowVoiceModal] = useState(false);
@@ -61,8 +79,111 @@ const CreateTicket = () => {
             if (recognitionRef.current) recognitionRef.current.stop();
             if (audioContextRef.current) audioContextRef.current.close();
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+            if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+            if (autoSaveIntervalRef.current) clearInterval(autoSaveIntervalRef.current);
         };
     }, []);
+
+    // ── On mount: run cleanup, check for existing drafts, show recovery modal ──
+    useEffect(() => {
+        api.cleanupDrafts(userId);
+        const drafts = api.getDrafts(userId);
+        setAllDrafts(drafts);
+        if (drafts.length > 0) {
+            setRecoveryDraft(drafts[0]);
+            setShowRecoveryModal(true);
+        }
+    }, [userId]);
+
+    // ── Close draft switcher on outside click ──
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (draftSwitcherRef.current && !draftSwitcherRef.current.contains(event.target)) {
+                setShowDraftSwitcher(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // ── Auto-save: 1s debounce on content change ──
+    useEffect(() => {
+        if (!isDirty) return;
+        if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+        setSaveStatus('saving');
+        autoSaveTimerRef.current = setTimeout(() => {
+            performSave();
+        }, 1000);
+        return () => clearTimeout(autoSaveTimerRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [issue, selectedLanguage, isDirty]);
+
+    // ── Auto-save: 10s interval fallback ──
+    useEffect(() => {
+        autoSaveIntervalRef.current = setInterval(() => {
+            if (isDirty) performSave();
+        }, 10000);
+        return () => clearInterval(autoSaveIntervalRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isDirty, issue, selectedLanguage, draftId]);
+
+    const performSave = () => {
+        const hasContent = issue.trim();
+        if (!hasContent) return;
+        const draftData = {
+            draft_id: draftId,
+            title: issue.substring(0, 80),
+            issue,
+            selectedLanguage,
+        };
+        const saved = api.saveDraft(userId, draftData);
+        setDraftId(saved.draft_id);
+        setLastSavedTime(new Date());
+        setSaveStatus('saved');
+        setIsDirty(false);
+        setAllDrafts(api.getDrafts(userId));
+    };
+
+    const formatSaveTime = (date) => {
+        if (!date) return '';
+        const diffMs = Date.now() - date.getTime();
+        const diffSec = Math.floor(diffMs / 1000);
+        if (diffSec < 5) return 'just now';
+        if (diffSec < 60) return `${diffSec}s ago`;
+        const diffMin = Math.floor(diffSec / 60);
+        if (diffMin < 60) return `${diffMin}m ago`;
+        const diffHr = Math.floor(diffMin / 60);
+        return `${diffHr}h ago`;
+    };
+
+    const handleRestoreDraft = (draft) => {
+        setIssue(draft.issue || '');
+        setSelectedLanguage(draft.selectedLanguage || 'en');
+        setDraftId(draft.draft_id);
+        setLastSavedTime(new Date(draft.updated_at));
+        setSaveStatus('saved');
+        setIsDirty(false);
+        setShowRecoveryModal(false);
+        setRecoveryDraft(null);
+    };
+
+    const handleDiscardDraft = (draftIdToDiscard) => {
+        api.deleteDraft(userId, draftIdToDiscard || draftId);
+        setAllDrafts(api.getDrafts(userId));
+        if (draftIdToDiscard === draftId || !draftIdToDiscard) {
+            setDraftId(null);
+            setLastSavedTime(null);
+            setSaveStatus('');
+        }
+        setShowRecoveryModal(false);
+        setShowDiscardModal(false);
+        setRecoveryDraft(null);
+    };
+
+    const handleLoadDraft = (draft) => {
+        handleRestoreDraft(draft);
+        setShowDraftSwitcher(false);
+    };
 
     // Close language dropdown on outside click
     useEffect(() => {
@@ -301,6 +422,13 @@ const CreateTicket = () => {
             }
 
             // Navigate to AI Processing workflow where the API will be called
+            // Clear the active draft on successful submission
+            if (draftId) {
+                api.deleteDraft(userId, draftId);
+                setDraftId(null);
+                setSaveStatus('');
+            }
+
             navigate('/ai-processing', {
                 state: {
                     text: textToSubmit,
@@ -320,6 +448,7 @@ const CreateTicket = () => {
     };
 
     return (
+        <>
         <div className="min-h-screen bg-[#f6f8f7] pb-20">
             <main className="pt-32 px-6">
                 <div className="w-full max-w-2xl mx-auto">
@@ -332,11 +461,107 @@ const CreateTicket = () => {
                     >
                         <Card className="border-none shadow-sm hover:shadow-md transition-shadow duration-300 rounded-3xl bg-white overflow-hidden h-full flex flex-col">
                             <CardHeader className="p-8 pb-4">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
-                                        <Sparkles size={18} className="fill-emerald-600" />
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="p-1.5 bg-emerald-100 text-emerald-600 rounded-lg">
+                                            <Sparkles size={18} className="fill-emerald-600" />
+                                        </div>
+                                        <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Workspace</span>
                                     </div>
-                                    <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Workspace</span>
+                                    <div className="flex items-center gap-3">
+                                        {/* Save Status Indicator */}
+                                        <AnimatePresence>
+                                            {saveStatus === 'saving' && (
+                                                <motion.span
+                                                    key="saving"
+                                                    initial={{ opacity: 0, y: -4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="text-xs font-semibold text-gray-400 flex items-center gap-1.5"
+                                                >
+                                                    <span className="w-3 h-3 border-2 border-gray-300 border-t-emerald-500 rounded-full animate-spin inline-block" />
+                                                    Saving...
+                                                </motion.span>
+                                            )}
+                                            {saveStatus === 'saved' && (
+                                                <motion.span
+                                                    key="saved"
+                                                    initial={{ opacity: 0, y: -4 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="text-xs font-semibold text-emerald-600 flex items-center gap-1.5"
+                                                >
+                                                    <CheckCircle2 size={12} />
+                                                    Saved {formatSaveTime(lastSavedTime)}
+                                                </motion.span>
+                                            )}
+                                        </AnimatePresence>
+
+                                        {/* Draft Switcher */}
+                                        {allDrafts.length > 0 && (
+                                            <div className="relative" ref={draftSwitcherRef}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setShowDraftSwitcher(!showDraftSwitcher)}
+                                                    className="text-xs font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 rounded-xl px-3 py-1.5 flex items-center gap-1.5 transition-all"
+                                                >
+                                                    <Clock size={12} />
+                                                    Drafts ({allDrafts.length})
+                                                    <ChevronDown size={12} className={`transition-transform ${showDraftSwitcher ? 'rotate-180' : ''}`} />
+                                                </button>
+                                                <AnimatePresence>
+                                                    {showDraftSwitcher && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                                                            animate={{ opacity: 1, y: 4, scale: 1 }}
+                                                            exit={{ opacity: 0, y: 8, scale: 0.96 }}
+                                                            className="absolute right-0 top-full z-50 w-72 bg-white rounded-2xl shadow-2xl border border-gray-100 p-2 overflow-hidden"
+                                                        >
+                                                            <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 px-3 py-2">Saved Drafts</p>
+                                                            <div className="space-y-1">
+                                                                {allDrafts.map((draft) => (
+                                                                    <div key={draft.draft_id} className="flex items-center gap-2 px-2 group">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleLoadDraft(draft)}
+                                                                            className="flex-1 text-left py-2 px-2 rounded-xl text-sm hover:bg-emerald-50 transition-all"
+                                                                        >
+                                                                            <p className="font-semibold text-gray-900 truncate">{draft.title || 'Untitled Draft'}</p>
+                                                                            <p className="text-xs text-gray-400">{formatSaveTime(new Date(draft.updated_at))}</p>
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleDiscardDraft(draft.draft_id)}
+                                                                            className="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                                                        >
+                                                                            <X size={14} />
+                                                                        </button>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                            <div className="border-t border-gray-50 mt-2 pt-2 px-2">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => {
+                                                                        setIssue('');
+                                                                        setSelectedLanguage('en');
+                                                                        setDraftId(null);
+                                                                        setLastSavedTime(null);
+                                                                        setSaveStatus('');
+                                                                        setIsDirty(false);
+                                                                        setShowDraftSwitcher(false);
+                                                                    }}
+                                                                    className="w-full text-xs text-center font-bold text-gray-400 hover:text-emerald-600 py-2 rounded-xl hover:bg-emerald-50 transition-all"
+                                                                >
+                                                                    + Start a New Draft
+                                                                </button>
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                                 <CardTitle className="text-3xl font-bold text-gray-900 tracking-tight">Report a New Issue</CardTitle>
                                 <CardDescription className="text-base text-gray-500">
@@ -421,7 +646,10 @@ const CreateTicket = () => {
                                         <div className="relative flex-grow flex flex-col">
                                             <Textarea
                                                 value={issue}
-                                                onChange={(e) => setIssue(e.target.value.substring(0, MAX_CHARS))}
+                                                onChange={(e) => {
+                                    setIssue(e.target.value.substring(0, MAX_CHARS));
+                                    setIsDirty(true);
+                                }}
                                                 placeholder="Describe your problem. Example: VPN not connecting error 789"
                                                 className="min-h-[160px] flex-grow rounded-2xl border-gray-100 bg-gray-50/50 focus:bg-white transition-all text-base p-4 resize-none"
                                                 disabled={isLoading}
@@ -698,6 +926,104 @@ const CreateTicket = () => {
                 )}
             </AnimatePresence>
         </div>
+
+            {/* ── Draft Recovery Modal ── */}
+            <AnimatePresence>
+                {showRecoveryModal && recoveryDraft && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="w-full max-w-md bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden"
+                        >
+                            <div className="p-6 bg-emerald-50/60 border-b border-emerald-100">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center">
+                                        <Clock size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-black text-gray-900 text-base">Draft Found</h3>
+                                        <p className="text-xs text-emerald-600 font-semibold">Saved {formatSaveTime(new Date(recoveryDraft.updated_at))}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-6">
+                                <p className="text-sm text-gray-600 font-medium mb-1">A saved draft was found:</p>
+                                <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                                    <p className="text-sm font-bold text-gray-900 truncate">{recoveryDraft.title || 'Untitled Draft'}</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">{new Date(recoveryDraft.updated_at).toLocaleString()}</p>
+                                </div>
+                                <p className="text-xs text-gray-400 mt-3">Would you like to continue where you left off?</p>
+                            </div>
+                            <div className="p-6 pt-0 flex gap-3">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => handleDiscardDraft(recoveryDraft.draft_id)}
+                                    className="flex-1 font-bold text-red-500 border-red-100 hover:bg-red-50 hover:border-red-200 h-11 rounded-xl"
+                                >
+                                    Discard Draft
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => handleRestoreDraft(recoveryDraft)}
+                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-bold h-11 rounded-xl border-none shadow-lg shadow-emerald-200"
+                                >
+                                    Restore Draft
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Discard Draft Confirmation Modal ── */}
+            <AnimatePresence>
+                {showDiscardModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="w-full max-w-sm bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden"
+                        >
+                            <div className="p-6">
+                                <h3 className="font-black text-gray-900 text-base mb-2">Discard Draft?</h3>
+                                <p className="text-sm text-gray-500 font-medium">This action cannot be undone. Your draft will be permanently deleted.</p>
+                            </div>
+                            <div className="p-6 pt-0 flex gap-3">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowDiscardModal(false)}
+                                    className="flex-1 font-bold text-gray-600 border-gray-200 hover:bg-gray-50 h-11 rounded-xl"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={() => handleDiscardDraft(draftId)}
+                                    className="flex-1 bg-red-500 hover:bg-red-600 text-white font-bold h-11 rounded-xl border-none"
+                                >
+                                    Discard
+                                </Button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+    </>
     );
 };
 
