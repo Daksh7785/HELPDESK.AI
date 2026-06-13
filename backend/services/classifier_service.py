@@ -6,9 +6,35 @@ Priority and other fields are derived from the category mapping.
 
 import os
 import json
+import time
+import logging
+from typing import Callable, Any
+
 import torch
 import torch.nn.functional as F
 from transformers import DistilBertTokenizerFast, DistilBertForSequenceClassification
+from prometheus_client import Counter, Histogram
+
+logger = logging.getLogger(__name__)
+
+# Prometheus metrics for tracking model performance
+MODEL_PREDICTIONS_TOTAL = Counter(
+    "model_predictions_total",
+    "Total count of DistilBERT predictions",
+    ["status"]
+)
+
+MODEL_PREDICTION_LATENCY = Histogram(
+    "model_prediction_latency_seconds",
+    "Latency of DistilBERT prediction in seconds",
+    buckets=(0.05, 0.1, 0.25, 0.5, 0.75, 1.0, 2.5, 5.0, 10.0)
+)
+
+CLASSIFIER_RETRY_TOTAL = Counter(
+    "classifier_retry_total",
+    "Total number of classifier retry attempts",
+    ["provider", "status"]
+)
 
 SAVE_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "models", "classifier")
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -43,26 +69,128 @@ AUTO_RESOLVE_SUBS = {
     "WiFi Issue", "Printer Error", "Monitor Problem",
 }
 
+# ---------------------------------------------------------------------------
+# Retry helpers
+# ---------------------------------------------------------------------------
+
+_RETRYABLE_EXCEPTIONS = (ConnectionError, TimeoutError, OSError)
+
+_MAX_RETRIES: int = 3
+_BASE_DELAY_S: float = 0.1  # 100 ms
+
+
+def _is_retryable(exc: BaseException) -> bool:
+    """Return True for transient errors that are safe to retry."""
+    return isinstance(exc, _RETRYABLE_EXCEPTIONS)
+
+
+def _backoff_delay(attempt: int) -> float:
+    """Exponential backoff: 100 ms * 2^attempt (attempt is 1-based)."""
+    return _BASE_DELAY_S * (2 ** attempt)
+
+
+def _retry_call(
+    fn: Callable[[], Any],
+    *,
+    provider: str = "classifier",
+    max_retries: int = _MAX_RETRIES,
+) -> Any:
+    """
+    Execute *fn* and retry on transient failures with exponential backoff.
+
+    Retry policy:
+      - Connection / timeout errors   → retry up to *max_retries* times.
+      - Validation / value errors     → fail immediately (not retryable).
+      - Exponential delay schedule    → 100 ms, 200 ms, 400 ms …
+
+    Metrics are emitted to Prometheus for each retry attempt and the final
+    outcome (success / failure).
+
+    Args:
+        fn: Zero-argument callable that performs the operation.
+        provider: Label used in Prometheus metrics and log entries.
+        max_retries: Maximum number of additional attempts after the first.
+
+    Returns:
+        The return value of *fn* on success.
+
+    Raises:
+        The last exception if all retry attempts are exhausted.
+    """
+    attempt = 0
+    while True:
+        try:
+            result = fn()
+            if attempt > 0:
+                CLASSIFIER_RETRY_TOTAL.labels(provider=provider, status="success").inc()
+                logger.info(
+                    "[RetryAnalytics] %s succeeded after %d retries",
+                    provider,
+                    attempt,
+                )
+            return result
+        except Exception as exc:
+            if not _is_retryable(exc) or attempt >= max_retries:
+                if attempt > 0:
+                    CLASSIFIER_RETRY_TOTAL.labels(provider=provider, status="failure").inc()
+                    logger.error(
+                        "[RetryAnalytics] %s failed after %d retries: %s",
+                        provider,
+                        attempt,
+                        exc,
+                    )
+                raise
+
+            attempt += 1
+            wait = _backoff_delay(attempt)
+            CLASSIFIER_RETRY_TOTAL.labels(provider=provider, status="retrying").inc()
+            logger.warning(
+                "[RetryAnalytics] event=classifier_retry provider=%s attempt=%d "
+                "success=pending wait_ms=%.0f reason=%s",
+                provider,
+                attempt,
+                wait * 1000,
+                type(exc).__name__,
+            )
+            time.sleep(wait)
+
+
+# ---------------------------------------------------------------------------
+# Classifier service
+# ---------------------------------------------------------------------------
+
 
 class ClassifierService:
-    def __init__(self):
+    def __init__(self) -> None:
         self.model = None
         self.tokenizer = None
         self.id2label = None
         self.label2id = None
         self._loaded = False
 
-    def load(self):
+    def load(self) -> None:
         """Load model, tokenizer, and label mappings from disk."""
         if self._loaded:
             return
 
         abs_dir = os.path.abspath(SAVE_DIR)
+        safetensors_path = os.path.join(abs_dir, "model.safetensors")
 
-        if not os.path.exists(os.path.join(abs_dir, "model.safetensors")):
+        if not os.path.exists(safetensors_path):
             raise FileNotFoundError(
                 f"Classifier model not found at {abs_dir}. "
                 "Please ensure model files are present."
+            )
+
+        with open(safetensors_path, "rb") as f:
+            header = f.read(512)
+        if (
+            b"version https://git-lfs.github.com/spec" in header
+            or b"oid sha256:" in header
+        ):
+            raise FileNotFoundError(
+                f"Classifier model at {abs_dir} is a Git LFS placeholder, not the actual model. "
+                "Please pull the LFS assets."
             )
 
         # Load label mappings
@@ -82,9 +210,12 @@ class ClassifierService:
         self._loaded = True
         print("Classifier loaded successfully")
 
-    def predict(self, text: str) -> dict:
+    def _run_inference(self, text: str) -> dict:
         """
-        Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
+        Execute a single forward pass through the classifier model.
+
+        This method is intentionally kept separate so that *_retry_call* can
+        wrap it without capturing the surrounding metrics context.
         """
         self.load()
 
@@ -128,7 +259,7 @@ class ClassifierService:
             "Software": ["crash", "load", "website", "application", "error", "bug", "failing", "software", "SQL", "Cluster", "Database", "Production", "Latency"],
             "Access": ["login", "password", "access", "authentication", "account", "permission", "MFA", "OAuth"]
         }
-        
+
         lower_text = text.lower()
         for cat, keywords in tech_keywords.items():
             if any(k.lower() in lower_text for k in keywords):
@@ -137,7 +268,7 @@ class ClassifierService:
                     category = cat
                     assigned_team = TEAM_MAP.get(cat, "General Support")
                     # Boost confidence significantly for verified technical signals
-                    confidence = max(confidence, 0.92) 
+                    confidence = max(confidence, 0.92)
                     break
 
         return {
@@ -148,3 +279,26 @@ class ClassifierService:
             "assigned_team": assigned_team,
             "confidence": confidence,
         }
+
+    def predict(self, text: str) -> dict:
+        """
+        Predict category, subcategory, priority, auto_resolve, assigned_team, and confidence.
+
+        Transient failures (connection errors, timeouts, OS-level I/O errors) are
+        automatically retried with exponential backoff up to MAX_RETRIES times.
+        Validation errors propagate immediately without retrying.
+        """
+        start_time = time.time()
+        try:
+            result = _retry_call(
+                lambda: self._run_inference(text),
+                provider="classifier",
+            )
+            MODEL_PREDICTIONS_TOTAL.labels(status="success").inc()
+            return result
+        except Exception as e:
+            MODEL_PREDICTIONS_TOTAL.labels(status="failure").inc()
+            raise e
+        finally:
+            duration = time.time() - start_time
+            MODEL_PREDICTION_LATENCY.observe(duration)
