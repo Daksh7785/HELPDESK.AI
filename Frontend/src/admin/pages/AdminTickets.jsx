@@ -46,6 +46,13 @@ const AdminTickets = () => {
     const [teamFilter, setTeamFilter] = useState('All');
     const [agents, setAgents] = useState([]); // All staff/admins in the company
 
+    // Bulk Action States
+    const [selectedTickets, setSelectedTickets] = useState([]);
+    const [bulkActionProgress, setBulkActionProgress] = useState(null); // { current, total, status }
+    const [lastTransactionId, setLastTransactionId] = useState(null);
+    const [undoTimer, setUndoTimer] = useState(null); // seconds left
+    const [bulkActionType, setBulkActionType] = useState(null);
+
     const fetchInitialData = async () => {
         setLoading(true);
         try {
@@ -176,6 +183,114 @@ const AdminTickets = () => {
         }
     };
 
+    const handleSelectAll = (e) => {
+        if (e.target.checked) {
+            setSelectedTickets(filteredTickets.map(t => t.id));
+        } else {
+            setSelectedTickets([]);
+        }
+    };
+
+    const handleSelectTicket = (id) => {
+        setSelectedTickets(prev => 
+            prev.includes(id) ? prev.filter(tId => tId !== id) : [...prev, id]
+        );
+    };
+
+    const handleBulkAction = async (action, value) => {
+        if (selectedTickets.length === 0) return;
+        setBulkActionProgress({ current: 0, total: selectedTickets.length, status: 'Processing...' });
+        
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/tickets/bulk-action`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    ticket_ids: selectedTickets,
+                    action: action,
+                    value: value,
+                    admin_id: user?.id
+                })
+            });
+            
+            if (!response.ok) throw new Error('Bulk action failed');
+            const data = await response.json();
+            
+            setBulkActionProgress({ current: selectedTickets.length, total: selectedTickets.length, status: 'Completed' });
+            setTimeout(() => setBulkActionProgress(null), 2000);
+            setSelectedTickets([]);
+            setLastTransactionId(data.transaction_id);
+            setUndoTimer(300);
+            setBulkActionType(null);
+            
+            const timer = setInterval(() => {
+                setUndoTimer(prev => {
+                    if (prev <= 1) {
+                        clearInterval(timer);
+                        setLastTransactionId(null);
+                        return null;
+                    }
+                    return prev - 1;
+                });
+            }, 1000);
+            
+            showToast(`${selectedTickets.length} tickets updated successfully`, "success");
+            fetchTickets();
+        } catch (error) {
+            setBulkActionProgress(null);
+            showToast("Bulk update failed: " + error.message, "error");
+        }
+    };
+
+    const handleUndoBulkAction = async () => {
+        if (!lastTransactionId) return;
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/api/admin/tickets/bulk-action/undo`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    transaction_id: lastTransactionId,
+                    admin_id: user?.id
+                })
+            });
+            
+            if (!response.ok) throw new Error('Undo failed');
+            
+            showToast("Undo successful", "success");
+            setLastTransactionId(null);
+            setUndoTimer(null);
+            fetchTickets();
+        } catch (error) {
+            showToast("Undo failed: " + error.message, "error");
+        }
+    };
+
+    const handleExportCSV = () => {
+        const selectedData = filteredTickets.filter(t => selectedTickets.includes(t.id));
+        if (selectedData.length === 0) return;
+        
+        const headers = ["Ticket ID", "Title", "Status", "Priority", "Assignee", "Category", "Created Date"];
+        const rows = selectedData.map(t => [
+            t.id,
+            `"${(t.summary || t.subject || '').replace(/"/g, '""')}"`,
+            t.status,
+            t.priority,
+            t.assignee?.full_name || t.assigned_agent_id || 'Unassigned',
+            t.category,
+            new Date(t.created_at).toLocaleString()
+        ]);
+        
+        const csvContent = [headers.join(","), ...rows.map(row => row.join(","))].join("\n");
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        link.setAttribute("href", url);
+        link.setAttribute("download", "tickets_export.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const categories = ['All', 'Network', 'Hardware', 'Software', 'Access', 'Account'];
     const priorities = ['All', 'Low', 'Medium', 'High'];
     const statuses = ['All', 'Open', 'In Progress', 'Resolved', 'Closed'];
@@ -289,6 +404,14 @@ const AdminTickets = () => {
                         <thead>
                             <tr className="bg-slate-50/80 border-b border-slate-100">
                                 <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    <input 
+                                        type="checkbox" 
+                                        checked={filteredTickets.length > 0 && selectedTickets.length === filteredTickets.length}
+                                        onChange={handleSelectAll}
+                                        className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                    />
+                                </th>
+                                <th className="px-6 py-5 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                     <div className="flex items-center gap-2">
                                         ID
                                         <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
@@ -307,6 +430,16 @@ const AdminTickets = () => {
                         <tbody className="divide-y divide-slate-50">
                             {filteredTickets.map((ticket) => (
                                 <tr key={ticket.id} className={`hover:bg-slate-50/50 transition-colors group ${isUpdating === ticket.id ? 'opacity-50 pointer-events-none' : ''}`}>
+                                    {/* Selection Checkbox */}
+                                    <td className="px-6 py-6">
+                                        <input 
+                                            type="checkbox" 
+                                            checked={selectedTickets.includes(ticket.id)}
+                                            onChange={() => handleSelectTicket(ticket.id)}
+                                            className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                        />
+                                    </td>
+
                                     {/* Ticket ID */}
                                     <td className="px-6 py-6">
                                         <span className="font-mono text-xs font-black text-emerald-600">#{formatTicketId(ticket.id)}</span>
@@ -469,6 +602,97 @@ const AdminTickets = () => {
                     </div>
                 )}
             </div>
+
+            {/* Bulk Action Toolbar */}
+            {selectedTickets.length >= 2 && (
+                <div className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-6 z-50 animate-in slide-in-from-bottom-8">
+                    <span className="font-bold text-sm bg-slate-800 px-3 py-1 rounded-lg">{selectedTickets.length} Selected</span>
+                    <div className="w-px h-6 bg-slate-700"></div>
+                    
+                    <div className="flex items-center gap-4">
+                        <div className="relative group">
+                            <button onClick={() => setBulkActionType('status')} className="text-sm font-bold hover:text-emerald-400 transition-colors">Status</button>
+                            {bulkActionType === 'status' && (
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-xl overflow-hidden min-w-[150px] border border-slate-100 p-2 flex flex-col gap-1">
+                                    {statuses.filter(s => s !== 'All').map(s => (
+                                        <button key={s} onClick={() => handleBulkAction('status', s.toLowerCase())} className="text-left px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-emerald-600 rounded-lg">{s}</button>
+                                    ))}
+                                    <button onClick={() => setBulkActionType(null)} className="text-left px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-50 rounded-lg">Cancel</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="relative group">
+                            <button onClick={() => setBulkActionType('priority')} className="text-sm font-bold hover:text-emerald-400 transition-colors">Priority</button>
+                            {bulkActionType === 'priority' && (
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-xl overflow-hidden min-w-[150px] border border-slate-100 p-2 flex flex-col gap-1">
+                                    {priorities.filter(p => p !== 'All').map(p => (
+                                        <button key={p} onClick={() => handleBulkAction('priority', p.toLowerCase())} className="text-left px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-emerald-600 rounded-lg">{p}</button>
+                                    ))}
+                                    <button onClick={() => setBulkActionType(null)} className="text-left px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-50 rounded-lg">Cancel</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="relative group">
+                            <button onClick={() => setBulkActionType('reassign')} className="text-sm font-bold hover:text-emerald-400 transition-colors">Reassign</button>
+                            {bulkActionType === 'reassign' && (
+                                <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-white rounded-xl shadow-xl overflow-hidden min-w-[200px] border border-slate-100 p-2 flex flex-col gap-1 max-h-60 overflow-y-auto">
+                                    <button onClick={() => handleBulkAction('reassign', 'unassigned')} className="text-left px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-50 rounded-lg italic">Unassigned</button>
+                                    {agents.map(a => (
+                                        <button key={a.id} onClick={() => handleBulkAction('reassign', a.id)} className="text-left px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 rounded-lg">{a.full_name}</button>
+                                    ))}
+                                    <button onClick={() => setBulkActionType(null)} className="text-left px-4 py-2 text-xs font-bold text-slate-400 hover:bg-slate-50 rounded-lg mt-2 border-t">Cancel</button>
+                                </div>
+                            )}
+                        </div>
+
+                        <button onClick={() => {
+                            const tags = window.prompt("Enter tags (comma separated):");
+                            if(tags) handleBulkAction('tags', tags.split(',').map(t=>t.trim()));
+                        }} className="text-sm font-bold hover:text-emerald-400 transition-colors">Tags</button>
+
+                        <div className="w-px h-4 bg-slate-700"></div>
+
+                        <button onClick={handleExportCSV} className="text-sm font-bold hover:text-emerald-400 transition-colors flex items-center gap-2 bg-slate-800 px-3 py-1.5 rounded-lg">
+                            <Save size={14}/> Export CSV
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Progress Modal */}
+            {bulkActionProgress && (
+                <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[100] flex items-center justify-center">
+                    <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-sm w-full space-y-4">
+                        <div className="flex items-center gap-3 text-emerald-600 mb-2">
+                            {bulkActionProgress.status === 'Processing...' ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle2 className="w-6 h-6" />}
+                            <h3 className="text-lg font-black uppercase tracking-widest text-slate-900">Bulk Update</h3>
+                        </div>
+                        <p className="text-sm font-bold text-slate-500">{bulkActionProgress.status}</p>
+                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div 
+                                className="h-full bg-emerald-500 transition-all duration-500 ease-out"
+                                style={{ width: `${(bulkActionProgress.current / bulkActionProgress.total) * 100}%` }}
+                            />
+                        </div>
+                        <p className="text-xs font-bold text-slate-400 text-right">{bulkActionProgress.current} / {bulkActionProgress.total} Processed</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Undo Notification */}
+            {undoTimer !== null && (
+                <div className="fixed top-6 right-6 bg-slate-900 text-white p-4 rounded-2xl shadow-2xl z-50 flex items-center gap-4 animate-in slide-in-from-right-8">
+                    <div>
+                        <p className="text-sm font-bold">Bulk Action Completed</p>
+                        <p className="text-xs text-slate-400 font-medium">Undo available for {Math.floor(undoTimer / 60)}:{(undoTimer % 60).toString().padStart(2, '0')}</p>
+                    </div>
+                    <button onClick={handleUndoBulkAction} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-colors flex items-center gap-2">
+                        <RotateCcw size={14} /> Undo
+                    </button>
+                </div>
+            )}
         </div>
     );
 };

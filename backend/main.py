@@ -122,6 +122,17 @@ class TicketSaveRequest(BaseModel):
     cause_effect_chain: list = []
 
 
+class BulkActionRequest(BaseModel):
+    ticket_ids: list[str | int]
+    action: str
+    value: str | list[str]
+    admin_id: str | None = None
+
+class UndoBulkActionRequest(BaseModel):
+    transaction_id: str
+    admin_id: str | None = None
+
+
 class DuplicateInfo(BaseModel):
     is_duplicate: bool
     duplicate_ticket_id: str | None = None
@@ -757,6 +768,146 @@ async def update_ticket(ticket_id: str, updates: dict):
             return updated_ticket
     
     raise HTTPException(status_code=404, detail="Ticket not found")
+
+
+BULK_AUDIT_LOG_PATH = Path(__file__).parent / "data" / "bulk_audit_log.json"
+
+@app.post("/api/admin/tickets/bulk-action")
+async def bulk_action_tickets(request: BulkActionRequest):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+    
+    try:
+        # Fetch previous state for undo capability
+        res = supabase.table("tickets").select("*").in_("id", request.ticket_ids).execute()
+        if not res.data:
+            return {"status": "success", "processed": 0, "transaction_id": None}
+            
+        previous_states = {str(t["id"]): t for t in res.data}
+        
+        # Determine updates
+        updates = {}
+        if request.action == "reassign":
+            # For unassigning, value might be 'unassigned' or similar. We assume valid ID.
+            updates["assigned_agent_id"] = None if request.value == "unassigned" else request.value
+            if request.value != "unassigned":
+                updates["status"] = "in progress"
+        elif request.action == "priority":
+            updates["priority"] = request.value
+        elif request.action == "status":
+            updates["status"] = request.value
+            
+        if not updates and request.action != "tags":
+             raise HTTPException(status_code=400, detail="Invalid action")
+
+        # Batch updates in chunks of 100
+        if updates:
+            for i in range(0, len(request.ticket_ids), 100):
+                batch_ids = request.ticket_ids[i:i+100]
+                supabase.table("tickets").update(updates).in_("id", batch_ids).execute()
+                
+        # Handle tags row by row due to array merging
+        if request.action == "tags":
+            for i in range(0, len(request.ticket_ids), 100):
+                batch_ids = request.ticket_ids[i:i+100]
+                for tid in batch_ids:
+                    t_str = str(tid)
+                    if t_str in previous_states:
+                        meta = previous_states[t_str].get("metadata") or {}
+                        existing_tags = meta.get("tags", [])
+                        new_tags = request.value if isinstance(request.value, list) else [request.value]
+                        merged_tags = list(set(existing_tags + new_tags))
+                        meta["tags"] = merged_tags
+                        supabase.table("tickets").update({"metadata": meta}).eq("id", tid).execute()
+
+        # Log audit
+        transaction_id = str(uuid.uuid4())
+        audit_entry = {
+            "transaction_id": transaction_id,
+            "admin_id": request.admin_id or "system",
+            "action": request.action,
+            "value": request.value,
+            "ticket_count": len(request.ticket_ids),
+            "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+            "previous_states": previous_states,
+            "new_values": updates if updates else {"tags": request.value}
+        }
+        
+        if BULK_AUDIT_LOG_PATH.exists() and BULK_AUDIT_LOG_PATH.stat().st_size > 2:
+            with open(BULK_AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
+                logs = json.load(f)
+        else:
+            logs = []
+            
+        logs.append(audit_entry)
+        
+        with open(BULK_AUDIT_LOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=2)
+            
+        return {"status": "success", "processed": len(request.ticket_ids), "transaction_id": transaction_id}
+        
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/admin/tickets/bulk-action/undo")
+async def undo_bulk_action(request: UndoBulkActionRequest):
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+        
+    try:
+        if not BULK_AUDIT_LOG_PATH.exists():
+            raise HTTPException(status_code=404, detail="No audit logs found")
+            
+        with open(BULK_AUDIT_LOG_PATH, "r", encoding="utf-8") as f:
+            logs = json.load(f)
+            
+        # Find transaction
+        transaction = next((log for log in logs if log["transaction_id"] == request.transaction_id), None)
+        if not transaction:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+            
+        if transaction.get("undone"):
+            raise HTTPException(status_code=400, detail="Transaction already undone")
+            
+        # Check expiry (5 minutes)
+        tx_time = datetime.datetime.fromisoformat(transaction["timestamp"].replace("Z", "+00:00")).replace(tzinfo=None)
+        if datetime.datetime.utcnow() - tx_time > datetime.timedelta(minutes=5):
+            raise HTTPException(status_code=400, detail="Undo window has expired")
+            
+        # Restore previous states
+        previous_states = transaction["previous_states"]
+        for tid, state in previous_states.items():
+            # Restore changed fields
+            restore_data = {}
+            if transaction["action"] == "reassign":
+                restore_data["assigned_agent_id"] = state.get("assigned_agent_id")
+                restore_data["status"] = state.get("status")
+            elif transaction["action"] == "priority":
+                restore_data["priority"] = state.get("priority")
+            elif transaction["action"] == "status":
+                restore_data["status"] = state.get("status")
+            elif transaction["action"] == "tags":
+                restore_data["metadata"] = state.get("metadata", {})
+                
+            if restore_data:
+                supabase.table("tickets").update(restore_data).eq("id", tid).execute()
+                
+        # Mark undone in log
+        transaction["undone"] = True
+        transaction["undone_at"] = datetime.datetime.utcnow().isoformat() + "Z"
+        
+        with open(BULK_AUDIT_LOG_PATH, "w", encoding="utf-8") as f:
+            json.dump(logs, f, indent=2)
+            
+        return {"status": "success", "restored": len(previous_states)}
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ---------------------------------------------------------------------------

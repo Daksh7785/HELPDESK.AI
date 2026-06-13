@@ -27,7 +27,7 @@ This document provides a comprehensive breakdown of all 30+ pages and interactio
 | Page | Description | Key Features |
 | :--- | :--- | :--- |
 | **Admin Lobby** | Central IT management hub. | Quick metrics (Pending, Resolved, Critical). |
-| **Admin Tickets** | Organizational ticket queue. | Bulk actions, advanced filtering, priority management. |
+| **Admin Tickets** | Organizational ticket queue. | **Bulk Action Processing** (multi-select, reassign, priority, status, tags, CSV export, progress modal, 5-minute undo), advanced filtering, per-ticket priority & status management. |
 | **Admin Users** | Workforce management. | Invite-only onboarding, user role auditing. |
 | **Admin Analytics** | Performance dashboard. | Sentiment heatmaps, tech-stack recurring issue analysis. |
 | **Admin Settings** | Organizational configuration. | Custom branding, SLA threshold definitions. |
