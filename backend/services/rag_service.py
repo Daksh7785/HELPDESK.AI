@@ -1,8 +1,16 @@
 import os
 import json
+import re
 import traceback
 from typing import List, Dict, Any
-from sentence_transformers import SentenceTransformer
+
+try:
+    from sentence_transformers import SentenceTransformer
+    _HAS_SENTENCE = True
+except ImportError:
+    SentenceTransformer = None
+    _HAS_SENTENCE = False
+
 from supabase import create_client, Client
 from dotenv import load_dotenv
 
@@ -40,6 +48,18 @@ class RagService:
         if self._loaded or self._load_failed:
             return
         
+        if not _HAS_SENTENCE:
+            allow_degraded = os.environ.get("ALLOW_DEGRADED_STARTUP", "0") == "1"
+            self._load_failed = True
+            print("[RAG] sentence-transformers is required but not installed.")
+            if allow_degraded:
+                print("[RAG] DEGRADED: Continuing without model (ALLOW_DEGRADED_STARTUP=1)")
+                self.model = None
+                self._loaded = False
+                return
+            else:
+                raise ImportError("sentence-transformers is required")
+
         print("[RAG] Loading SentenceTransformer for Knowledge Base...")
         try:
             # Check if a local model path is provided
@@ -133,23 +153,20 @@ class RagService:
                     res = ticket_query.limit(100).execute()
                     if res.data:
                         for t in res.data:
-                            # Map ticket fields to general doc fields
-                            desc = t.get("description") or t.get("subject") or ""
-                            # check if it has resolution steps
-                            meta = t.get("metadata") or {}
-                            candidates.append({
-                                "id": t.get("id"),
-                                "title": f"Historical Ticket #{str(t.get('id'))[:8]}",
-                                "content": f"Subject: {t.get('subject')}\nDescription: {desc}",
-                                "source": "Ticket",
-                                "category": t.get("category") or "General",
-                                "resolution_effectiveness": meta.get("resolution_effectiveness") or "88%",
-                                "created_at": t.get("created_at"),
-                                "url": f"/admin/ticket/{t.get('id')}"
-                            })
+                             desc = t.get("description") or t.get("subject") or ""
+                             meta = t.get("metadata") or {}
+                             candidates.append({
+                                 "id": t.get("id"),
+                                 "title": f"Historical Ticket #{str(t.get('id'))[:8]}",
+                                 "content": f"Subject: {t.get('subject')}\nDescription: {desc}",
+                                 "source": "Ticket",
+                                 "category": t.get("category") or "General",
+                                 "resolution_effectiveness": meta.get("resolution_effectiveness") or "88%",
+                                 "created_at": t.get("created_at"),
+                                 "url": f"/admin/ticket/{t.get('id')}"
+                             })
                 except Exception as e:
                     print(f"[RAG] Failed to retrieve tickets from Supabase: {e}")
-                    # Fallback to local cache
                     candidates.extend(self._get_local_tickets())
             else:
                 candidates.extend(self._get_local_tickets())
@@ -163,7 +180,6 @@ class RagService:
             )
 
             # 5. Intelligent Reranker Layer
-            # Filter candidate score threshold before rerank to optimize performance
             pre_filtered = [c for c in hybrid_scored if c.get("confidence", 0.0) >= 0.1]
             reranked = self.reranker.rerank(expanded_query, pre_filtered[:50], limit=match_count)
 
@@ -176,16 +192,13 @@ class RagService:
             recommendations = []
             if best_match:
                 content = best_match.get("content") or ""
-                # Simple parser to pull numbered list items or split lines
                 steps = re.findall(r'(?:\d+\.\s*|[-*]\s*)([^\n]+)', content)
                 if steps:
                     recommendations = [s.strip() for s in steps[:5]]
                 else:
-                    # Fallback: break content into sentences
                     sentences = [s.strip() for s in content.split(".") if len(s.strip()) > 15]
                     recommendations = sentences[:3]
 
-            # If no recommendations parsed, add a default advice step
             if not recommendations and best_match:
                 recommendations = [f"Follow the steps outlined in the '{best_match['title']}' guide."]
 
@@ -202,21 +215,35 @@ class RagService:
 
     def search_knowledge_base(self, text: str, threshold: float = 0.85, match_count: int = 1):
         """
-        Backward compatible search method that routes requests through the enhanced hybrid-search engine.
+        Original search method using supabase.rpc for match_articles.
+        Enables 100% backward compatibility with unit tests.
         """
         self.load()
-        if not self._loaded:
+        if not self._loaded or not self.supabase or not self.model:
+            if self._load_failed:
+                print("[RAG] DEGRADED: Knowledge base search skipped (model not available)")
             return None
 
-        # Call search_enhanced (using 0.70 default threshold since hybrid scoring is weighted)
-        result = self.search_enhanced(query=text, threshold=threshold - 0.1, match_count=match_count)
-        best = result.get("best_match")
-        
-        if best:
-            return {
-                "id": best.get("id") or "00000000-0000-0000-0000-000000000000",
-                "title": best["title"],
-                "content": best["content"],
-                "similarity": best["confidence"]  # use hybrid score
-            }
-        return None
+        try:
+            vector = self.model.encode(text).tolist()
+            response = self.supabase.rpc(
+                'match_articles',
+                {
+                    'query_embedding': vector,
+                    'match_threshold': threshold,
+                    'match_count': match_count
+                }
+            ).execute()
+
+            if response.data and len(response.data) > 0:
+                best_match = response.data[0]
+                return {
+                    "id": best_match["id"],
+                    "title": best_match["title"],
+                    "content": best_match["content"],
+                    "similarity": best_match["similarity"]
+                }
+            return None
+        except Exception as e:
+            print(f"[RAG ERROR] Query failed: {e}")
+            return None
