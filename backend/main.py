@@ -1940,3 +1940,45 @@ async def set_primary_ticket(body: PrimaryTicketRequest):
             print(f"[SetPrimary] Supabase persist error: {db_err}")
     return result
 
+
+# --- AI Proxy Endpoints ---
+from backend.services.ai_proxy_service import ask_ai, analyze_ticket_with_ai
+
+class AskAIProxyRequest(BaseModel):
+    prompt: str
+    ticket_context: dict
+    history: list = []
+    image: str = None
+
+@app.post("/ai/proxy/ask")
+async def proxy_ask_ai(request: AskAIProxyRequest):
+    try:
+        response_text = await ask_ai(
+            prompt=request.prompt,
+            ticket_context=request.ticket_context,
+            history=request.history,
+            image=request.image
+        )
+        return {"response": response_text}
+    except Exception as e:
+        print(f"[Proxy AskAI Error] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+class AnalyzeTicketProxyRequest(BaseModel):
+    issue_text: str
+    ocr_text: str = ""
+    image: str = None
+
+@app.post("/ai/proxy/analyze")
+async def proxy_analyze_ticket(request: AnalyzeTicketProxyRequest):
+    try:
+        result = await analyze_ticket_with_ai(
+            issue_text=request.issue_text,
+            ocr_text=request.ocr_text,
+            image=request.image
+        )
+        return result
+    except Exception as e:
+        print(f"[Proxy Analyze Error] {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
