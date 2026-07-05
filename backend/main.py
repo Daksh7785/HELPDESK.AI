@@ -1440,6 +1440,10 @@ async def auth_login(body: LoginBody, response: Response):
     if not session or not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    email_confirmed = getattr(user, "email_confirmed_at", None)
+    if not email_confirmed:
+        raise HTTPException(status_code=403, detail="Email not verified")
+
     _set_session_cookies(response, session)
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
     return {"user": user_payload, "message": "Session cookies set"}
@@ -1469,10 +1473,14 @@ async def auth_signup(body: SignupBody, response: Response):
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
-    if session:
+    email_confirmed = getattr(user, "email_confirmed_at", None) if user else None
+
+    if session and email_confirmed:
         _set_session_cookies(response, session)
+        
     user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
-    return {"user": user_payload, "message": "Signup complete"}
+    message = "Signup complete" if email_confirmed else "Signup complete. Please verify your email."
+    return {"user": user_payload, "message": message}
 
 # ---------------------------------------------------------------------------
 # Admin Analytics endpoints
