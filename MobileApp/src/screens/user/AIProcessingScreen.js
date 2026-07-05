@@ -14,9 +14,7 @@ import {
 import * as Haptics from 'expo-haptics';
 import axios from 'axios';
 import { decode } from 'base64-arraybuffer';
-
-const BACKEND_URL = 'https://ritesh19180-ai-helpdesk-api.hf.space';
-
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://ritesh19180-ai-helpdesk-api.hf.space';
 // ─── Premium Neural Orbit Component ────────────────────────────────────────
 const NeuralOrbit = ({ radius, duration, color, opacity = 1 }) => {
   const rotateAnim = useRef(new Animated.Value(0)).current;
