@@ -1386,12 +1386,33 @@ def _set_session_cookies(response: Response, session) -> None:
             **_cookie_kwargs(),
         )
 
+    csrf_token = str(uuid.uuid4())
+    csrf_kwargs = _cookie_kwargs().copy()
+    csrf_kwargs["httponly"] = False
+    response.set_cookie(
+        "csrf_token",
+        csrf_token,
+        max_age=ACCESS_MAX_AGE,
+        **csrf_kwargs,
+    )
+
 def _clear_session_cookies(response: Response) -> None:
     kwargs = _cookie_kwargs()
     response.delete_cookie(ACCESS_COOKIE, path=kwargs["path"])
     response.delete_cookie(REFRESH_COOKIE, path=kwargs["path"])
+    
+    csrf_kwargs = kwargs.copy()
+    csrf_kwargs["httponly"] = False
+    response.delete_cookie("csrf_token", path=csrf_kwargs["path"])
 
 async def get_current_user(request: Request) -> dict:
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        if request.cookies.get(ACCESS_COOKIE):
+            csrf_cookie = request.cookies.get("csrf_token")
+            csrf_header = request.headers.get("x-csrf-token")
+            if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+                raise HTTPException(status_code=403, detail="CSRF token validation failed")
+
     token = extract_token(request)
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
