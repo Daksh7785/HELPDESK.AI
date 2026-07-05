@@ -28,8 +28,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
+import re
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -1413,9 +1414,27 @@ async def get_current_user(request: Request) -> dict:
         return user.dict()
     return dict(user)
 
+def validate_password_complexity(v: str) -> str:
+    if len(v) < 12:
+        raise ValueError('Password must be at least 12 characters long')
+    if not re.search(r'[A-Z]', v):
+        raise ValueError('Password must contain at least one uppercase letter')
+    if not re.search(r'[a-z]', v):
+        raise ValueError('Password must contain at least one lowercase letter')
+    if not re.search(r'\d', v):
+        raise ValueError('Password must contain at least one number')
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', v):
+        raise ValueError('Password must contain at least one special character')
+    return v
+
 class LoginBody(BaseModel):
     email: str
     password: str
+
+    @field_validator('password')
+    @classmethod
+    def check_password(cls, v: str) -> str:
+        return validate_password_complexity(v)
 
 class SignupBody(BaseModel):
     email: str
@@ -1423,6 +1442,11 @@ class SignupBody(BaseModel):
     full_name: str | None = None
     role: str | None = "user"
     company: str | None = None
+
+    @field_validator('password')
+    @classmethod
+    def check_password(cls, v: str) -> str:
+        return validate_password_complexity(v)
 
 @app.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):
