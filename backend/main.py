@@ -1421,7 +1421,6 @@ class SignupBody(BaseModel):
     email: str
     password: str
     full_name: str | None = None
-    role: str | None = "user"
     company: str | None = None
 
 @app.post("/auth/login")
@@ -1448,11 +1447,9 @@ async def auth_login(body: LoginBody, response: Response):
 async def auth_signup(body: SignupBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
-    metadata = {}
+    metadata = {"role": "user"}
     if body.full_name:
         metadata["full_name"] = body.full_name
-    if body.role:
-        metadata["role"] = body.role
     if body.company:
         metadata["company"] = body.company
 
@@ -1473,6 +1470,28 @@ async def auth_signup(body: SignupBody, response: Response):
         _set_session_cookies(response, session)
     user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
     return {"user": user_payload, "message": "Signup complete"}
+
+class UpdateRoleBody(BaseModel):
+    user_id: str
+    role: str
+
+async def verify_admin_token(x_admin_token: str | None = Header(default=None)):
+    expected_token = os.environ.get("ADMIN_TOKEN")
+    if not expected_token or x_admin_token != expected_token:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+@app.post("/auth/update-role", dependencies=[Depends(verify_admin_token)])
+async def auth_update_role(body: UpdateRoleBody):
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    try:
+        result = supabase.auth.admin.update_user_by_id(
+            body.user_id,
+            {"user_metadata": {"role": body.role}}
+        )
+        return {"message": f"Role updated to {body.role}"}
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 # ---------------------------------------------------------------------------
 # Admin Analytics endpoints
