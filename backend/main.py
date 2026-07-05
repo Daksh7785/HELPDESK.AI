@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 warnings.filterwarnings("ignore", message="'pin_memory'")
 
 # HF Rebuild Trigger: 2026-03-08-2030
-from fastapi import FastAPI, Depends, Header, HTTPException, Request, Response
+from fastapi import FastAPI, Depends, Header, HTTPException, Request, Response, APIRouter
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from slowapi.util import get_remote_address
@@ -350,6 +350,11 @@ app = FastAPI(
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
+
+# API Versioning Routers
+api_v1_router = APIRouter(prefix="/api/v1", tags=["API v1"])
+api_v2_router = APIRouter(prefix="/api/v2", tags=["API v2"])
+
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # CORS — locked to production + local dev only
@@ -514,7 +519,8 @@ class TroubleshootResponse(BaseModel):
     options: list[str]
     is_final: bool
 
-@app.post("/ai/troubleshoot", response_model=TroubleshootResponse)
+@app.post("/ai/troubleshoot", response_model=TroubleshootResponse, deprecated=True)
+@api_v1_router.post("/ai/troubleshoot", response_model=TroubleshootResponse)
 async def troubleshoot(request: TroubleshootRequest):
     """Get dynamic troubleshooting steps from Gemini."""
     if not gemini_service or not gemini_service._initialized:
@@ -541,7 +547,8 @@ class BugReportAnalysisRequest(BaseModel):
 class BugReportAnalysisResponse(BaseModel):
     probable_cause: str
 
-@app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
+@app.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse, deprecated=True)
+@api_v1_router.post("/ai/analyze_bug", response_model=BugReportAnalysisResponse)
 async def analyze_bug(request: BugReportAnalysisRequest):
     """Analyze a bug report using Gemini to generate a Probable Cause."""
     if not gemini_service or not gemini_service._initialized:
@@ -563,7 +570,8 @@ async def analyze_bug(request: BugReportAnalysisRequest):
 # ---------------------------------------------------------------------------
 CORRECTIONS_LOG_PATH = Path(__file__).parent / "data" / "corrections_log.json"
 
-@app.post("/ai/log_correction")
+@app.post("/ai/log_correction", deprecated=True)
+@api_v1_router.post("/ai/log_correction")
 async def log_correction(raw_request: Request):
     """Log an admin correction when the AI prediction differs from the human decision."""
     try:
@@ -624,7 +632,8 @@ async def log_correction(raw_request: Request):
 # ---------------------------------------------------------------------------
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
-@app.get("/tickets")
+@app.get("/tickets", deprecated=True)
+@api_v1_router.get("/tickets")
 async def get_tickets(company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
     if not supabase:
@@ -637,7 +646,8 @@ async def get_tickets(company_id: str | None = None):
     res = query.execute()
     return res.data
 
-@app.get("/tickets/search")
+@app.get("/tickets/search", deprecated=True)
+@api_v1_router.get("/tickets/search")
 async def search_tickets(q: str | None = None, company_id: str | None = None, limit: int = 50, offset: int = 0):
     """Search tickets using tenant-safe full-text search."""
     if not supabase:
@@ -662,7 +672,8 @@ async def search_tickets(q: str | None = None, company_id: str | None = None, li
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 
-@app.post("/tickets/save")
+@app.post("/tickets/save", deprecated=True)
+@api_v1_router.post("/tickets/save")
 async def save_ticket(request_body: TicketSaveRequest):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
@@ -841,7 +852,8 @@ async def save_ticket(request_body: TicketSaveRequest):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/tickets/{ticket_id}")
+@app.get("/tickets/{ticket_id}", deprecated=True)
+@api_v1_router.get("/tickets/{ticket_id}")
 async def get_ticket_by_id(ticket_id: str):
     """Fetch single persistent ticket."""
     if not supabase:
@@ -853,7 +865,8 @@ async def get_ticket_by_id(ticket_id: str):
     return res.data
 
 
-@app.post("/tickets", response_model=TicketRecord)
+@app.post("/tickets", response_model=TicketRecord, deprecated=True)
+@api_v1_router.post("/tickets", response_model=TicketRecord)
 async def create_ticket(ticket: TicketRecord):
     """Save a new ticket into the system."""
     # Check for duplicates before adding
@@ -866,7 +879,8 @@ async def create_ticket(ticket: TicketRecord):
     return ticket
 
 
-@app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
+@app.patch("/tickets/{ticket_id}", response_model=TicketRecord, deprecated=True)
+@api_v1_router.patch("/tickets/{ticket_id}", response_model=TicketRecord)
 async def update_ticket(ticket_id: str, updates: dict):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
     for i, ticket in enumerate(TICKETS_DB):
@@ -884,7 +898,8 @@ async def update_ticket(ticket_id: str, updates: dict):
 # ---------------------------------------------------------------------------
 # Main AI Analyzer endpoint
 # ---------------------------------------------------------------------------
-@app.post("/ai/analyze_ticket", response_model=TicketResponse)
+@app.post("/ai/analyze_ticket", response_model=TicketResponse, deprecated=True)
+@api_v1_router.post("/ai/analyze_ticket", response_model=TicketResponse)
 @limiter.limit("10/minute")
 async def analyze_ticket(request_body: TicketRequest, request: Request):
     """
@@ -920,7 +935,8 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     # Initalize Timeline
     return await analyze_only(request_body)
 
-@app.post("/ai/analyze")
+@app.post("/ai/analyze", deprecated=True)
+@api_v1_router.post("/ai/analyze")
 async def analyze_only(request_body: TicketRequest):
     """
     PERFORMANCE UPGRADE: AI Analysis phase only. 
@@ -1154,7 +1170,8 @@ async def analyze_only(request_body: TicketRequest):
         sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z")
     )
 
-@app.post("/ai/analyze_stream")
+@app.post("/ai/analyze_stream", deprecated=True)
+@api_v1_router.post("/ai/analyze_stream")
 async def analyze_stream(request_body: TicketRequest):
     """
     REAL-TIME SSE ENDPOINT: Streams the AI progress to the frontend dynamically.
@@ -1317,7 +1334,8 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket/legacy")
+@app.post("/ai/analyze_ticket/legacy", deprecated=True)
+@api_v1_router.post("/ai/analyze_ticket/legacy")
 async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     BACKWARD COMPATIBILITY: Strictly performs analysis only. 
@@ -1325,7 +1343,8 @@ async def legacy_analyze_and_save(request_body: TicketRequest):
     """
     return await analyze_only(request_body)
 
-@app.post("/ai/analyze-v2")
+@app.post("/ai/analyze-v2", deprecated=True)
+@api_v2_router.post("/ai/analyze_ticket")
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
     try:
@@ -1424,7 +1443,8 @@ class SignupBody(BaseModel):
     role: str | None = "user"
     company: str | None = None
 
-@app.post("/auth/login")
+@app.post("/auth/login", deprecated=True)
+@api_v1_router.post("/auth/login")
 async def auth_login(body: LoginBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
@@ -1444,7 +1464,8 @@ async def auth_login(body: LoginBody, response: Response):
     user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
     return {"user": user_payload, "message": "Session cookies set"}
 
-@app.post("/auth/signup")
+@app.post("/auth/signup", deprecated=True)
+@api_v1_router.post("/auth/signup")
 async def auth_signup(body: SignupBody, response: Response):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
@@ -1502,7 +1523,8 @@ def _analytics_query(company_id: str | None, period_days: int | None = None):
     return q
 
 
-@app.get("/admin/analytics/overview")
+@app.get("/admin/analytics/overview", deprecated=True)
+@api_v1_router.get("/admin/analytics/overview")
 async def analytics_overview(company_id: str | None = None):
     """
     Aggregated KPI counts: total, open, resolved, SLA breach rate, avg resolution time.
@@ -1563,7 +1585,8 @@ async def analytics_overview(company_id: str | None = None):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@app.get("/admin/analytics/volume")
+@app.get("/admin/analytics/volume", deprecated=True)
+@api_v1_router.get("/admin/analytics/volume")
 async def analytics_volume(company_id: str | None = None, period: str = "30d"):
     """
     Daily ticket creation + resolution counts for the given period.
@@ -1608,7 +1631,8 @@ async def analytics_volume(company_id: str | None = None, period: str = "30d"):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@app.get("/admin/analytics/sla")
+@app.get("/admin/analytics/sla", deprecated=True)
+@api_v1_router.get("/admin/analytics/sla")
 async def analytics_sla(company_id: str | None = None):
     """
     SLA compliance percentage by priority level.
@@ -1649,7 +1673,8 @@ async def analytics_sla(company_id: str | None = None):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@app.get("/admin/analytics/categories")
+@app.get("/admin/analytics/categories", deprecated=True)
+@api_v1_router.get("/admin/analytics/categories")
 async def analytics_categories(company_id: str | None = None):
     """
     Ticket count per category and subcategory for donut/bar charts.
@@ -1675,7 +1700,8 @@ async def analytics_categories(company_id: str | None = None):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@app.get("/admin/analytics/agents")
+@app.get("/admin/analytics/agents", deprecated=True)
+@api_v1_router.get("/admin/analytics/agents")
 async def analytics_agents(company_id: str | None = None):
     """
     Open ticket count per assigned team (agent workload distribution).
@@ -1710,7 +1736,8 @@ async def analytics_agents(company_id: str | None = None):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@app.get("/admin/analytics/resolution-time")
+@app.get("/admin/analytics/resolution-time", deprecated=True)
+@api_v1_router.get("/admin/analytics/resolution-time")
 async def analytics_resolution_time(company_id: str | None = None):
     """
     Distribution of resolution times (in hours) for a histogram.
@@ -1771,12 +1798,14 @@ async def analytics_resolution_time(company_id: str | None = None):
         raise HTTPException(status_code=500, detail=str(exc))
 
 
-@app.post("/auth/logout")
+@app.post("/auth/logout", deprecated=True)
+@api_v1_router.post("/auth/logout")
 async def auth_logout(response: Response):
     _clear_session_cookies(response)
     return {"ok": True}
 
-@app.get("/auth/me")
+@app.get("/auth/me", deprecated=True)
+@api_v1_router.get("/auth/me")
 async def auth_me(user: dict = Depends(get_current_user)):
     return {"user": user}
 
@@ -1801,7 +1830,8 @@ class PrimaryTicketRequest(BaseModel):
     ticket_id: str
 
 
-@app.get("/ai/duplicate-clusters")
+@app.get("/ai/duplicate-clusters", deprecated=True)
+@api_v1_router.get("/ai/duplicate-clusters")
 async def get_duplicate_clusters(company_id: str | None = None):
     """
     Return all duplicate clusters for a tenant.
@@ -1814,7 +1844,8 @@ async def get_duplicate_clusters(company_id: str | None = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/ai/duplicate-analytics")
+@app.get("/ai/duplicate-analytics", deprecated=True)
+@api_v1_router.get("/ai/duplicate-analytics")
 async def get_duplicate_analytics(company_id: str | None = None):
     """
     Return analytics summary: top duplicate categories, cluster sizes, confidence scores.
@@ -1844,7 +1875,8 @@ async def get_duplicate_analytics(company_id: str | None = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/ai/duplicate-threshold")
+@app.get("/ai/duplicate-threshold", deprecated=True)
+@api_v1_router.get("/ai/duplicate-threshold")
 async def get_duplicate_threshold_endpoint(company_id: str):
     """Get the current duplicate detection threshold for a tenant."""
     threshold = duplicate_service.get_threshold(company_id)
@@ -1867,7 +1899,8 @@ async def get_duplicate_threshold_endpoint(company_id: str):
     }
 
 
-@app.put("/ai/duplicate-threshold")
+@app.put("/ai/duplicate-threshold", deprecated=True)
+@api_v1_router.put("/ai/duplicate-threshold")
 async def update_duplicate_threshold_endpoint(body: ThresholdUpdateRequest):
     """
     Update the duplicate detection threshold for a tenant (range 0.70–0.95).
@@ -1890,7 +1923,8 @@ async def update_duplicate_threshold_endpoint(body: ThresholdUpdateRequest):
     }
 
 
-@app.post("/ai/duplicate-feedback")
+@app.post("/ai/duplicate-feedback", deprecated=True)
+@api_v1_router.post("/ai/duplicate-feedback")
 async def process_duplicate_feedback(body: FeedbackRequest):
     """
     Process admin feedback to auto-tune the duplicate threshold.
@@ -1923,7 +1957,8 @@ async def process_duplicate_feedback(body: FeedbackRequest):
     return result
 
 
-@app.post("/ai/duplicate-clusters/set-primary")
+@app.post("/ai/duplicate-clusters/set-primary", deprecated=True)
+@api_v1_router.post("/ai/duplicate-clusters/set-primary")
 async def set_primary_ticket(body: PrimaryTicketRequest):
     """Designate a ticket as the primary/canonical record for a duplicate cluster."""
     result = duplicate_service.set_primary_ticket(body.cluster_id, body.ticket_id)
@@ -1940,3 +1975,8 @@ async def set_primary_ticket(body: PrimaryTicketRequest):
             print(f"[SetPrimary] Supabase persist error: {db_err}")
     return result
 
+
+
+# Include versioned routers
+app.include_router(api_v1_router)
+app.include_router(api_v2_router)
