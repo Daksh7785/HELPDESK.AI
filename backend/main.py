@@ -882,14 +882,9 @@ async def update_ticket(ticket_id: str, updates: dict):
 
 
 # ---------------------------------------------------------------------------
-# Main AI Analyzer endpoint
+# Main AI Analyzer core logic
 # ---------------------------------------------------------------------------
-@app.post("/ai/analyze_ticket", response_model=TicketResponse)
-@limiter.limit("10/minute")
-async def analyze_ticket(request_body: TicketRequest, request: Request):
-    """
-    Main endpoint for analyzing a new ticket using the cascade of local AI models.
-    """
+async def analyze_ticket_core(request_body: TicketRequest, request: Request = None) -> TicketResponse:
     text = request_body.text
 
     settings = get_system_settings(request_body.company_id)
@@ -897,16 +892,31 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     duplicate_sensitivity = settings["duplicate_sensitivity"]
     enable_auto_resolve = settings["enable_auto_resolve"]
     
-    # Grab client metadata
-    client_ip = request.client.host if request.client else "unknown"
-    user_agent = request.headers.get("user-agent", "unknown")
-    origin_host = request.headers.get("origin", "unknown")
+    # Grab client metadata if request is available
+    if request:
+        client_ip = request.client.host if request.client else "unknown"
+        user_agent = request.headers.get("user-agent", "unknown")
+        origin_host = request.headers.get("origin", "unknown")
+    else:
+        client_ip = "unknown"
+        user_agent = "unknown"
+        origin_host = "unknown"
     
+    # --- Context & Environment ---
+    import datetime
+    def get_now_ist():
+        return datetime.datetime.utcnow().isoformat() + "Z"
+
     env_metadata = {
         "ip": client_ip,
         "user_agent": user_agent,
-        "origin": origin_host
+        "origin": origin_host,
+        "timestamp": get_now_ist(),
+        "model_version": "3.0.0-PRO",
+        "api_endpoint": "/api/v1/ai/analyze"
     }
+
+    timeline = {"received": get_now_ist()}
 
     # --- Layer 1: Local OCR (CPU, no API required) ---
     local_ocr_text = ""
@@ -917,26 +927,9 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
             text = f"{text} {local_ocr_text}".strip()
             print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
-    # Initalize Timeline
-    return await analyze_only(request_body)
-
-@app.post("/ai/analyze")
-async def analyze_only(request_body: TicketRequest):
-    """
-    PERFORMANCE UPGRADE: AI Analysis phase only. 
-    Does NOT persist to DB. This allows the user to review the analysis 
-    and duplicate check before committing to a ticket creation.
-    """
-    text = request_body.text
-    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
-    settings = get_system_settings(request_body.company)
-    confidence_threshold = settings["ai_confidence_threshold"]
-    duplicate_sensitivity = settings["duplicate_sensitivity"]
-    enable_auto_resolve = settings["enable_auto_resolve"]
+    print(f"[AI] Starting Analysis for: {text[:50]}...") 
 
     # --- Vague Input Guard ---
-    # If the text is extremely short or a generic term, skip AI classification and
-    # return a safe low-priority "General Inquiry" to prevent hallucinated critical categories.
     import re as _re
     VAGUE_KEYWORDS = {
         "demo", "test", "hi", "hello", "check", "try", "ping", "ok", "okay",
@@ -947,7 +940,7 @@ async def analyze_only(request_body: TicketRequest):
     _word_count = len(_stripped.split())
     _is_vague = (len(_stripped) < 15) or (_word_count == 1 and _stripped in VAGUE_KEYWORDS)
     if _is_vague:
-        import datetime as _dt, uuid as _uuid
+        import uuid as _uuid
         _sla_breach = calculate_sla_breach_at("Low")
         print(f"[AI] Vague input detected: '{text}'. Returning safe General Inquiry classification.")
         return TicketResponse(
@@ -965,31 +958,18 @@ async def analyze_only(request_body: TicketRequest):
             reasoning="Input was too brief for accurate classification. Please provide more context.",
             decision_factors=["Input is too short or generic for AI classification."],
             image_description="",
-            ocr_text="",
+            ocr_text=local_ocr_text,
             highlights=[],
-            timeline={"received": _dt.datetime.utcnow().isoformat() + "Z"},
-            env_metadata={},
+            timeline=timeline,
+            env_metadata=env_metadata,
             is_potential_duplicate=False,
             parent_ticket_id=None,
             sla_breach_at=_sla_breach.isoformat().replace("+00:00", "Z"),
         )
     
-    # --- Context & Environment ---
-    import datetime
-    def get_now_ist():
-        return datetime.datetime.utcnow().isoformat() + "Z"
-
-    env_metadata = {
-        "timestamp": get_now_ist(),
-        "model_version": "3.0.0-PRO",
-        "api_endpoint": "/ai/analyze"
-    }
-    
-    timeline = {"received": get_now_ist()}
-
     # --- Vision Logic (OCR Awareness) ---
     gemini_analysis = {
-        "ocr_text": request_body.image_text or "",
+        "ocr_text": local_ocr_text or request_body.image_text or "",
         "image_description": ""
     }
     
@@ -1001,7 +981,7 @@ async def analyze_only(request_body: TicketRequest):
         except Exception as e:
             print(f"[VISION ERROR] {e}")
 
-    summary = text[:100] + ("…" if len(text) > 100 else "") 
+    summary = text[:100] + ("..." if len(text) > 100 else "") 
 
     # --- Spam & Phishing Detection Layer ---
     spam_result = analyze_spam_phishing(text, gemini_analysis.get("ocr_text", ""))
@@ -1010,10 +990,8 @@ async def analyze_only(request_body: TicketRequest):
     try:
         classification_v3_res = classifier_v3.predict(text)
         if "error" in classification_v3_res:
-            # Fallback to V1
             classification = classifier_service.predict(text)
         else:
-            # Parse V3 output
             cat = classification_v3_res.get("Category", {}).get("prediction", "Unknown")
             sub = classification_v3_res.get("Subcategory", {}).get("prediction", "Unknown")
             pri = classification_v3_res.get("priority", {}).get("prediction", "Medium")
@@ -1038,7 +1016,6 @@ async def analyze_only(request_body: TicketRequest):
             "auto_resolve": False, "assigned_team": "General Support", "confidence": 0.0,
         }
 
-    # Apply Spam overrides if spam/phishing is detected
     if spam_result["is_spam"]:
         classification["category"] = "Spam"
         if spam_result["risk_level"] == "high":
@@ -1125,9 +1102,8 @@ async def analyze_only(request_body: TicketRequest):
     if gemini_service and gemini_service._initialized:
         summary = gemini_service.get_summary(text)
     
-    # Convert priority to the SLA resolution target timestamp for preview.
     sla_breach_dt = calculate_sla_breach_at(classification["priority"])
-
+    import uuid
     return TicketResponse(
         ticket_id=str(uuid.uuid4()), # Temporary ID
         summary=summary,
@@ -1153,6 +1129,30 @@ async def analyze_only(request_body: TicketRequest):
         parent_ticket_id=dup_result.get("parent_ticket_id"),
         sla_breach_at=sla_breach_dt.isoformat().replace("+00:00", "Z")
     )
+
+# ---------------------------------------------------------------------------
+# API Endpoints
+# ---------------------------------------------------------------------------
+
+@app.post("/api/v1/ai/analyze", response_model=TicketResponse, summary="Analyze Ticket (v1)")
+@limiter.limit("10/minute")
+async def api_v1_analyze(request_body: TicketRequest, request: Request):
+    """
+    Canonical endpoint for analyzing a new ticket using the cascade of local AI models.
+    """
+    return await analyze_ticket_core(request_body, request)
+
+
+@app.post("/ai/analyze_ticket", response_model=TicketResponse, deprecated=True, summary="Deprecated: Use /api/v1/ai/analyze")
+@limiter.limit("10/minute")
+async def analyze_ticket(request_body: TicketRequest, request: Request):
+    return await analyze_ticket_core(request_body, request)
+
+
+@app.post("/ai/analyze", response_model=TicketResponse, deprecated=True, summary="Deprecated: Use /api/v1/ai/analyze")
+async def analyze_only(request_body: TicketRequest, request: Request = None):
+    return await analyze_ticket_core(request_body, request)
+
 
 @app.post("/ai/analyze_stream")
 async def analyze_stream(request_body: TicketRequest):
@@ -1317,15 +1317,11 @@ async def analyze_stream(request_body: TicketRequest):
 
     return StreamingResponse(event_generator(), media_type="text/event-stream")
 
-@app.post("/ai/analyze_ticket/legacy")
-async def legacy_analyze_and_save(request_body: TicketRequest):
-    """
-    BACKWARD COMPATIBILITY: Strictly performs analysis only. 
-    Does NOT persist to DB to avoid foreign key violations.
-    """
-    return await analyze_only(request_body)
+@app.post("/ai/analyze_ticket/legacy", response_model=TicketResponse, deprecated=True, summary="Deprecated: Use /api/v1/ai/analyze")
+async def legacy_analyze_and_save(request_body: TicketRequest, request: Request):
+    return await analyze_ticket_core(request_body, request)
 
-@app.post("/ai/analyze-v2")
+@app.post("/ai/analyze-v2", deprecated=True, summary="Deprecated: Use /api/v1/ai/analyze")
 async def analyze_ticket_v2(request: TicketRequest):
     text = request.text
     try:
