@@ -214,26 +214,8 @@ class Message(BaseModel):
     message: str
     timestamp: str
 
-
-class TicketRecord(BaseModel):
-    ticket_id: str
-    owner_id: str
-    summary: str
-    category: str
-    subcategory: str
-    priority: str
-    status: str
-    assigned_team: str
-    created_at: str
-    updated_at: str | None = None
-    last_user_viewed_at: str | None = None
-    messages: list[Message] = []
-    metadata: dict = {}
-    timeline: dict = {} # Milestones: created, analyzed, triaged, routed, in_progress, resolved
-
-
-# --- In-Memory Database (to be replaced with SQL later) ---
-TICKETS_DB: list[TicketRecord] = []
+# --- In-Memory Database Removed ---
+# Persistence is now handled via Supabase PostgreSQL.
 
 
 class HealthResponse(BaseModel):
@@ -853,32 +835,38 @@ async def get_ticket_by_id(ticket_id: str):
     return res.data
 
 
-@app.post("/tickets", response_model=TicketRecord)
-async def create_ticket(ticket: TicketRecord):
+@app.post("/tickets")
+async def create_ticket(ticket: dict):
     """Save a new ticket into the system."""
-    # Check for duplicates before adding
-    existing = next((t for t in TICKETS_DB if t.ticket_id == ticket.ticket_id), None)
-    if existing:
-        return existing
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
         
-    TICKETS_DB.append(ticket)
-    print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
-    return ticket
+    # Check for duplicates before adding
+    ticket_id = ticket.get("id")
+    if ticket_id:
+        existing = supabase.table("tickets").select("*").eq("id", ticket_id).execute()
+        if existing.data:
+            return existing.data[0]
+            
+    res = supabase.table("tickets").insert(ticket).execute()
+    if not res.data:
+        raise HTTPException(status_code=500, detail="Failed to create ticket")
+        
+    print(f"[DB] Ticket #{res.data[0].get('id')} created for user {res.data[0].get('user_id')}")
+    return res.data[0]
 
 
-@app.patch("/tickets/{ticket_id}", response_model=TicketRecord)
+@app.patch("/tickets/{ticket_id}")
 async def update_ticket(ticket_id: str, updates: dict):
     """Partially update a ticket's fields (e.g., status, viewed_at)."""
-    for i, ticket in enumerate(TICKETS_DB):
-        if str(ticket.ticket_id) == str(ticket_id):
-            # Convert to dict, update, then back to model
-            ticket_dict = ticket.dict()
-            ticket_dict.update(updates)
-            updated_ticket = TicketRecord(**ticket_dict)
-            TICKETS_DB[i] = updated_ticket
-            return updated_ticket
-    
-    raise HTTPException(status_code=404, detail="Ticket not found")
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+        
+    res = supabase.table("tickets").update(updates).eq("id", ticket_id).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+        
+    return res.data[0]
 
 
 # ---------------------------------------------------------------------------
