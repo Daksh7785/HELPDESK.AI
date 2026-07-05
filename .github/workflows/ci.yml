@@ -65,4 +65,17 @@ jobs:
                   except Exception as e:
                       print(f'AI Logic Error: {e}')
                       # Optional: exit 1 if you want to enforce model presence in Git
-                  "
+                      "
+
+    # --- JOB 3: Security & Secret Scanning ---
+    security-scan:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Secret Scanning (Gitleaks)
+              uses: gitleaks/gitleaks-action@v2
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
