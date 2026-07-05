@@ -54,7 +54,7 @@ try:
         supabase = None
     else:
         supabase = create_client(url, key)
-except (ImportError, Exception) as e:
+except Exception as e:
     print(f"[WARNING] Supabase initialization failed: {e}")
     supabase = None
     Client = None
