@@ -352,6 +352,15 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logging.error(f"Unhandled Exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
+
+
 # CORS — locked to production + local dev only
 app.add_middleware(
     CORSMiddleware,
@@ -1339,8 +1348,8 @@ async def analyze_ticket_v2(request: TicketRequest):
             "assigned_team": prediction["assigned_team"]["prediction"],
             "confidence": prediction["category"]["confidence"]
         }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise
 
 # ---------------------------------------------------------------------------
 # Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
@@ -1400,6 +1409,8 @@ async def get_current_user(request: Request) -> dict:
     try:
         result = supabase.auth.get_user(token)
     except Exception as exc:
+        if isinstance(exc, (ValueError, TypeError, AttributeError, NameError, KeyError)):
+            raise
         raise HTTPException(
             status_code=401,
             detail=f"Invalid session: {exc}",
@@ -1433,6 +1444,8 @@ async def auth_login(body: LoginBody, response: Response):
             {"email": body.email, "password": body.password}
         )
     except Exception as exc:
+        if isinstance(exc, (ValueError, TypeError, AttributeError, NameError, KeyError)):
+            raise
         raise HTTPException(status_code=401, detail=str(exc)) from exc
 
     session = getattr(result, "session", None)
@@ -1465,6 +1478,8 @@ async def auth_signup(body: SignupBody, response: Response):
             }
         )
     except Exception as exc:
+        if isinstance(exc, (ValueError, TypeError, AttributeError, NameError, KeyError)):
+            raise
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     session = getattr(result, "session", None)
@@ -1559,8 +1574,8 @@ async def analytics_overview(company_id: str | None = None):
             "avg_resolution_hours": avg_resolution_hours,
             "busiest_team": busiest_team,
         }
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        raise
 
 
 @app.get("/admin/analytics/volume")
@@ -1604,8 +1619,8 @@ async def analytics_volume(company_id: str | None = None, period: str = "30d"):
             for d in all_days
         ]
         return {"period": period, "series": series}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        raise
 
 
 @app.get("/admin/analytics/sla")
@@ -1645,8 +1660,8 @@ async def analytics_sla(company_id: str | None = None):
                 "sla_target_hours": SLA_RESOLUTION_HOURS.get(pri, 72),
             })
         return {"sla_by_priority": result}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        raise
 
 
 @app.get("/admin/analytics/categories")
@@ -1671,8 +1686,8 @@ async def analytics_categories(company_id: str | None = None):
             for cat, cnt in sorted(cat_counts.items(), key=lambda x: -x[1])
         ]
         return {"total": len(tickets), "categories": categories}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        raise
 
 
 @app.get("/admin/analytics/agents")
@@ -1706,8 +1721,8 @@ async def analytics_agents(company_id: str | None = None):
             key=lambda x: -x["open_tickets"],
         )
         return {"teams": teams}
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        raise
 
 
 @app.get("/admin/analytics/resolution-time")
@@ -1767,8 +1782,8 @@ async def analytics_resolution_time(company_id: str | None = None):
             "median_hours": median,
             "sample_size": len(hours_list),
         }
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    except Exception:
+        raise
 
 
 @app.post("/auth/logout")
@@ -1810,8 +1825,8 @@ async def get_duplicate_clusters(company_id: str | None = None):
     try:
         clusters = duplicate_service.get_clusters(company_id)
         return {"clusters": clusters, "total": len(clusters)}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise
 
 
 @app.get("/ai/duplicate-analytics")
@@ -1840,8 +1855,8 @@ async def get_duplicate_analytics(company_id: str | None = None):
             except Exception as db_err:
                 print(f"[Analytics] DB enrichment error: {db_err}")
         return analytics
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+    except Exception:
+        raise
 
 
 @app.get("/ai/duplicate-threshold")
