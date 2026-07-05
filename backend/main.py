@@ -14,6 +14,8 @@ import warnings
 import logging
 import hashlib
 from contextlib import asynccontextmanager
+import secrets
+from starlette.middleware.base import BaseHTTPMiddleware
 
 # Suppress harmless PyTorch CPU pin_memory warning
 warnings.filterwarnings("ignore", message="'pin_memory'")
@@ -351,6 +353,33 @@ app = FastAPI(
 limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# CSRF Protection Middleware
+class CSRFMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method not in {"GET", "OPTIONS", "HEAD"}:
+            if "access_token" in request.cookies:
+                csrf_cookie = request.cookies.get("csrf_token")
+                csrf_header = request.headers.get("x-csrf-token")
+                if not csrf_cookie or not csrf_header or csrf_cookie != csrf_header:
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": "CSRF token missing or invalid"}
+                    )
+        response = await call_next(request)
+        if "csrf_token" not in request.cookies:
+            secure = os.getenv("ENV", "production").lower() != "development"
+            response.set_cookie(
+                "csrf_token",
+                secrets.token_urlsafe(32),
+                httponly=False,
+                secure=secure,
+                samesite="strict",
+                path="/"
+            )
+        return response
+
+app.add_middleware(CSRFMiddleware)
 
 # CORS — locked to production + local dev only
 app.add_middleware(
