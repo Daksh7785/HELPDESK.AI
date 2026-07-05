@@ -1433,7 +1433,8 @@ async def auth_login(body: LoginBody, response: Response):
             {"email": body.email, "password": body.password}
         )
     except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+        logging.error(f"Login error: {exc}", exc_info=True)
+        raise HTTPException(status_code=401, detail="Authentication failed") from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
@@ -1465,7 +1466,8 @@ async def auth_signup(body: SignupBody, response: Response):
             }
         )
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logging.error(f"Signup error: {exc}", exc_info=True)
+        raise HTTPException(status_code=400, detail="Signup failed due to an unexpected error") from exc
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
@@ -1560,7 +1562,8 @@ async def analytics_overview(company_id: str | None = None):
             "busiest_team": busiest_team,
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logging.error(f"Analytics query error: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/volume")
@@ -1605,7 +1608,8 @@ async def analytics_volume(company_id: str | None = None, period: str = "30d"):
         ]
         return {"period": period, "series": series}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logging.error(f"Analytics query error: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/sla")
@@ -1646,7 +1650,8 @@ async def analytics_sla(company_id: str | None = None):
             })
         return {"sla_by_priority": result}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logging.error(f"Analytics query error: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/categories")
@@ -1672,7 +1677,8 @@ async def analytics_categories(company_id: str | None = None):
         ]
         return {"total": len(tickets), "categories": categories}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logging.error(f"Analytics query error: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/agents")
@@ -1707,7 +1713,8 @@ async def analytics_agents(company_id: str | None = None):
         )
         return {"teams": teams}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logging.error(f"Analytics query error: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/resolution-time")
@@ -1768,7 +1775,8 @@ async def analytics_resolution_time(company_id: str | None = None):
             "sample_size": len(hours_list),
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logging.error(f"Analytics query error: {exc}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/auth/logout")
