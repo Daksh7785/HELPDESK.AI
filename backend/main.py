@@ -29,7 +29,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.encoders import jsonable_encoder
 import asyncio
 from pathlib import Path
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from dotenv import load_dotenv
 
 # Load environment variables from backend/.env
@@ -134,6 +134,45 @@ class TicketRequest(BaseModel):
     image_url: str | None = None
     confidence_threshold: float = 0.20
     duplicate_sensitivity: float = 0.85
+
+    @field_validator("image_base64")
+    @classmethod
+    def validate_image_base64(cls, v: str) -> str:
+        if not v:
+            return v
+        
+        # Enforce maximum payload size (e.g., ~5MB max decoded size -> ~7MB base64 string)
+        if len(v) > 7 * 1024 * 1024:
+            raise ValueError("Base64 payload too large")
+
+        # Validate MIME type if data URI scheme is present
+        if v.startswith("data:"):
+            parts = v.split(";")
+            if len(parts) != 2 or not parts[0].startswith("data:image/"):
+                raise ValueError("Invalid or unsupported image MIME type")
+            
+            mime_type = parts[0][5:]
+            allowed_mimes = ["image/jpeg", "image/png", "image/webp"]
+            if mime_type not in allowed_mimes:
+                raise ValueError(f"Unsupported image MIME type: {mime_type}. Allowed: jpeg, png, webp")
+            
+            base64_data = parts[1]
+            if not base64_data.startswith("base64,"):
+                raise ValueError("Invalid base64 data URI format")
+            
+            b64_str = base64_data[7:]
+        else:
+            b64_str = v
+
+        # Validate base64 encoding
+        import base64
+        import binascii
+        try:
+            base64.b64decode(b64_str, validate=True)
+        except binascii.Error:
+            raise ValueError("Invalid Base64 encoding")
+            
+        return v
 
 class TicketSaveRequest(BaseModel):
     user_id: str
