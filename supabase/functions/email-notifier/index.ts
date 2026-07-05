@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.42.0"
 // Standard Supabase Secrets
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") || "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
+const WEBHOOK_SECRET = Deno.env.get("WEBHOOK_SECRET") || "";
 
 // User Defined Secrets
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") || "";
@@ -13,7 +14,38 @@ serve(async (req: Request) => {
   try {
     if (!RESEND_API_KEY) throw new Error("Missing RESEND_API_KEY");
 
-    const payload = await req.json();
+    // Validate Webhook Signature
+    const signatureHeader = req.headers.get("X-Webhook-Signature");
+    if (!signatureHeader || !signatureHeader.startsWith("sha256=")) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Missing or invalid signature header" }), { status: 401 });
+    }
+
+    const signature = signatureHeader.substring(7);
+    const bodyText = await req.text();
+
+    if (!WEBHOOK_SECRET) {
+      return new Response(JSON.stringify({ error: "Server configuration error: Missing WEBHOOK_SECRET" }), { status: 500 });
+    }
+
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(WEBHOOK_SECRET),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+
+    const hmacBuffer = await crypto.subtle.sign("HMAC", key, encoder.encode(bodyText));
+    const expectedSignature = Array.from(new Uint8Array(hmacBuffer))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    if (signature !== expectedSignature) {
+      return new Response(JSON.stringify({ error: "Unauthorized: Signature mismatch" }), { status: 401 });
+    }
+
+    const payload = JSON.parse(bodyText);
     const { type, record, email, code, link } = payload;
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
