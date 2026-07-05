@@ -340,6 +340,14 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.exception("Unhandled exception processing %s %s", request.method, request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
+
 app = FastAPI(
     title="AI Helpdesk Backend",
     description="Ticket classification, entity extraction, and duplicate detection",
@@ -839,7 +847,7 @@ async def save_ticket(request_body: TicketSaveRequest):
 
     except Exception as e:
         traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.get("/tickets/{ticket_id}")
 async def get_ticket_by_id(ticket_id: str):
@@ -1340,7 +1348,8 @@ async def analyze_ticket_v2(request: TicketRequest):
             "confidence": prediction["category"]["confidence"]
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Internal server error occurred")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 # ---------------------------------------------------------------------------
 # Clean cookie-based Supabase Auth endpoints for /auth/me backward-compatibility
@@ -1433,7 +1442,8 @@ async def auth_login(body: LoginBody, response: Response):
             {"email": body.email, "password": body.password}
         )
     except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+        logger.exception("Authentication failed")
+        raise HTTPException(status_code=401, detail="Authentication failed")
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
@@ -1465,7 +1475,8 @@ async def auth_signup(body: SignupBody, response: Response):
             }
         )
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        logger.exception("Bad request or validation error")
+        raise HTTPException(status_code=400, detail="Bad request")
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
@@ -1560,7 +1571,8 @@ async def analytics_overview(company_id: str | None = None):
             "busiest_team": busiest_team,
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.exception("Internal server error occurred")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/volume")
@@ -1605,7 +1617,8 @@ async def analytics_volume(company_id: str | None = None, period: str = "30d"):
         ]
         return {"period": period, "series": series}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.exception("Internal server error occurred")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/sla")
@@ -1646,7 +1659,8 @@ async def analytics_sla(company_id: str | None = None):
             })
         return {"sla_by_priority": result}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.exception("Internal server error occurred")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/categories")
@@ -1672,7 +1686,8 @@ async def analytics_categories(company_id: str | None = None):
         ]
         return {"total": len(tickets), "categories": categories}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.exception("Internal server error occurred")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/agents")
@@ -1707,7 +1722,8 @@ async def analytics_agents(company_id: str | None = None):
         )
         return {"teams": teams}
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.exception("Internal server error occurred")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/admin/analytics/resolution-time")
@@ -1768,7 +1784,8 @@ async def analytics_resolution_time(company_id: str | None = None):
             "sample_size": len(hours_list),
         }
     except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+        logger.exception("Internal server error occurred")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.post("/auth/logout")
@@ -1811,7 +1828,8 @@ async def get_duplicate_clusters(company_id: str | None = None):
         clusters = duplicate_service.get_clusters(company_id)
         return {"clusters": clusters, "total": len(clusters)}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Internal server error occurred")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/ai/duplicate-analytics")
@@ -1841,7 +1859,8 @@ async def get_duplicate_analytics(company_id: str | None = None):
                 print(f"[Analytics] DB enrichment error: {db_err}")
         return analytics
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Internal server error occurred")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 @app.get("/ai/duplicate-threshold")
