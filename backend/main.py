@@ -32,6 +32,45 @@ from pathlib import Path
 from pydantic import BaseModel
 from dotenv import load_dotenv
 
+import logging
+import time
+
+# Configure structured logging
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger("helpdesk_api")
+
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request_id = str(uuid.uuid4())
+        start_time = time.time()
+        client_ip = request.client.host if request.client else "unknown"
+        method = request.method
+        path = request.url.path
+
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+        except Exception as e:
+            status_code = 500
+            raise
+        finally:
+            process_time = time.time() - start_time
+            log_data = {
+                "request_id": request_id,
+                "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+                "method": method,
+                "path": path,
+                "status_code": status_code,
+                "latency_sec": round(process_time, 4),
+                "client_ip": client_ip,
+            }
+            logger.info(json.dumps(log_data))
+            
+        return response
+
+
 # Load environment variables from backend/.env
 env_path = Path(__file__).parent / '.env'
 load_dotenv(dotenv_path=env_path)
@@ -41,7 +80,7 @@ try:
     from backend.auth.crypto import apply_db_encryption_patch
     apply_db_encryption_patch()
 except Exception as e:
-    print(f"[WARNING] Database encryption patch initialization failed: {e}")
+    logger.warning(f"Database encryption patch initialization failed: {e}")
 
 
 # Initialize Supabase Client (Service Role for backend bypass)
@@ -50,12 +89,12 @@ try:
     url = os.environ.get("SUPABASE_URL")
     key = os.environ.get("SUPABASE_SERVICE_KEY")
     if not url or not key:
-        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
+        logger.error("SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
         supabase = None
     else:
         supabase = create_client(url, key)
 except (ImportError, Exception) as e:
-    print(f"[WARNING] Supabase initialization failed: {e}")
+    logger.warning(f"Supabase initialization failed: {e}")
     supabase = None
     Client = None
 
@@ -96,7 +135,7 @@ def get_system_settings(company_id: str) -> dict:
         if res.data:
             return {**defaults, **res.data}
     except Exception as e:
-        print(f"[WARNING] Could not fetch system_settings for company_id={company_id}: {e}")
+        logger.warning(f"Could not fetch system_settings for company_id={company_id}: {e}")
     return defaults
 
 
@@ -119,7 +158,7 @@ def detect_semantic_duplicate(text: str, *, company_id: str | None, threshold: f
             supabase_client=supabase,
         )
     except Exception as error:
-        print(f"[WARNING] Duplicate detection fallback activated: {error}")
+        logger.warning(f"Duplicate detection fallback activated: {error}")
         duplicate_result = duplicate_service.check_duplicate(text, threshold=threshold)
         duplicate_result["parent_ticket_id"] = duplicate_result.get("duplicate_ticket_id")
         duplicate_result["is_potential_duplicate"] = duplicate_result.get("is_duplicate", False)
@@ -274,31 +313,31 @@ except ImportError:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Load all models at startup."""
-    print("[Startup] Loading AI models ...")
+    logger.info("[Startup] Loading AI models ...")
     try:
         classifier_service.load()
     except Exception as e:
-        print(f"[WARNING] Classifier not loaded: {e}")
+        logger.warning(f"Classifier not loaded: {e}")
     try:
         ner_service.load()
     except Exception as e:
-        print(f"[WARNING] NER not loaded: {e}")
+        logger.warning(f"NER not loaded: {e}")
     try:
         duplicate_service.load()
     except Exception as e:
-        print(f"[WARNING] Duplicate service not loaded: {e}")
+        logger.warning(f"Duplicate service not loaded: {e}")
     try:
         rag_service.load()
     except Exception as e:
-        print(f"[WARNING] RAG service not loaded: {e}")
+        logger.warning(f"RAG service not loaded: {e}")
     
     if gemini_service:
-        print(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
+        logger.info(f"[Startup] Gemini Service: {'Initialized' if gemini_service._initialized else 'FAILED (Key missing or SDK error)'}")
     else:
-        print("[Startup] Gemini Service: NOT LOADED (Import failed)")
+        logger.info("[Startup] Gemini Service: NOT LOADED (Import failed)")
 
-    print("[Startup] Classifier V2 Shadow: Ready.")
-    print("[Startup] Ready.")
+    logger.info("[Startup] Classifier V2 Shadow: Ready.")
+    logger.info("[Startup] Ready.")
     # Strict health checks: fail loudly when core model assets are unavailable.
     # Set ALLOW_DEGRADED_STARTUP=1 to permit degraded startup for local/dev convenience.
     try:
@@ -320,11 +359,11 @@ async def lifespan(app: FastAPI):
                 from backend.services.notification_routing import load as load_notification_router
                 notification_router = load_notification_router()
             except Exception as e:
-                print(f"[WARNING] Notification router not loaded for SLA service: {e}")
+                logger.warning(f"Notification router not loaded for SLA service: {e}")
             sla_service = load_sla_service(supabase, notification_router)
             interval = int(os.environ.get("SLA_ESCALATION_INTERVAL_SECONDS", "300"))
             sla_task = asyncio.create_task(run_sla_escalation_loop(sla_service, interval_seconds=interval))
-            print(f"[Startup] SLA escalation loop enabled ({interval}s interval).")
+            logger.info(f"[Startup] SLA escalation loop enabled ({interval}s interval).")
 
         yield
     finally:
@@ -334,7 +373,7 @@ async def lifespan(app: FastAPI):
                 await sla_task
             except asyncio.CancelledError:
                 pass
-        print("[Shutdown] Cleaning up ...")
+        logger.info("[Shutdown] Cleaning up ...")
 
 
 # ---------------------------------------------------------------------------
@@ -346,6 +385,9 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+app.add_middleware(RequestLoggingMiddleware)
+
 
 # Rate limiter — 10 AI requests per minute per IP (free tier protection)
 limiter = Limiter(key_func=get_remote_address)
@@ -569,10 +611,10 @@ async def log_correction(raw_request: Request):
     try:
         body = await raw_request.json()
     except Exception as e:
-        print(f"[CORRECTION ERROR] Could not parse request body: {e}")
+        logger.error(f"[CORRECTION ERROR] Could not parse request body: {e}")
         return {"status": "error", "message": "Invalid JSON body"}
 
-    print(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
+    logger.info(f"[CORRECTION RECEIVED] Payload keys: {list(body.keys())}")
 
     ticket_id = str(body.get("ticket_id", "unknown"))
     original_text = str(body.get("original_text", ""))
@@ -613,11 +655,11 @@ async def log_correction(raw_request: Request):
         with open(CORRECTIONS_LOG_PATH, "w", encoding="utf-8") as f:
             json.dump(logs, f, indent=2)
 
-        print(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
+        logger.info(f"[CORRECTION SAVED] Ticket ID: {ticket_id} | Changed: {changed_fields}")
         return {"status": "saved", "changed_fields": changed_fields}
 
     except Exception as e:
-        print(f"[CORRECTION ERROR] Could not save: {e}")
+        logger.error(f"[CORRECTION ERROR] Could not save: {e}")
         return {"status": "error", "message": str(e)}
 
 
@@ -807,11 +849,11 @@ async def save_ticket(request_body: TicketSaveRequest):
             except Exception as index_error:
                 duplicate_indexed = False
                 duplicate_index_warning = "Duplicate index update failed."
-                print(f"[WARNING] {duplicate_index_warning} ticket_id={ticket_id} error={index_error}")
+                logger.warning(f"{duplicate_index_warning} ticket_id={ticket_id} error={index_error}")
         else:
             duplicate_indexed = False
             duplicate_index_warning = "Duplicate index update skipped: no description or subject text was provided."
-            print(f"[WARNING] {duplicate_index_warning}")
+            logger.warning(f"{duplicate_index_warning}")
         
         # Add initial system diagnostic message
         msg = "Our Neural Engine has successfully triaged your issue and routed it to the designated team."
@@ -862,7 +904,7 @@ async def create_ticket(ticket: TicketRecord):
         return existing
         
     TICKETS_DB.append(ticket)
-    print(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
+    logger.info(f"[DB] Ticket #{ticket.ticket_id} created for user {ticket.owner_id}")
     return ticket
 
 
@@ -911,11 +953,11 @@ async def analyze_ticket(request_body: TicketRequest, request: Request):
     # --- Layer 1: Local OCR (CPU, no API required) ---
     local_ocr_text = ""
     if request_body.image_base64 and ocr_service:
-        print("[AI] Extracting text via local OCR...")
+        logger.info("[AI] Extracting text via local OCR...")
         local_ocr_text = ocr_service.extract_text(request_body.image_base64)
         if local_ocr_text:
             text = f"{text} {local_ocr_text}".strip()
-            print(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
+            logger.info(f"[AI] OCR added {len(local_ocr_text)} chars to context.")
 
     # Initalize Timeline
     return await analyze_only(request_body)
@@ -928,7 +970,7 @@ async def analyze_only(request_body: TicketRequest):
     and duplicate check before committing to a ticket creation.
     """
     text = request_body.text
-    print(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
+    logger.info(f"[AI] Starting Analysis (READ-ONLY) for: {text[:50]}...") 
     settings = get_system_settings(request_body.company)
     confidence_threshold = settings["ai_confidence_threshold"]
     duplicate_sensitivity = settings["duplicate_sensitivity"]
@@ -949,7 +991,7 @@ async def analyze_only(request_body: TicketRequest):
     if _is_vague:
         import datetime as _dt, uuid as _uuid
         _sla_breach = calculate_sla_breach_at("Low")
-        print(f"[AI] Vague input detected: '{text}'. Returning safe General Inquiry classification.")
+        logger.info(f"[AI] Vague input detected: '{text}'. Returning safe General Inquiry classification.")
         return TicketResponse(
             ticket_id=str(_uuid.uuid4()),
             summary=f"General inquiry: {text}",
@@ -995,11 +1037,11 @@ async def analyze_only(request_body: TicketRequest):
     
     if request_body.image_base64 and not gemini_analysis["ocr_text"]:
         try:
-            print("[AI] Detecting visual context via Gemini...")
+            logger.info("[AI] Detecting visual context via Gemini...")
             vision_result = gemini_service.analyze_image(request_body.image_base64, text)
             gemini_analysis.update(vision_result)
         except Exception as e:
-            print(f"[VISION ERROR] {e}")
+            logger.error(f"[VISION ERROR] {e}")
 
     summary = text[:100] + ("…" if len(text) > 100 else "") 
 
@@ -1088,9 +1130,9 @@ async def analyze_only(request_body: TicketRequest):
             classification["auto_resolve"] = True
             classification["assigned_team"] = "Auto-Resolve AI"
             classification["confidence"] = max(classification["confidence"], float(rag_match["similarity"]))
-            print(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
+            logger.info(f"[RAG SUCCESS] Found solution for: '{rag_match['title']}'")
     except Exception as e:
-        print(f"[RAG ERROR] {e}")
+        logger.error(f"[RAG ERROR] {e}")
 
     # --- Reasoning ---
     decision_factors = []
@@ -1838,7 +1880,7 @@ async def get_duplicate_analytics(company_id: str | None = None):
                 ]
                 analytics["db_total_duplicates"] = len(rows)
             except Exception as db_err:
-                print(f"[Analytics] DB enrichment error: {db_err}")
+                logger.info(f"[Analytics] DB enrichment error: {db_err}")
         return analytics
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -1882,7 +1924,7 @@ async def update_duplicate_threshold_endpoint(body: ThresholdUpdateRequest):
                 "duplicate_sensitivity": new_threshold,
             }, on_conflict="company_id").execute()
         except Exception as db_err:
-            print(f"[ThresholdUpdate] Supabase persist error: {db_err}")
+            logger.info(f"[ThresholdUpdate] Supabase persist error: {db_err}")
     return {
         "status":      "updated",
         "company_id":  body.company_id,
@@ -1919,7 +1961,7 @@ async def process_duplicate_feedback(body: FeedbackRequest):
                 "new_threshold": result["new_threshold"],
             }).execute()
         except Exception as db_err:
-            print(f"[Feedback] Supabase persist error: {db_err}")
+            logger.info(f"[Feedback] Supabase persist error: {db_err}")
     return result
 
 
@@ -1937,6 +1979,6 @@ async def set_primary_ticket(body: PrimaryTicketRequest):
                 "primary_ticket": body.ticket_id,
             }, on_conflict="cluster_id").execute()
         except Exception as db_err:
-            print(f"[SetPrimary] Supabase persist error: {db_err}")
+            logger.info(f"[SetPrimary] Supabase persist error: {db_err}")
     return result
 
