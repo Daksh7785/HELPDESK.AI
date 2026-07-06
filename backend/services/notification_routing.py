@@ -19,7 +19,7 @@ from datetime import datetime, timezone
 from typing import Optional, Dict
 from enum import Enum
 
-from supabase import create_client
+from backend.supabase_client import get_admin_client
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -51,10 +51,7 @@ class NotificationRoutingMiddleware:
 
     def __init__(self):
         """Initialize the notification routing middleware."""
-        self.supabase = create_client(
-            os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        )
+        self.supabase = get_admin_client()
         self._settings_cache: Dict[str, Dict] = {}
         self.log_level = os.getenv("NOTIFICATION_ROUTING_LOG_LEVEL", "info").lower()
 

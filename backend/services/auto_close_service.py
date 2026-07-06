@@ -14,8 +14,7 @@ import os
 import logging
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, List
-
-from supabase import create_client
+from backend.supabase_client import get_admin_client
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -34,10 +33,7 @@ class AutoCloseService:
 
     def __init__(self):
         """Initialize the auto-close service with Supabase client."""
-        self.supabase = create_client(
-            os.getenv("SUPABASE_URL"),
-            os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-        )
+        self.supabase = get_admin_client()
         self.enabled = os.getenv("AUTO_CLOSE_ENABLED", "true").lower() == "true"
         self.default_auto_close_days = int(os.getenv("AUTO_CLOSE_DAYS", "7"))
         self.cron_schedule = os.getenv("AUTO_CLOSE_CRON_SCHEDULE", "0 2 * * *")  # 2 AM UTC daily

@@ -269,12 +269,8 @@ def load(supabase_client: Any = None, notification_router: Any = None) -> SlaEsc
     global _instance
     if _instance is None:
         if supabase_client is None:
-            from supabase import create_client
-
-            supabase_client = create_client(
-                os.getenv("SUPABASE_URL"),
-                os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_SERVICE_KEY"),
-            )
+            from backend.supabase_client import get_admin_client
+            supabase_client = get_admin_client()
         _instance = SlaEscalationService(
             supabase_client,
             notification_router=notification_router,

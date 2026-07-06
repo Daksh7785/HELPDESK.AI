@@ -9,12 +9,10 @@ class RagService:
         self._loaded = False
         self._load_failed = False
         
-        load_dotenv()
-        url = os.environ.get("SUPABASE_URL")
-        key = os.environ.get("SUPABASE_SERVICE_KEY")
-        if url and key:
-            self.supabase: Client = create_client(url, key)
-        else:
+        try:
+            from backend.supabase_client import get_admin_client
+            self.supabase = get_admin_client()
+        except ImportError:
             self.supabase = None
 
     def is_available(self) -> bool:

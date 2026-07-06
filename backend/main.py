@@ -46,18 +46,14 @@ except Exception as e:
 
 # Initialize Supabase Client (Service Role for backend bypass)
 try:
-    from supabase import create_client, Client
-    url = os.environ.get("SUPABASE_URL")
-    key = os.environ.get("SUPABASE_SERVICE_KEY")
-    if not url or not key:
-        print("[ERROR] SUPABASE_URL or SUPABASE_SERVICE_KEY not set in backend/.env")
-        supabase = None
-    else:
-        supabase = create_client(url, key)
+    from backend.supabase_client import get_admin_client, get_user_client, get_anon_client
+    supabase = get_admin_client()
+    supabase_anon = get_anon_client()
 except (ImportError, Exception) as e:
     print(f"[WARNING] Supabase initialization failed: {e}")
     supabase = None
-    Client = None
+    supabase_anon = None
+    get_user_client = None
 
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -625,12 +621,13 @@ async def log_correction(raw_request: Request):
 # Ticket operations (Now via Supabase)
 # ---------------------------------------------------------------------------
 @app.get("/tickets")
-async def get_tickets(company_id: str | None = None):
+async def get_tickets(request: Request, company_id: str | None = None):
     """Fetch persistent tickets from Supabase."""
-    if not supabase:
+    client = get_user_client(request.headers.get("Authorization")) if get_user_client else None
+    if not client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    query = supabase.table("tickets").select("*").order("created_at", desc=True)
+    query = client.table("tickets").select("*").order("created_at", desc=True)
     if company_id:
         query = query.eq("company_id", company_id)
         
@@ -638,9 +635,10 @@ async def get_tickets(company_id: str | None = None):
     return res.data
 
 @app.get("/tickets/search")
-async def search_tickets(q: str | None = None, company_id: str | None = None, limit: int = 50, offset: int = 0):
+async def search_tickets(request: Request, q: str | None = None, company_id: str | None = None, limit: int = 50, offset: int = 0):
     """Search tickets using tenant-safe full-text search."""
-    if not supabase:
+    client = get_user_client(request.headers.get("Authorization")) if get_user_client else None
+    if not client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
 
     if not q:
@@ -649,7 +647,7 @@ async def search_tickets(q: str | None = None, company_id: str | None = None, li
         raise HTTPException(status_code=400, detail="company_id is required for tenant-safe search")
 
     try:
-        result = supabase.rpc(
+        result = client.rpc(
             "search_tickets",
             {
                 "query_text": q,
@@ -663,13 +661,16 @@ async def search_tickets(q: str | None = None, company_id: str | None = None, li
         raise HTTPException(status_code=500, detail=f"Search failed: {e}")
 
 @app.post("/tickets/save")
-async def save_ticket(request_body: TicketSaveRequest):
+async def save_ticket(request_body: TicketSaveRequest, request: Request):
     """
     OFFICIAL PERSISTENCE: Saves the analyzed ticket to Supabase.
     This is called AFTER the user confirms the analysis results.
     """
-    if not supabase:
+    client = get_user_client(request.headers.get("Authorization")) if get_user_client else None
+    if not client:
         raise HTTPException(status_code=500, detail="Supabase connection not initialized.")
+    # For some admin validations in this endpoint, we might still use the global admin `supabase` client,
+    # but the final insert will be done using `client` (user-scoped).
 
     logger = logging.getLogger(__name__)
     try:
@@ -679,6 +680,8 @@ async def save_ticket(request_body: TicketSaveRequest):
         profile = {}
         if request_body.user_id:
             try:
+                # We use the admin client (`supabase`) here to ensure we can read profiles 
+                # even if RLS is tricky for self-healing, though `client` could also work.
                 profile_res = (
                     supabase.table("profiles")
                     .select("company_id, company")
@@ -792,7 +795,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         # Strip keys not accepted by the DB schema
         insert_data = {k: v for k, v in final_data.items() if k in VALID_TICKET_COLUMNS}
 
-        res = supabase.table("tickets").insert(insert_data).execute()
+        res = client.table("tickets").insert(insert_data).execute()
         
         if not res.data:
             raise Exception("Failed to insert ticket into database.")
@@ -818,7 +821,7 @@ async def save_ticket(request_body: TicketSaveRequest):
         if final_data["auto_resolve"]:
             msg = "AI Auto-Resolution active: A verified solution has been identified. Please review the attached resolution steps."
 
-        supabase.table("ticket_messages").insert({
+        client.table("ticket_messages").insert({
             "ticket_id": ticket_id,
             "sender_id": "00000000-0000-0000-0000-000000000000", # System ID
             "sender_name": "AI Assistant",
@@ -842,12 +845,13 @@ async def save_ticket(request_body: TicketSaveRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tickets/{ticket_id}")
-async def get_ticket_by_id(ticket_id: str):
+async def get_ticket_by_id(ticket_id: str, request: Request):
     """Fetch single persistent ticket."""
-    if not supabase:
+    client = get_user_client(request.headers.get("Authorization")) if get_user_client else None
+    if not client:
         raise HTTPException(status_code=500, detail="Database connection not initialized")
     
-    res = supabase.table("tickets").select("*").eq("id", ticket_id).single().execute()
+    res = client.table("tickets").select("*").eq("id", ticket_id).single().execute()
     if not res.data:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return res.data
