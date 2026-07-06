@@ -107,6 +107,17 @@ We follow a strict "Production Ready" workflow. All PRs must meet the following 
 *   Never commit raw datasets to the repository.
 *   Ensure any model changes include a summary of evaluation metrics (F1-score, Accuracy).
 
+### Security & Secret Scanning
+*   **Never commit secrets** (API keys, passwords, tokens) to the repository.
+*   We use **Gitleaks** to scan for exposed secrets.
+*   Before committing, you must install and run our pre-commit hooks:
+    ```bash
+    pip install pre-commit
+    pre-commit install
+    ```
+    This will automatically check your commits for accidentally included secrets.
+*   If a secret is accidentally committed, it must be rotated immediately.
+
 ---
 
 ## ⚖️ Code of Conduct
