@@ -1413,6 +1413,49 @@ async def get_current_user(request: Request) -> dict:
         return user.dict()
     return dict(user)
 
+async def get_user_profile(user: dict = Depends(get_current_user)) -> dict:
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+    user_id = user.get("id") or user.get("sub")
+    res = supabase.table("profiles").select("role, company_id").eq("id", user_id).single().execute()
+    if not res.data:
+        raise HTTPException(status_code=401, detail="User profile not found")
+    return res.data
+
+async def require_master_admin(profile: dict = Depends(get_user_profile)) -> dict:
+    if profile.get("role") != "master_admin":
+        raise HTTPException(status_code=403, detail="Master Admin privileges required")
+    return profile
+
+async def require_company_admin_or_master(request: Request, profile: dict = Depends(get_user_profile)) -> dict:
+    requested_company_id = request.query_params.get("company_id")
+    role = profile.get("role")
+    
+    if role == "master_admin":
+        return profile
+        
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+        
+    if not requested_company_id:
+        raise HTTPException(status_code=403, detail="Master Admin privileges required for platform-wide data")
+        
+    if str(profile.get("company_id")) != requested_company_id:
+        raise HTTPException(status_code=403, detail="Not authorized for this tenant")
+        
+    return profile
+
+def verify_company_access(profile: dict, requested_company_id: str | None) -> None:
+    role = profile.get("role")
+    if role == "master_admin":
+        return
+    if role != "admin":
+        raise HTTPException(status_code=403, detail="Admin privileges required")
+    if not requested_company_id:
+        raise HTTPException(status_code=403, detail="Master Admin privileges required for platform-wide data")
+    if str(profile.get("company_id")) != requested_company_id:
+        raise HTTPException(status_code=403, detail="Not authorized for this tenant")
+
 class LoginBody(BaseModel):
     email: str
     password: str
@@ -1503,7 +1546,7 @@ def _analytics_query(company_id: str | None, period_days: int | None = None):
 
 
 @app.get("/admin/analytics/overview")
-async def analytics_overview(company_id: str | None = None):
+async def admin_analytics_overview(company_id: str | None = None, _profile: dict = Depends(require_company_admin_or_master)):
     """
     Aggregated KPI counts: total, open, resolved, SLA breach rate, avg resolution time.
     Used by the Overview Cards section of the analytics dashboard.
@@ -1564,7 +1607,7 @@ async def analytics_overview(company_id: str | None = None):
 
 
 @app.get("/admin/analytics/volume")
-async def analytics_volume(company_id: str | None = None, period: str = "30d"):
+async def admin_analytics_volume(company_id: str | None = None, period: str = "30d", _profile: dict = Depends(require_company_admin_or_master)):
     """
     Daily ticket creation + resolution counts for the given period.
     period values: '7d', '30d', '90d'
@@ -1609,7 +1652,7 @@ async def analytics_volume(company_id: str | None = None, period: str = "30d"):
 
 
 @app.get("/admin/analytics/sla")
-async def analytics_sla(company_id: str | None = None):
+async def admin_analytics_sla(company_id: str | None = None, _profile: dict = Depends(require_company_admin_or_master)):
     """
     SLA compliance percentage by priority level.
     Returns [{ priority, within_sla, breached, compliance_rate }]
@@ -1650,7 +1693,7 @@ async def analytics_sla(company_id: str | None = None):
 
 
 @app.get("/admin/analytics/categories")
-async def analytics_categories(company_id: str | None = None):
+async def admin_analytics_categories(company_id: str | None = None, _profile: dict = Depends(require_company_admin_or_master)):
     """
     Ticket count per category and subcategory for donut/bar charts.
     """
@@ -1676,7 +1719,7 @@ async def analytics_categories(company_id: str | None = None):
 
 
 @app.get("/admin/analytics/agents")
-async def analytics_agents(company_id: str | None = None):
+async def admin_analytics_agents(company_id: str | None = None, _profile: dict = Depends(require_company_admin_or_master)):
     """
     Open ticket count per assigned team (agent workload distribution).
     Returns horizontal bar chart data sorted by workload descending.
@@ -1711,7 +1754,7 @@ async def analytics_agents(company_id: str | None = None):
 
 
 @app.get("/admin/analytics/resolution-time")
-async def analytics_resolution_time(company_id: str | None = None):
+async def admin_analytics_resolution_time(company_id: str | None = None, _profile: dict = Depends(require_company_admin_or_master)):
     """
     Distribution of resolution times (in hours) for a histogram.
     Buckets: 0-4h, 4-12h, 12-24h, 24-48h, 48-72h, 72h+
@@ -1802,7 +1845,7 @@ class PrimaryTicketRequest(BaseModel):
 
 
 @app.get("/ai/duplicate-clusters")
-async def get_duplicate_clusters(company_id: str | None = None):
+async def get_duplicate_clusters(company_id: str | None = None, _profile: dict = Depends(require_company_admin_or_master)):
     """
     Return all duplicate clusters for a tenant.
     Supports real-time visibility into ticket groupings.
@@ -1815,7 +1858,7 @@ async def get_duplicate_clusters(company_id: str | None = None):
 
 
 @app.get("/ai/duplicate-analytics")
-async def get_duplicate_analytics(company_id: str | None = None):
+async def get_duplicate_analytics(company_id: str | None = None, _profile: dict = Depends(require_company_admin_or_master)):
     """
     Return analytics summary: top duplicate categories, cluster sizes, confidence scores.
     """
@@ -1845,7 +1888,7 @@ async def get_duplicate_analytics(company_id: str | None = None):
 
 
 @app.get("/ai/duplicate-threshold")
-async def get_duplicate_threshold_endpoint(company_id: str):
+async def get_duplicate_threshold_endpoint(company_id: str, _profile: dict = Depends(require_company_admin_or_master)):
     """Get the current duplicate detection threshold for a tenant."""
     threshold = duplicate_service.get_threshold(company_id)
     # Also try Supabase system_settings
@@ -1868,11 +1911,12 @@ async def get_duplicate_threshold_endpoint(company_id: str):
 
 
 @app.put("/ai/duplicate-threshold")
-async def update_duplicate_threshold_endpoint(body: ThresholdUpdateRequest):
+async def update_duplicate_threshold_endpoint(body: ThresholdUpdateRequest, profile: dict = Depends(get_user_profile)):
     """
     Update the duplicate detection threshold for a tenant (range 0.70–0.95).
     Persists to Supabase system_settings and updates the in-process cache.
     """
+    verify_company_access(profile, body.company_id)
     new_threshold = duplicate_service.update_threshold(body.company_id, body.threshold)
     # Persist to Supabase
     if supabase:
@@ -1891,11 +1935,12 @@ async def update_duplicate_threshold_endpoint(body: ThresholdUpdateRequest):
 
 
 @app.post("/ai/duplicate-feedback")
-async def process_duplicate_feedback(body: FeedbackRequest):
+async def process_duplicate_feedback(body: FeedbackRequest, profile: dict = Depends(get_user_profile)):
     """
     Process admin feedback to auto-tune the duplicate threshold.
     feedback_type: "false_positive" | "missed_duplicate"
     """
+    verify_company_access(profile, body.company_id)
     valid_types = {"false_positive", "missed_duplicate"}
     if body.feedback_type not in valid_types:
         raise HTTPException(
@@ -1924,8 +1969,10 @@ async def process_duplicate_feedback(body: FeedbackRequest):
 
 
 @app.post("/ai/duplicate-clusters/set-primary")
-async def set_primary_ticket(body: PrimaryTicketRequest):
+async def set_primary_ticket(body: PrimaryTicketRequest, profile: dict = Depends(get_user_profile)):
     """Designate a ticket as the primary/canonical record for a duplicate cluster."""
+    if profile.get("role") not in ["admin", "master_admin"]:
+        raise HTTPException(status_code=403, detail="Admin privileges required")
     result = duplicate_service.set_primary_ticket(body.cluster_id, body.ticket_id)
     if not result:
         raise HTTPException(status_code=404, detail="Cluster not found")
