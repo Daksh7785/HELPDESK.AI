@@ -13,7 +13,16 @@ import traceback
 import warnings
 import logging
 import hashlib
+import time
+from collections import defaultdict
 from contextlib import asynccontextmanager
+
+# Brute-force protection tracking
+MAX_FAILED_ATTEMPTS = 5
+LOCKOUT_DURATION_SECONDS = 900  # 15 minutes
+_failed_login_attempts: dict[tuple[str, str], dict] = defaultdict(
+    lambda: {"count": 0, "lockout_until": 0.0, "last_attempt": 0.0}
+)
 
 # Suppress harmless PyTorch CPU pin_memory warning
 warnings.filterwarnings("ignore", message="'pin_memory'")
@@ -1425,15 +1434,41 @@ class SignupBody(BaseModel):
     company: str | None = None
 
 @app.post("/auth/login")
-async def auth_login(body: LoginBody, response: Response):
+async def auth_login(body: LoginBody, response: Response, request: Request):
     if not supabase:
         raise HTTPException(status_code=503, detail="Database connection offline")
+
+    client_ip = request.client.host if request.client else "unknown"
+    track_key = (client_ip, body.email)
+    now = time.time()
+    attempt_info = _failed_login_attempts[track_key]
+
+    # Clean up old lockouts
+    if attempt_info["lockout_until"] > 0 and attempt_info["lockout_until"] <= now:
+        attempt_info["count"] = 0
+        attempt_info["lockout_until"] = 0.0
+
+    if attempt_info["lockout_until"] > now:
+        raise HTTPException(status_code=429, detail="Too many failed attempts. Account temporarily locked.")
+
+    if attempt_info["count"] > 0:
+        delay = min(2 ** (attempt_info["count"] - 1), 10)
+        await asyncio.sleep(delay)
+
     try:
         result = supabase.auth.sign_in_with_password(
             {"email": body.email, "password": body.password}
         )
     except Exception as exc:
+        attempt_info["count"] += 1
+        attempt_info["last_attempt"] = now
+        if attempt_info["count"] >= MAX_FAILED_ATTEMPTS:
+            attempt_info["lockout_until"] = now + LOCKOUT_DURATION_SECONDS
+            raise HTTPException(status_code=429, detail="Too many failed attempts. Account temporarily locked.")
         raise HTTPException(status_code=401, detail=str(exc)) from exc
+
+    if track_key in _failed_login_attempts:
+        del _failed_login_attempts[track_key]
 
     session = getattr(result, "session", None)
     user = getattr(result, "user", None)
