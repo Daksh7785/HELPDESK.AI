@@ -1474,6 +1474,42 @@ async def auth_signup(body: SignupBody, response: Response):
     user_payload = user.model_dump() if user and hasattr(user, "model_dump") else None
     return {"user": user_payload, "message": "Signup complete"}
 
+@app.post("/auth/refresh")
+async def auth_refresh(request: Request, response: Response):
+    refresh_token = request.cookies.get(REFRESH_COOKIE)
+    if not refresh_token:
+        raise HTTPException(status_code=401, detail="No refresh token provided")
+    
+    if not supabase:
+        raise HTTPException(status_code=503, detail="Database connection offline")
+        
+    try:
+        result = supabase.auth.refresh_session(refresh_token)
+    except Exception as exc:
+        _clear_session_cookies(response)
+        raise HTTPException(status_code=401, detail=f"Session expired or invalid: {str(exc)}") from exc
+
+    session = getattr(result, "session", None)
+    user = getattr(result, "user", None)
+    if not session or not user:
+        _clear_session_cookies(response)
+        raise HTTPException(status_code=401, detail="Could not refresh session")
+        
+    _set_session_cookies(response, session)
+    user_payload = user.model_dump() if hasattr(user, "model_dump") else dict(user)
+    return {"user": user_payload, "message": "Session refreshed successfully"}
+
+@app.post("/auth/logout")
+async def auth_logout(request: Request, response: Response):
+    token = extract_token(request)
+    if token and supabase:
+        try:
+            supabase.auth.sign_out()
+        except Exception:
+            pass
+    _clear_session_cookies(response)
+    return {"message": "Logged out successfully"}
+
 # ---------------------------------------------------------------------------
 # Admin Analytics endpoints
 # ---------------------------------------------------------------------------
