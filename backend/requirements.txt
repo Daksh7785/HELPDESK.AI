@@ -16,3 +16,4 @@ slowapi>=0.1.9
 supabase==2.22.4
 storage3==2.22.4
 prometheus-client>=0.17.0
+boto3>=1.28.0
