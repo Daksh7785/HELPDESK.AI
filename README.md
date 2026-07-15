@@ -198,6 +198,16 @@ npm install
 npm run dev
 ```
 
+### SSL/TLS Certificate Auto-Renewal
+For production deployments, ensure SSL/TLS certificates are auto-renewed. We provide a helper script for `certbot`:
+```bash
+sudo ./scripts/ssl_auto_renew.sh
+```
+You can add this script to your crontab to run periodically (e.g., weekly) for fully automated renewals:
+```bash
+0 0 * * 0 /path/to/HELPDESK.AI/scripts/ssl_auto_renew.sh >> /var/log/ssl_renew.log 2>&1
+```
+
 ---
 
 <h2 id="roadmap">🗺️ Roadmap</h2>
