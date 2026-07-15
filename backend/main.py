@@ -76,6 +76,10 @@ from backend.services.sla_service import (
     run_sla_escalation_loop,
 )
 from backend.services.spam_detector_service import analyze_spam_phishing
+from backend.services.anomaly_detection_service import (
+    AnomalyDetectionService,
+    run_anomaly_detection_loop,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -313,6 +317,7 @@ async def lifespan(app: FastAPI):
         raise RuntimeError("[Startup-FATAL] Classifier assets not loaded. Set ALLOW_DEGRADED_STARTUP=1 to bypass.")
 
     sla_task = None
+    anomaly_task = None
     try:
         if supabase and os.environ.get("SLA_ESCALATION_ENABLED", "true").lower() == "true":
             notification_router = None
@@ -326,12 +331,27 @@ async def lifespan(app: FastAPI):
             sla_task = asyncio.create_task(run_sla_escalation_loop(sla_service, interval_seconds=interval))
             print(f"[Startup] SLA escalation loop enabled ({interval}s interval).")
 
+        # Anomaly Detection background loop
+        if supabase and os.environ.get("ANOMALY_DETECTION_ENABLED", "true").lower() == "true":
+            anomaly_service = AnomalyDetectionService(supabase_client=supabase)
+            anomaly_interval = int(os.environ.get("ANOMALY_DETECTION_INTERVAL_SECONDS", "300"))
+            anomaly_task = asyncio.create_task(
+                run_anomaly_detection_loop(anomaly_service, interval_seconds=anomaly_interval)
+            )
+            print(f"[Startup] Anomaly detection loop enabled ({anomaly_interval}s interval).")
+
         yield
     finally:
         if sla_task:
             sla_task.cancel()
             try:
                 await sla_task
+            except asyncio.CancelledError:
+                pass
+        if anomaly_task:
+            anomaly_task.cancel()
+            try:
+                await anomaly_task
             except asyncio.CancelledError:
                 pass
         print("[Shutdown] Cleaning up ...")
@@ -1940,3 +1960,112 @@ async def set_primary_ticket(body: PrimaryTicketRequest):
             print(f"[SetPrimary] Supabase persist error: {db_err}")
     return result
 
+# ---------------------------------------------------------------------------
+# Anomaly Detection endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/admin/anomalies")
+async def get_anomalies(
+    company_id: str,
+    severity: str | None = None,
+    anomaly_type: str | None = None,
+    acknowledged: bool | None = None,
+    limit: int = 50,
+    offset: int = 0,
+):
+    """Fetch anomaly events for a company with optional filters."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    query = (
+        supabase.table("anomaly_events")
+        .select("*")
+        .eq("company_id", company_id)
+        .order("detected_at", desc=True)
+        .limit(limit)
+        .offset(offset)
+    )
+
+    if severity:
+        query = query.eq("severity", severity)
+    if anomaly_type:
+        query = query.eq("anomaly_type", anomaly_type)
+    if acknowledged is not None:
+        query = query.eq("acknowledged", acknowledged)
+
+    res = query.execute()
+    return res.data or []
+
+
+@app.post("/admin/anomalies/{anomaly_id}/acknowledge")
+async def acknowledge_anomaly(anomaly_id: str, raw_request: Request):
+    """Mark an anomaly event as acknowledged by an admin."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    try:
+        body = await raw_request.json()
+    except Exception:
+        body = {}
+
+    user_id = body.get("user_id")
+
+    try:
+        res = (
+            supabase.table("anomaly_events")
+            .update({
+                "acknowledged": True,
+                "acknowledged_by": user_id,
+                "acknowledged_at": datetime.datetime.utcnow().isoformat() + "Z",
+            })
+            .eq("id", anomaly_id)
+            .execute()
+        )
+
+        if not res.data:
+            raise HTTPException(status_code=404, detail="Anomaly not found")
+
+        return {"status": "acknowledged", "anomaly_id": anomaly_id}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to acknowledge: {e}")
+
+
+@app.get("/admin/anomalies/summary")
+async def get_anomalies_summary(company_id: str):
+    """Get a summary of anomaly counts by severity for a company."""
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    try:
+        res = (
+            supabase.table("anomaly_events")
+            .select("severity, acknowledged")
+            .eq("company_id", company_id)
+            .execute()
+        )
+
+        data = res.data or []
+        summary = {
+            "total": len(data),
+            "unacknowledged": sum(1 for d in data if not d.get("acknowledged")),
+            "by_severity": {
+                "critical": sum(1 for d in data if d.get("severity") == "critical"),
+                "high": sum(1 for d in data if d.get("severity") == "high"),
+                "medium": sum(1 for d in data if d.get("severity") == "medium"),
+                "low": sum(1 for d in data if d.get("severity") == "low"),
+            },
+            "unacknowledged_by_severity": {
+                "critical": sum(1 for d in data if d.get("severity") == "critical" and not d.get("acknowledged")),
+                "high": sum(1 for d in data if d.get("severity") == "high" and not d.get("acknowledged")),
+                "medium": sum(1 for d in data if d.get("severity") == "medium" and not d.get("acknowledged")),
+                "low": sum(1 for d in data if d.get("severity") == "low" and not d.get("acknowledged")),
+            },
+        }
+
+        return summary
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch summary: {e}")

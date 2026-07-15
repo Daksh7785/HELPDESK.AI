@@ -65,6 +65,7 @@ import AdminAnalytics from "./admin/pages/AdminAnalytics";
 import AdminProfile from "./admin/pages/AdminProfile";
 import AdminSettings from "./admin/pages/AdminSettings";
 import AdminDuplicates from "./admin/pages/AdminDuplicates";
+import AdminAnomalyDetection from "./admin/pages/AdminAnomalyDetection";
 import MasterBugReports from "./master-admin/pages/MasterBugReports";
 
 // Feature Pages
@@ -210,6 +211,7 @@ function AppLayout() {
             <Route path="/admin/profile" element={<AdminProfile />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
             <Route path="/admin/duplicates" element={<AdminDuplicates />} />
+            <Route path="/admin/anomaly-detection" element={<AdminAnomalyDetection />} />
           </Route>
         </Route>
 

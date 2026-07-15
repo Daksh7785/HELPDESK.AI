@@ -11,7 +11,9 @@ const useAdminStore = create(
                 enableAutoResolve: false,
                 autoCloseDays: 7,
                 emailNotifications: false,
-                adminAlerts: false
+                adminAlerts: false,
+                anomalyDetectionEnabled: true,
+                anomalyDetectionInterval: 300
             },
 
             setUsers: (users) => set({ users }),

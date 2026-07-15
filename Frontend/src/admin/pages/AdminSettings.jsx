@@ -5,7 +5,8 @@ import {
     Inbox,
     Bell,
     Save,
-    ShieldCheck
+    ShieldCheck,
+    Activity
 } from 'lucide-react';
 import useAdminStore from '../store/adminStore';
 import { Card, CardContent } from "../../components/ui/card";
@@ -166,6 +167,57 @@ const AdminSettings = () => {
                             >
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.adminAlerts ? 'right-1' : 'left-1'}`}></div>
                             </button>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                {/* 5. Anomaly Detection Settings */}
+                <Card className="border-none shadow-2xl shadow-slate-200/40 rounded-[2rem] overflow-hidden bg-white">
+                    <div className="px-8 py-6 bg-gradient-to-r from-slate-900 to-indigo-900 text-white flex items-center justify-between border-b border-slate-800">
+                        <h3 className="text-sm font-black uppercase italic tracking-tight flex items-center gap-3">
+                            <Activity size={18} className="text-cyan-400" /> Anomaly Detection
+                        </h3>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-cyan-300/70 bg-cyan-500/10 px-3 py-1 rounded-full border border-cyan-500/20">
+                            Enterprise
+                        </span>
+                    </div>
+                    <CardContent className="p-8 space-y-6">
+                        {/* Enable/Disable Toggle */}
+                        <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                            <div>
+                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Enable Anomaly Detection</h4>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1 max-w-md">
+                                    Automatically scan ticket data for volume spikes, category drift, priority surges, and repeat offenders.
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => handleChange('anomalyDetectionEnabled', !settings.anomalyDetectionEnabled)}
+                                className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.anomalyDetectionEnabled ? 'bg-cyan-600' : 'bg-slate-200'}`}
+                            >
+                                <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.anomalyDetectionEnabled ? 'right-1' : 'left-1'}`}></div>
+                            </button>
+                        </div>
+
+                        {/* Scan Interval */}
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                            <div>
+                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-widest">Detection Scan Interval</h4>
+                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                                    How often the system scans for anomalies.
+                                </p>
+                            </div>
+                            <Select
+                                value={settings.anomalyDetectionInterval}
+                                onChange={(e) => handleChange('anomalyDetectionInterval', parseInt(e.target.value))}
+                                className="w-full md:w-auto"
+                                buttonClassName="w-full md:w-auto min-w-[140px] bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-black text-slate-700 uppercase outline-none focus:border-cyan-600 transition-colors flex justify-between items-center"
+                                options={[
+                                    { value: 60, label: "1 Minute" },
+                                    { value: 300, label: "5 Minutes" },
+                                    { value: 900, label: "15 Minutes" },
+                                    { value: 1800, label: "30 Minutes" }
+                                ]}
+                            />
                         </div>
                     </CardContent>
                 </Card>

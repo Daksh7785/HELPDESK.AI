@@ -22,6 +22,7 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
         { label: 'Users', path: '/admin/users', icon: Users },
         { label: 'Analytics', path: '/admin/analytics', icon: BarChart3 },
         { label: 'Duplicates', path: '/admin/duplicates', icon: Copy },
+        { label: 'Anomaly Detection', path: '/admin/anomaly-detection', icon: Activity },
         { label: 'Profile', path: '/admin/profile', icon: UserCircle },
     ];
 
