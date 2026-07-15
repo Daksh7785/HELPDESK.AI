@@ -37,7 +37,7 @@ function Login() {
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email || !password) {
-      setError("Please enter your email and password");
+      setError("Please enter your email and password to log in.");
       return;
     }
 
@@ -81,7 +81,7 @@ function Login() {
   const handleMagicLink = async (e) => {
     e.preventDefault();
     if (!email) {
-      setError("Please enter your email address");
+      setError("Please enter your email address to reset your password.");
       return;
     }
 

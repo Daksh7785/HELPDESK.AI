@@ -61,7 +61,7 @@ function ForgotPassword() {
             setStep(2);
         } catch (err) {
             console.error("Password reset error:", err);
-            setError(err.message || "An error occurred. Please try again.");
+            setError(err.message || "Something went wrong on our end. Please try again in a few moments.");
         } finally {
             setLoading(false);
         }
@@ -74,7 +74,7 @@ function ForgotPassword() {
             return;
         }
         if (timerExpired) {
-            setError("Your code has expired. Please request a new one.");
+            setError("Your reset code has expired. Please request a new one.");
             return;
         }
 
@@ -93,7 +93,7 @@ function ForgotPassword() {
             setMessage("Code verified. Please enter your new password.");
         } catch (err) {
             console.error("OTP verification error:", err);
-            setError("Invalid or expired code. Please check your email and try again.");
+            setError("That code is invalid or expired. Please check your email and try again.");
         } finally {
             setLoading(false);
         }

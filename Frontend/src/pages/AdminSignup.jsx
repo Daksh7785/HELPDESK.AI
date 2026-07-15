@@ -84,7 +84,7 @@ function AdminSignup() {
     const nextStep = () => {
         if (step === 1) {
             if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword) {
-                setError("Please fill in all required personal information.");
+                setError("Please fill in all the required personal information fields.");
                 return;
             }
             const pwError = validatePassword(formData.password);
@@ -98,7 +98,7 @@ function AdminSignup() {
             }
         } else if (step === 2) {
             if (!formData.companyName || !formData.companySize || !formData.industry || !formData.country) {
-                setError("Please fill in all required company details.");
+                setError("Please fill in all the required company detail fields.");
                 return;
             }
         }
@@ -116,7 +116,7 @@ function AdminSignup() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.agreedToTerms || !formData.isAuthorized) {
-            setError("You must agree to the terms and authorize company registration.");
+            setError("Please agree to the terms and authorize company registration to continue.");
             return;
         }
 

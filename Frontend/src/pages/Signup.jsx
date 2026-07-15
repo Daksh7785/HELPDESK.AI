@@ -113,12 +113,12 @@ function Signup() {
     };
 
     if (!email || !password || !confirmPassword || !fullName) {
-      setError("All fields are required.");
+      setError("Oops! All fields are required to create an account.");
       return;
     }
 
     if (!selectedCompany) {
-      setError("Please select your company.");
+      setError("Please select a company to associate with your account.");
       return;
     }
 

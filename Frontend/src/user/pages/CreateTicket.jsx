@@ -133,7 +133,7 @@ const CreateTicket = () => {
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         
         if (!SpeechRecognition) {
-            setError("Speech recognition is not supported in this browser.");
+            setError("Speech recognition is not supported in this browser. Please try using a modern browser like Chrome or Edge.");
             return;
         }
 
@@ -222,7 +222,7 @@ const CreateTicket = () => {
 
         } catch (err) {
             console.error("Microphone access denied:", err);
-            setError("Could not access microphone. Please ensure permissions are granted.");
+            setError("We couldn't access your microphone. Please check your browser settings and grant microphone permissions to use voice input.");
         }
     };
 
@@ -270,7 +270,7 @@ const CreateTicket = () => {
             setError('');
             processOCR(selected);
         } else if (selected) {
-            setError('Please upload only PNG or JPG images.');
+            setError("Invalid image format. Please upload only PNG or JPG images.");
         }
     };
 
@@ -359,7 +359,7 @@ const CreateTicket = () => {
         } else {
             // Manual mode: validate textarea
             if (!issue.trim()) {
-                setError('Please describe your issue first.');
+                setError("Oops! You need to describe your issue before submitting the ticket.");
                 return;
             }
         }
@@ -417,7 +417,7 @@ const CreateTicket = () => {
 
         } catch (err) {
             console.error(err);
-            setError('Failed to submit ticket. Please try again later.');
+            setError("We couldn't submit your ticket right now. Please check your internet connection and try again.");
         } finally {
             setIsLoading(false);
         }

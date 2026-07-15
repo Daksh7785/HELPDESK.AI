@@ -43,7 +43,7 @@ function MasterAdminLogin() {
             const { user: authUser } = await login(email, password);
 
             if (!authUser) {
-                setError("Authentication failed. Please check your credentials.");
+                setError("Login failed. Please double-check your email and password.");
                 return;
             }
 
@@ -57,13 +57,13 @@ function MasterAdminLogin() {
 
             if (profileError || !dbProfile) {
                 await logout();
-                setError("Access denied. No profile found for this account.");
+                setError("Access denied. We couldn't find a profile for this account.");
                 return;
             }
 
             if (dbProfile.role !== "master_admin") {
                 await logout();
-                setError("Access denied. This portal is restricted.");
+                setError("Access denied. This portal is restricted to Master Administrators only.");
                 return;
             }
 

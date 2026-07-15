@@ -26,11 +26,11 @@ function ResetPassword() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (password.length < 8) {
-            setError("Password must be at least 8 characters long");
+            setError("Your password must be at least 8 characters long for security.");
             return;
         }
         if (password !== confirmPassword) {
-            setError("Passwords do not match");
+            setError("The passwords you entered do not match. Please try again.");
             return;
         }
 

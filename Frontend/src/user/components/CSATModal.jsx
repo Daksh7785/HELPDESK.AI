@@ -43,7 +43,7 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
             setSubmitted(true);
             setTimeout(() => { onSubmit?.(selected); }, 1800);
         } catch (err) {
-            setError('Failed to submit. Please try again.');
+            setError("We couldn't submit your rating. Please check your internet connection and try again.");
             console.error(err);
         } finally {
             setLoading(false);

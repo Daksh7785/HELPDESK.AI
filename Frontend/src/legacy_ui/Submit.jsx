@@ -63,7 +63,7 @@ function Submit() {
     e.preventDefault();
 
     if (!issue.trim() || !title.trim()) {
-      setError("Please provide a title and describe your issue before submitting.");
+      setError("Please provide a title and describe your issue before submitting the ticket.");
       return;
     }
 
@@ -95,7 +95,7 @@ function Submit() {
 
       navigate("/ai-understanding");
     } catch (_err) {
-      setError("AI Analysis failed. Please try again.");
+      setError("AI Analysis failed. We couldn't analyze the issue right now. Please try again in a moment.");
       setLoading(false);
     }
   };
