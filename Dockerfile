@@ -1,31 +1,48 @@
-# Use an official Python runtime as a parent image
+# Stage 1: Builder
+FROM python:3.10-slim AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment
+RUN python -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy the requirements file and install dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Stage 2: Final
 FROM python:3.10-slim
 
 LABEL version="1.1.1" rebuild_trigger="2026-03-08-2032"
 
-# Set the working directory to /app
 WORKDIR /app
 
-# Install system dependencies required for EasyOCR and OpenCV
-RUN apt-get update && apt-get install -y \
+# Install only runtime system dependencies required for EasyOCR and OpenCV
+RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 \
     libglib2.0-0 \
-    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy the requirements file into the container
-COPY backend/requirements.txt .
+# Copy virtual environment from the builder stage
+COPY --from=builder /opt/venv /opt/venv
 
-# Install dependencies (no-cache-dir keeps the docker image smaller)
-RUN pip install --no-cache-dir -r requirements.txt
+# Set PATH to use the virtual environment
+ENV PATH="/opt/venv/bin:$PATH"
 
 # Copy all the remaining files into the container as a 'backend' directory
 COPY backend /app/backend
 
-# Tell Python where to look for modules (so it can find the 'backend' folder)
+# Tell Python where to look for modules
 ENV PYTHONPATH=/app
 
-# Expose port 7860 (Hugging Face Spaces default)
+# Expose port 7860
 EXPOSE 7860
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
