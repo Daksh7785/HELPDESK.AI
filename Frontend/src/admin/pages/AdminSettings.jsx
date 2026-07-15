@@ -97,7 +97,7 @@ const AdminSettings = () => {
                             <button
                                 onClick={() => handleChange('enableAutoResolve', !settings.enableAutoResolve)}
                                 className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.enableAutoResolve ? 'bg-indigo-600' : 'bg-slate-200'}`}
-                            >
+                             aria-label="Action">
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.enableAutoResolve ? 'right-1' : 'left-1'}`}></div>
                             </button>
                         </div>
@@ -149,7 +149,7 @@ const AdminSettings = () => {
                             <button
                                 onClick={() => handleChange('emailNotifications', !settings.emailNotifications)}
                                 className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.emailNotifications ? 'bg-amber-500' : 'bg-slate-200'}`}
-                            >
+                             aria-label="Action">
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.emailNotifications ? 'right-1' : 'left-1'}`}></div>
                             </button>
                         </div>
@@ -163,7 +163,7 @@ const AdminSettings = () => {
                             <button
                                 onClick={() => handleChange('adminAlerts', !settings.adminAlerts)}
                                 className={`w-14 h-8 rounded-full relative transition-all duration-300 shadow-inner shrink-0 ${settings.adminAlerts ? 'bg-amber-500' : 'bg-slate-200'}`}
-                            >
+                             aria-label="Action">
                                 <div className={`absolute top-1 w-6 h-6 bg-white rounded-full transition-all duration-300 shadow-md ${settings.adminAlerts ? 'right-1' : 'left-1'}`}></div>
                             </button>
                         </div>

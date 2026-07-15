@@ -81,7 +81,7 @@ function SectionHeader({ icon: Icon, title, onExport, onRefresh, loading }) {
                         disabled={loading}
                         style={{ background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}
                         title="Refresh"
-                    >
+                     aria-label="Refresh Cw">
                         <RefreshCw size={12} className={loading ? 'animate-spin' : ''} />
                     </button>
                 )}
@@ -398,7 +398,7 @@ const AdminAnalytics = () => {
                                 onClick={fetchVolume}
                                 disabled={volumeLoading}
                                 style={{ background: 'transparent', border: '1px solid #e5e7eb', borderRadius: '8px', padding: '4px 10px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#6b7280' }}
-                            >
+                             aria-label="Refresh Cw">
                                 <RefreshCw size={12} className={volumeLoading ? 'animate-spin' : ''} />
                             </button>
                             <button

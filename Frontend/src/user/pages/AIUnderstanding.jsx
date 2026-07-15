@@ -380,7 +380,7 @@ const AIUnderstanding = () => {
                     <button
                         onClick={() => setExplainerOpen(!explainerOpen)}
                         className="w-full p-6 flex items-center justify-between hover:bg-gray-50/50 transition-colors"
-                    >
+                     aria-label="Chevron Down">
                         <span className="text-sm font-black text-gray-900 flex items-center gap-2">
                             <Lightbulb className="w-4 h-4 text-amber-500" />
                             How AI reached this conclusion

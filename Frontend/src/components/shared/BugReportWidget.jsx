@@ -78,7 +78,7 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
                 className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#13ec80] transition-all text-sm text-slate-700 outline-none focus:ring-2 focus:ring-[#13ec80]/20"
-            >
+             aria-label="Chevron Down">
                 <span className="truncate">{selectedOption.label}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
@@ -430,7 +430,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                 <button
                                     onClick={handleClose}
                                     className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-full transition-colors"
-                                >
+                                 aria-label="X">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
@@ -708,7 +708,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                         <button
                             onClick={(e) => { e.stopPropagation(); handleCancelSelection(); }}
                             className="fixed top-6 right-6 p-2 bg-white rounded-full shadow-lg text-slate-600 hover:text-red-500 transition-colors pointer-events-auto"
-                        >
+                         aria-label="X">
                             <X className="w-6 h-6" />
                         </button>
                     </motion.div>

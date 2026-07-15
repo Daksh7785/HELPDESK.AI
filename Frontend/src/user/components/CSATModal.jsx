@@ -72,7 +72,7 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
                     <button
                         onClick={onDismiss}
                         className="absolute top-4 right-4 p-1.5 hover:bg-white/10 rounded-full transition-colors"
-                    >
+                     aria-label="X">
                         <X className="w-4 h-4" />
                     </button>
                     <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center mb-3 backdrop-blur-sm border border-white/20">
@@ -95,7 +95,7 @@ export default function CSATModal({ ticketId, onSubmit, onDismiss }) {
                                     onClick={() => { setSelected(star); setError(''); }}
                                     className="transition-all duration-200"
                                     style={{ transform: hovered === star ? 'scale(1.2)' : 'scale(1)' }}
-                                >
+                                 aria-label="Star">
                                     <Star
                                         className={`w-9 h-9 transition-all duration-300 ${star <= (hovered || selected)
                                                 ? 'text-yellow-400 fill-yellow-400 drop-shadow-[0_0_8px_rgba(250,204,21,0.4)]'

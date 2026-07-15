@@ -215,7 +215,7 @@ const AdminTicketDetail = () => {
                         onClick={() => navigate('/admin/tickets')}
                         style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                         className="hover:bg-slate-50 rounded-xl transition-colors"
-                    >
+                     aria-label="Corner Up Left">
                         <CornerUpLeft size={20} />
                     </button>
                     <div>

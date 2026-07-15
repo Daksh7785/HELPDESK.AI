@@ -133,7 +133,7 @@ function AllAdmins() {
                                         }
                                     }}
                                     className="p-2 rounded-xl bg-white/5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
-                                >
+                                 aria-label="Action">
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>

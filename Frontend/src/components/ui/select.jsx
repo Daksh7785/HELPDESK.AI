@@ -26,7 +26,7 @@ export const Select = ({ value, onChange, options, placeholder = "Select an opti
                 onClick={() => !disabled && setIsOpen(!isOpen)}
                 disabled={disabled}
                 className={buttonClassName || `w-full flex items-center justify-between pl-4 pr-3 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-semibold transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 ${disabled ? 'opacity-50 cursor-not-allowed bg-slate-50' : 'hover:bg-slate-50 cursor-pointer text-slate-700'}`}
-            >
+             aria-label="Chevron Down">
                 <span className={`truncate ${selectedOption ? "text-slate-900" : "text-slate-400"}`}>
                     {selectedOption ? selectedOption.label : placeholder}
                 </span>

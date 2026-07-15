@@ -508,7 +508,7 @@ const CreateTicket = () => {
                                                         type="button"
                                                         onClick={() => setIsLangOpen(!isLangOpen)}
                                                         className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm font-bold text-gray-700 flex items-center justify-between hover:bg-white hover:border-emerald-200 transition-all shadow-sm group"
-                                                    >
+                                                     aria-label="Action">
                                                         <span className="flex items-center gap-2">
                                                             <Globe size={14} className="text-emerald-500" />
                                                             {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.label}
@@ -700,7 +700,7 @@ const CreateTicket = () => {
                                                             size="icon"
                                                             onClick={removeFile}
                                                             className="text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full shrink-0"
-                                                        >
+                                                         aria-label="X">
                                                             <X size={18} />
                                                         </Button>
                                                     </div>
@@ -778,7 +778,7 @@ const CreateTicket = () => {
                                 <button
                                     onClick={handleCancelVoice}
                                     className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 rounded-full transition-colors"
-                                >
+                                 aria-label="X">
                                     <X size={20} />
                                 </button>
                             </div>

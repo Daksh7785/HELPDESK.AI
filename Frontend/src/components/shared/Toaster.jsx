@@ -54,7 +54,7 @@ const Toaster = () => {
                             <button
                                 onClick={() => removeToast(toast.id)}
                                 className="shrink-0 p-1 hover:bg-white/10 rounded-lg transition-colors"
-                            >
+                             aria-label="X">
                                 <X className="w-4 h-4 opacity-50 hover:opacity-100" />
                             </button>
                         </div>

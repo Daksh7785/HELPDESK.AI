@@ -71,7 +71,7 @@ function DemoModal({ onClose }) {
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/10 rounded-full p-2 transition-colors z-30"
-                >
+                 aria-label="X">
                     <X className="w-5 h-5" />
                 </button>
 

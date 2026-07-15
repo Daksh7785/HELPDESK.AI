@@ -192,7 +192,7 @@ const DocsPortal = () => {
                                                     ${isActive 
                                                         ? 'bg-slate-50 text-emerald-600 border-l-2 border-emerald-500' 
                                                         : 'text-gray-500 hover:bg-slate-50/50 hover:text-gray-800'}`}
-                                            >
+                                             aria-label="Chevron Right">
                                                 <span className="truncate max-w-[200px]">{article.title}</span>
                                                 <ChevronRight size={12} className={isActive ? 'text-emerald-500' : 'text-gray-300'} />
                                             </button>

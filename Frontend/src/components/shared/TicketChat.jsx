@@ -437,7 +437,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                             onClick={() => handleCallPress('Audio')}
                             style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', color: '#374151' }}
                             className="hover:text-emerald-600 transition-colors"
-                        >
+                         aria-label="Phone">
                             <Phone size={18} />
                         </button>
                         <button
@@ -445,7 +445,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                             onClick={() => handleCallPress('Video')}
                             style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', color: '#374151' }}
                             className="hover:text-emerald-600 transition-colors"
-                        >
+                         aria-label="Video">
                             <Video size={18} />
                         </button>
                     </div>
@@ -627,7 +627,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                             onClick={startRecording}
                             style={{ padding: '10px', background: 'rgba(0,0,0,0.05)', color: '#374151', borderRadius: '10px', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                             className="active:scale-95 transition-transform"
-                        >
+                         aria-label="Mic">
                             <Mic size={16} />
                         </button>
                         <button
@@ -682,7 +682,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                             type="button"
                             onClick={endCall}
                             style={{ width: '48px', height: '48px', borderRadius: '50%', border: 'none', background: '#ef4444', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
+                         aria-label="Phone">
                             <Phone size={18} style={{ transform: 'rotate(135deg)' }} />
                         </button>
 
@@ -690,7 +690,7 @@ const TicketChat = ({ ticketId, currentUserRole = 'user' }) => {
                             type="button"
                             onClick={() => setIsSpeakerOn(!isSpeakerOn)}
                             style={{ width: '48px', height: '48px', borderRadius: '50%', border: 'none', background: isSpeakerOn ? '#ffffff' : 'rgba(255,255,255,0.08)', color: isSpeakerOn ? '#16a34a' : '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                        >
+                         aria-label="Action">
                             <Volume2 size={18} />
                         </button>
                     </div>

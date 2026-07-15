@@ -379,7 +379,7 @@ const AdminUsers = () => {
                         onClick={fetchUsers}
                         className="p-4 bg-slate-100 text-slate-600 rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center"
                         title="Refresh Data"
-                    >
+                     aria-label="Zap">
                         <Zap size={20} className={loading ? "animate-pulse" : ""} />
                     </button>
                 </div>
@@ -512,7 +512,7 @@ const AdminUsers = () => {
                                                         onClick={() => openProfile(user)}
                                                         className="w-10 h-10 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50 transition-all shadow-sm"
                                                         title="View Profile"
-                                                    >
+                                                     aria-label="Eye">
                                                         <Eye size={18} />
                                                     </button>
                                                     <button
@@ -646,7 +646,7 @@ const AdminUsers = () => {
                                     </p>
                                 </div>
                             </div>
-                            <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-3 rounded-xl border border-slate-200 transition-colors">
+                            <button onClick={() => setShowProfileModal(false)} className="text-slate-400 hover:text-slate-600 bg-white shadow-sm p-3 rounded-xl border border-slate-200 transition-colors" aria-label="X">
                                 <X size={24} />
                             </button>
                         </div>

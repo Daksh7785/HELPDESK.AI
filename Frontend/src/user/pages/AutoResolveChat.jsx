@@ -366,7 +366,7 @@ const AutoResolveChat = () => {
                                     <button
                                         onClick={() => fileInputRef.current?.click()}
                                         className="w-12 h-12 rounded-full flex items-center justify-center text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all duration-300"
-                                    >
+                                     aria-label="Paperclip">
                                         <Paperclip size={20} />
                                         <input
                                             type="file"
@@ -391,14 +391,14 @@ const AutoResolveChat = () => {
                                                 ${isListening
                                                     ? 'bg-red-500 text-white shadow-[0_0_20px_rgba(239,68,68,0.4)] animate-pulse scale-110'
                                                     : 'bg-white border border-slate-200 text-slate-400 hover:text-emerald-500 hover:border-emerald-200 shadow-sm'}`}
-                                        >
+                                         aria-label="Mic">
                                             <Mic size={24} />
                                         </button>
                                         <button
                                             onClick={() => handleSendMessage()}
                                             disabled={!inputText.trim()}
                                             className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center text-white shadow-xl shadow-emerald-500/20 hover:bg-emerald-700 hover:rotate-6 active:scale-95 disabled:opacity-30 disabled:grayscale transition-all duration-300"
-                                        >
+                                         aria-label="Send">
                                             <Send size={18} className="translate-x-0.5 -translate-y-0.5" />
                                         </button>
                                     </div>

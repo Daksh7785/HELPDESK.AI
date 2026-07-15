@@ -58,7 +58,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                 <button
                     onClick={onMobileNavToggle}
                     className="lg:hidden p-2 hover:bg-slate-50 rounded-xl text-slate-500 transition-colors"
-                >
+                 aria-label="Menu">
                     <Menu size={20} />
                 </button>
 
@@ -90,7 +90,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                             onClick={handleSearchClear}
                             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 transition-colors"
                             tabIndex={-1}
-                        >
+                         aria-label="X">
                             <X size={14} />
                         </button>
                     )}
@@ -109,7 +109,7 @@ const AdminHeader = ({ onMobileNavToggle, isSidebarCollapsed, onToggleSidebar })
                     <button
                         onClick={() => setIsProfileOpen(!isProfileOpen)}
                         className="flex items-center gap-3 hover:bg-slate-50 p-1 rounded-2xl border border-transparent hover:border-slate-100 transition-all group"
-                    >
+                     aria-label="Avatar">
                         <Avatar className="w-8 h-8 rounded-lg shadow-md group-hover:scale-105 transition-transform">
                             <AvatarImage src={adminProfile?.profile_picture} className="object-cover" />
                             <AvatarFallback className="bg-slate-900 text-white font-black text-xs rounded-lg">

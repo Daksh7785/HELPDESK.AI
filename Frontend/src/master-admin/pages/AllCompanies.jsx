@@ -92,7 +92,7 @@ function AllCompanies() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-colors">
+                    <button className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-slate-400 hover:text-white transition-colors" aria-label="Filter">
                         <Filter className="w-5 h-5" />
                     </button>
                 </div>
@@ -174,7 +174,7 @@ function AllCompanies() {
                                             >
                                                 {company.status === 'active' ? <XCircle className="w-5 h-5" /> : <CheckCircle2 className="w-5 h-5" />}
                                             </button>
-                                            <button className="p-2 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-all">
+                                            <button className="p-2 rounded-lg hover:bg-white/10 text-slate-500 hover:text-white transition-all" aria-label="External Link">
                                                 <ExternalLink className="w-5 h-5" />
                                             </button>
                                         </div>

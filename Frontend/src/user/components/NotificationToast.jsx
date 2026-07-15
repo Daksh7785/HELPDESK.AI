@@ -78,7 +78,7 @@ const NotificationToast = () => {
                                         setCurrentToast(null);
                                     }}
                                     className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-                                >
+                                 aria-label="X">
                                     <X className="w-4 h-4" />
                                 </button>
                             </div>

@@ -258,13 +258,13 @@ const MasterBugReports = () => {
                                                 <button
                                                     onClick={() => setSelectedBug(bug)}
                                                     className="w-10 h-10 bg-white/5 text-indigo-400 rounded-xl hover:bg-indigo-500 hover:text-white transition-all shadow-xl border border-white/5 flex items-center justify-center group/btn"
-                                                >
+                                                 aria-label="Eye">
                                                     <Eye size={16} className="group-hover/btn:scale-110 transition-transform" />
                                                 </button>
                                                 <button
                                                     onClick={() => deleteBug(bug.id)}
                                                     className="w-10 h-10 bg-white/0 text-slate-700 hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all flex items-center justify-center"
-                                                >
+                                                 aria-label="Action">
                                                     <Trash2 size={16} />
                                                 </button>
                                             </div>
@@ -310,7 +310,7 @@ const MasterBugReports = () => {
                                         <h2 className="text-3xl font-black text-white tracking-tighter uppercase italic italic">{selectedBug.bug_title}</h2>
                                     </div>
                                 </div>
-                                <button onClick={() => setSelectedBug(null)} className="p-4 hover:bg-white/5 rounded-2xl transition-all border border-transparent hover:border-white/10 group">
+                                <button onClick={() => setSelectedBug(null)} className="p-4 hover:bg-white/5 rounded-2xl transition-all border border-transparent hover:border-white/10 group" aria-label="X">
                                     <X className="w-6 h-6 text-slate-500 group-hover:text-white" />
                                 </button>
                             </div>

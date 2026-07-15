@@ -459,7 +459,7 @@ const AdminDuplicates = () => {
                   onClick={() => handleFeedback('false_positive')}
                   disabled={saving}
                   className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-rose-50 border border-rose-100 text-rose-700 font-black text-sm hover:bg-rose-100 transition-colors disabled:opacity-50"
-                >
+                 aria-label="Trending Up">
                   <TrendingUp size={18} />
                   <div className="text-left">
                     <p className="text-xs font-black uppercase">Too Many</p>
@@ -471,7 +471,7 @@ const AdminDuplicates = () => {
                   onClick={() => handleFeedback('missed_duplicate')}
                   disabled={saving}
                   className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-700 font-black text-sm hover:bg-indigo-100 transition-colors disabled:opacity-50"
-                >
+                 aria-label="Trending Down">
                   <TrendingDown size={18} />
                   <div className="text-left">
                     <p className="text-xs font-black uppercase">Missing</p>

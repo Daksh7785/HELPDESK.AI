@@ -163,7 +163,7 @@ function AutoResolve() {
                             <button
                                 onClick={() => window.location.reload()}
                                 className="w-full sm:w-auto px-4 py-4 text-gray-400 hover:text-emerald-600 transition-colors"
-                            >
+                             aria-label="Refresh Ccw">
                                 <RefreshCcw size={20} />
                             </button>
                         </div>

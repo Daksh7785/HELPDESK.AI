@@ -146,7 +146,7 @@ const AdminProfile = () => {
                     {isEditingProfile && (
                         <>
                             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/*" />
-                            <button onClick={() => fileInputRef.current?.click()} style={{ position: 'absolute', bottom: -4, right: -4, background: '#fff', border: '1.5px solid #d1fae5', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#15803d', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', zIndex: 20 }}>
+                            <button onClick={() => fileInputRef.current?.click()} style={{ position: 'absolute', bottom: -4, right: -4, background: '#fff', border: '1.5px solid #d1fae5', borderRadius: '12px', padding: '8px', cursor: 'pointer', color: '#15803d', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', zIndex: 20 }} aria-label="Camera">
                                 <Camera size={18} />
                             </button>
                         </>
@@ -238,7 +238,7 @@ const AdminProfile = () => {
                                     </h4>
                                     <p style={{ fontSize: '11px', color: '#6b7280' }}>Enforce extra verification for secure admin actions.</p>
                                 </div>
-                                <button onClick={() => setIsAdmin2FAEnabled(!isAdmin2FAEnabled)} style={{ width: '52px', height: '28px', borderRadius: '100px', position: 'relative', transition: 'all 0.4s', background: isAdmin2FAEnabled ? '#22c55e' : '#d1d5db', border: 'none', cursor: 'pointer', flexShrink: 0 }}>
+                                <button onClick={() => setIsAdmin2FAEnabled(!isAdmin2FAEnabled)} style={{ width: '52px', height: '28px', borderRadius: '100px', position: 'relative', transition: 'all 0.4s', background: isAdmin2FAEnabled ? '#22c55e' : '#d1d5db', border: 'none', cursor: 'pointer', flexShrink: 0 }} aria-label="Action">
                                     <div style={{ position: 'absolute', top: '2px', width: '24px', height: '24px', background: '#fff', borderRadius: '50%', transition: 'all 0.4s', boxShadow: '0 1px 3px rgba(0,0,0,0.15)', left: isAdmin2FAEnabled ? '26px' : '2px' }}></div>
                                 </button>
                             </div>
@@ -313,7 +313,7 @@ const AdminProfile = () => {
                     <div style={{ background: '#fff', borderRadius: '20px', boxShadow: '0 25px 50px rgba(0,0,0,0.15)', overflow: 'hidden', width: '100%', maxWidth: '400px' }} className="animate-in zoom-in-95 duration-300">
                         <div style={{ background: '#0f1f12', padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <h3 style={{ fontFamily: 'Syne, sans-serif', fontWeight: 700, color: '#fff', fontSize: '16px', margin: 0 }}>Update Password</h3>
-                            <button onClick={() => setShowPasswordModal(false)} style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                            <button onClick={() => setShowPasswordModal(false)} style={{ color: '#9ca3af', background: 'none', border: 'none', cursor: 'pointer' }} aria-label="X"><X size={20} /></button>
                         </div>
                         <div style={{ padding: '28px' }} className="space-y-5">
                             {[{ label: 'New Password', key: 'newPassword', ph: 'Enter new password' }, { label: 'Confirm Password', key: 'confirmPassword', ph: 'Confirm password' }].map((f, i) => (

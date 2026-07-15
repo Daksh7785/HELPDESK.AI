@@ -206,16 +206,16 @@ const AdminDashboard = () => {
 
             {/* KPIs */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none" aria-label="Stat Card">
                     <StatCard label="Total Tickets" value={metrics.total} color="indigo" subtitle="Lifetime generated" customIcon={<TicketIcon />} />
                 </button>
-                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none">
+                <button onClick={() => navigate('/admin/tickets')} className="text-left group focus:outline-none" aria-label="Stat Card">
                     <StatCard label="Active Tickets" value={metrics.active} color="amber" subtitle="Need attention" customIcon={<ActivityIcon />} />
                 </button>
-                <button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none">
+                <button onClick={() => navigate('/admin/tickets?filter=auto')} className="text-left group focus:outline-none" aria-label="Stat Card">
                     <StatCard label="AI Auto-Resolved" value={metrics.autoResolved} color="emerald" subtitle="Resolved by AI" customIcon={<CpuIcon />} />
                 </button>
-                <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none">
+                <button onClick={() => navigate('/admin/tickets?filter=human')} className="text-left group focus:outline-none" aria-label="Stat Card">
                     <StatCard label="Escalated Tickets" value={metrics.humanEscalated} color="red" subtitle="Requires support agent" customIcon={<UsersIcon />} />
                 </button>
             </div>

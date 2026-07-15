@@ -346,7 +346,7 @@ function Submit() {
                         onClick={handleRemoveImage}
                         className="shrink-0 flex items-center justify-center w-8 h-8 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
                         disabled={loading}
-                      >
+                       aria-label="X">
                         <X size={16} />
                       </button>
                     </div>
@@ -367,7 +367,7 @@ function Submit() {
                 type="submit"
                 disabled={loading}
                 className="w-full h-12 bg-[var(--stitch-primary,#13ec80)] hover:bg-[#0fd472] text-[var(--stitch-text-main,#111814)] font-bold text-base rounded-[var(--stitch-radius,0.5rem)] shadow-[0_4px_14px_0_rgba(19,236,128,0.39)] hover:shadow-[0_6px_20px_rgba(19,236,128,0.23)] hover:-translate-y-0.5 transition-all duration-200 flex items-center justify-center gap-2 group disabled:opacity-50 disabled:hover:translate-y-0"
-              >
+               aria-label="Arrow Right">
                 <span>{file ? "Analyze Text & Image" : "Analyze Issue"}</span>
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </button>

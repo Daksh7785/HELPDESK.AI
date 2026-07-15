@@ -472,7 +472,7 @@ const Profile = () => {
                                         <button
                                             onClick={() => setShowPasswordModal(true)}
                                             className="w-full p-8 flex items-center justify-between hover:bg-slate-50 transition-all group"
-                                        >
+                                         aria-label="Chevron Right">
                                             <div className="flex items-center gap-6">
                                                 <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-sm">
                                                     <Lock size={20} />
@@ -507,7 +507,7 @@ const Profile = () => {
                                         <button
                                             onClick={handleLogout}
                                             className="w-full p-8 flex items-center justify-between hover:bg-amber-50/30 transition-all group border-b border-slate-50"
-                                        >
+                                         aria-label="Chevron Right">
                                             <div className="flex items-center gap-6">
                                                 <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 shadow-sm transition-all group-hover:bg-amber-500 group-hover:text-white">
                                                     <LogOut size={20} />
@@ -523,7 +523,7 @@ const Profile = () => {
                                         <button
                                             onClick={handleDeleteAccount}
                                             className="w-full p-8 flex items-center justify-between hover:bg-red-50/30 transition-all group rounded-b-3xl"
-                                        >
+                                         aria-label="Chevron Right">
                                             <div className="flex items-center gap-6">
                                                 <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 shadow-sm transition-all group-hover:bg-red-600 group-hover:text-white">
                                                     <X size={20} />
@@ -557,7 +557,7 @@ const Profile = () => {
                                 <h3 className="font-black italic uppercase text-sm tracking-widest flex items-center gap-2">
                                     <Lock size={16} className="text-emerald-400" /> Security Sequence
                                 </h3>
-                                <button onClick={() => setShowPasswordModal(false)} className="text-white/60 hover:text-white transition-colors">
+                                <button onClick={() => setShowPasswordModal(false)} className="text-white/60 hover:text-white transition-colors" aria-label="X">
                                     <X size={20} />
                                 </button>
                             </div>

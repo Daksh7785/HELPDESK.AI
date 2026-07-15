@@ -515,7 +515,7 @@ const AdminTickets = () => {
                                                 onClick={() => navigate(`/admin/ticket/${ticket.id}`)}
                                                 className="p-2 bg-slate-900 text-white rounded-xl hover:bg-emerald-600 transition-all shadow-lg shadow-slate-900/10 hover:shadow-emerald-500/20"
                                                 title="Open Detailed View"
-                                            >
+                                             aria-label="Arrow Up Right">
                                                 <ArrowUpRight size={14} />
                                             </button>
                                         </div>

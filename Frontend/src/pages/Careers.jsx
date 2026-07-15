@@ -53,7 +53,7 @@ export default function Careers() {
                             </div>
                             <div className="flex items-center gap-4">
                                 <span className="text-xs font-bold text-emerald-700">{job.scale}</span>
-                                <button className="p-2 bg-gray-50 hover:bg-emerald-50 rounded-lg border border-gray-100 hover:border-emerald-100 text-slate-500 hover:text-emerald-700 transition-colors">
+                                <button className="p-2 bg-gray-50 hover:bg-emerald-50 rounded-lg border border-gray-100 hover:border-emerald-100 text-slate-500 hover:text-emerald-700 transition-colors" aria-label="Arrow Right">
                                     <ArrowRight size={16} />
                                 </button>
                             </div>

@@ -24,7 +24,7 @@ export function NotFound() {
                 </EmptyHeader>
                 <EmptyContent>
                     <div className="flex gap-2">
-                        <Button asChild>
+                        <Button asChild aria-label="Link">
                             <Link to="/">
                                 <HomeIcon
                                     className="size-4 mr-2" data-icon="inline-start" />
@@ -32,7 +32,7 @@ export function NotFound() {
                             </Link>
                         </Button>
 
-                        <Button asChild variant="outline">
+                        <Button asChild variant="outline" aria-label="Link">
                             <Link to="/contact">
                                 <CompassIcon
                                     className="size-4 mr-2"
