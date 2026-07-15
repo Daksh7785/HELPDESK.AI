@@ -10,6 +10,14 @@ export default {
 	theme: {
 		extend: {
 			colors: {
+				slate: {
+					400: 'rgb(var(--color-slate-400) / <alpha-value>)',
+					500: 'rgb(var(--color-slate-500) / <alpha-value>)',
+				},
+				gray: {
+					400: 'rgb(var(--color-gray-400) / <alpha-value>)',
+					500: 'rgb(var(--color-gray-500) / <alpha-value>)',
+				},
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))'

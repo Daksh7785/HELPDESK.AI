@@ -77,7 +77,7 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
             <button
                 type="button"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#13ec80] transition-all text-sm text-slate-700 outline-none focus:ring-2 focus:ring-[#13ec80]/20"
+                className="w-full flex items-center justify-between px-4 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-[#16a34a] transition-all text-sm text-slate-700 outline-none focus:ring-2 focus:ring-[#16a34a]/20"
             >
                 <span className="truncate">{selectedOption.label}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
@@ -107,13 +107,13 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
                                     }}
                                     className={`w-full flex items-center justify-between px-4 py-2.5 text-sm transition-colors
                                         ${value === option.value
-                                            ? 'bg-[#13ec80]/10 text-slate-900 font-semibold'
+                                            ? 'bg-[#16a34a]/10 text-slate-900 font-semibold'
                                             : 'text-slate-600 hover:bg-slate-50'
                                         }`}
                                 >
                                     {option.label}
                                     {value === option.value && (
-                                        <Check className="w-4 h-4 text-[#13ec80]" />
+                                        <Check className="w-4 h-4 text-[#16a34a]" />
                                     )}
                                 </button>
                             ))}
@@ -386,7 +386,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
                         onClick={handleOpen}
-                        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-[#13ec80] to-[#0fd472] text-[#111814] px-4 py-3 rounded-full shadow-lg hover:shadow-xl hover:shadow-[#13ec80]/20 transition-all border border-[#13ec80]/50 group"
+                        className="fixed bottom-6 right-6 z-50 flex items-center gap-2 bg-gradient-to-r from-[#16a34a] to-[#15803d] text-white px-4 py-3 rounded-full shadow-lg hover:shadow-xl hover:shadow-[#16a34a]/20 transition-all border border-[#16a34a]/50 group"
                     >
                         <Bug className="w-5 h-5 group-hover:rotate-12 transition-transform" />
                         <span className="font-bold text-sm hidden sm:block">Report Bug</span>
@@ -421,8 +421,8 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                         >
                             {/* Header */}
                             <div className="flex items-center justify-between p-5 border-b border-slate-100 shrink-0">
-                                <div className="flex items-center gap-3 text-[#13ec80]">
-                                    <div className="p-2 bg-[#13ec80]/10 rounded-lg">
+                                <div className="flex items-center gap-3 text-[#16a34a]">
+                                    <div className="p-2 bg-[#16a34a]/10 rounded-lg">
                                         <Bug className="w-6 h-6" />
                                     </div>
                                     <h2 className="text-xl font-bold text-slate-800 dark:text-white">Report a Bug</h2>
@@ -463,7 +463,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                 value={formData.bug_title}
                                                 onChange={handleChange}
                                                 placeholder="e.g., Evaluation fails to save after clicking submit"
-                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white"
+                                                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all text-sm bg-slate-50 focus:bg-white"
                                             />
                                         </div>
                                     )}
@@ -481,7 +481,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                             onChange={handleChange}
                                             rows="3"
                                             placeholder="Describe the bug in detail..."
-                                            className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-y"
+                                            className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all text-sm bg-slate-50 focus:bg-white resize-y"
                                         ></textarea>
                                     </div>
 
@@ -499,7 +499,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                     onChange={handleChange}
                                                     rows="2"
                                                     placeholder="1. Go to...&#10;2. Click on...&#10;3. See error..."
-                                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-y"
+                                                    className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all text-sm bg-slate-50 focus:bg-white resize-y"
                                                 ></textarea>
                                             </div>
 
@@ -516,7 +516,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                         onChange={handleChange}
                                                         rows="2"
                                                         placeholder="Expected result..."
-                                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-none"
+                                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all text-sm bg-slate-50 focus:bg-white resize-none"
                                                     ></textarea>
                                                 </div>
                                                 <div>
@@ -530,7 +530,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                         onChange={handleChange}
                                                         rows="2"
                                                         placeholder="Actual result..."
-                                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#13ec80]/20 focus:border-[#13ec80] transition-all text-sm bg-slate-50 focus:bg-white resize-none"
+                                                        className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none focus:ring-2 focus:ring-[#16a34a]/20 focus:border-[#16a34a] transition-all text-sm bg-slate-50 focus:bg-white resize-none"
                                                     ></textarea>
                                                 </div>
                                             </div>
@@ -575,7 +575,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                     name="contact_permission"
                                                     checked={formData.contact_permission}
                                                     onChange={handleChange}
-                                                    className="w-4 h-4 text-[#13ec80] rounded border-slate-300 focus:ring-[#13ec80]"
+                                                    className="w-4 h-4 text-[#16a34a] rounded border-slate-300 focus:ring-[#16a34a]"
                                                 />
                                                 <span className="text-sm font-medium text-slate-700">You can contact me for more information about this bug</span>
                                             </label>
@@ -603,7 +603,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                             <div className="flex items-center justify-between mb-3">
                                                 <div>
                                                     <h3 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
-                                                        <Camera className="w-4 h-4 text-[#13ec80]" />
+                                                        <Camera className="w-4 h-4 text-[#16a34a]" />
                                                         Advanced Attachments
                                                     </h3>
                                                     <p className="text-xs text-slate-500 mt-1">Capture your screen to show exactly what's wrong.</p>
@@ -613,7 +613,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                                         type="button"
                                                         onClick={handleCaptureScreenshot}
                                                         disabled={isSubmitting}
-                                                        className="px-3 py-1.5 text-xs font-semibold text-[#111814] bg-[#13ec80] hover:bg-[#0fd472] transition-colors rounded-lg flex items-center gap-1.5 border border-[#13ec80]/20 shadow-sm"
+                                                        className="px-3 py-1.5 text-xs font-semibold text-white bg-[#16a34a] hover:bg-[#15803d] transition-colors rounded-lg flex items-center gap-1.5 border border-[#16a34a]/20 shadow-sm"
                                                     >
                                                         <Crop className="w-3.5 h-3.5" />
                                                         Select Region & Snap
@@ -662,7 +662,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                                     type="submit"
                                     form="bugReportForm"
                                     disabled={isSubmitting}
-                                    className="px-6 py-2.5 text-sm font-bold text-[#111814] bg-[#13ec80] hover:bg-[#0fd472] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all rounded-xl shadow-lg shadow-[#13ec80]/30 flex items-center gap-2"
+                                    className="px-6 py-2.5 text-sm font-bold text-white bg-[#16a34a] hover:bg-[#15803d] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed transition-all rounded-xl shadow-lg shadow-[#16a34a]/30 flex items-center gap-2"
                                 >
                                     {isSubmitting ? 'Sending...' : 'Submit Bug Report'}
                                     {!isSubmitting && <Send className="w-4 h-4" />}
@@ -687,7 +687,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                         className="fixed inset-0 z-[9999] bg-slate-900/30 cursor-crosshair flex flex-col items-center justify-start pt-12"
                     >
                         <div className="bg-white/90 backdrop-blur px-4 py-2 rounded-full shadow-2xl border border-white/20 flex items-center gap-2 select-none pointer-events-none">
-                            <MousePointer2 className="w-4 h-4 text-[#13ec80]" />
+                            <MousePointer2 className="w-4 h-4 text-[#16a34a]" />
                             <span className="text-sm font-bold text-slate-800">Drag to Select Bug Area</span>
                             <div className="w-px h-4 bg-slate-300 mx-1" />
                             <kbd className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-[10px] text-slate-500 shadow-sm">ESC to Cancel</kbd>
@@ -695,7 +695,7 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
 
                         {selectionRect && (
                             <div
-                                className="absolute border-2 border-[#13ec80] bg-[#13ec80]/10 shadow-[0_0_0_9999px_rgba(15,23,42,0.5)]"
+                                className="absolute border-2 border-[#16a34a] bg-[#16a34a]/10 shadow-[0_0_0_9999px_rgba(15,23,42,0.5)]"
                                 style={{
                                     left: selectionRect.left,
                                     top: selectionRect.top,

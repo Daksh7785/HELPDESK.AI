@@ -4,8 +4,8 @@
 
 @layer base {
   :root {
-    --stitch-primary: #13ec80;
-    --stitch-primary-hover: #0fd472;
+    --stitch-primary: #16a34a;
+    --stitch-primary-hover: #15803d;
     --stitch-background-light: #f6f8f7;
     --stitch-background-dark: #102219;
     --stitch-surface-light: #ffffff;
@@ -13,7 +13,7 @@
     --stitch-border-light: #e2e8e5;
     --stitch-border-dark: #2a4034;
     --stitch-text-main: #111814;
-    --stitch-text-muted: #618975;
+    --stitch-text-muted: #426150;
     --stitch-radius: 12px;
     --background: 0 0% 100%;
     --foreground: 224 71.4% 4.1%;
@@ -26,10 +26,10 @@
     --secondary: 220 14.3% 95.9%;
     --secondary-foreground: 220.9 39.3% 11%;
     --muted: 220 14.3% 95.9%;
-    --muted-foreground: 220 8.9% 46.1%;
+    --muted-foreground: 220 8.9% 40%;
     --accent: 220 14.3% 95.9%;
     --accent-foreground: 220.9 39.3% 11%;
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 72.2% 50.6%;
     --destructive-foreground: 210 20% 98%;
     --border: 220 13% 91%;
     --input: 220 13% 91%;
@@ -40,6 +40,10 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --color-slate-400: 100 116 139;
+    --color-slate-500: 71 85 105;
+    --color-gray-400: 107 114 128;
+    --color-gray-500: 75 85 99;
   }
 
   body {
@@ -73,6 +77,10 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --color-slate-400: 148 163 184;
+    --color-slate-500: 100 116 139;
+    --color-gray-400: 156 163 175;
+    --color-gray-500: 107 114 128;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
