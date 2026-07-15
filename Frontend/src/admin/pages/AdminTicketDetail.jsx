@@ -299,7 +299,6 @@ const AdminTicketDetail = () => {
                     )}
                 </div>
             </div>
-
             {ticket.metadata?.spam_analysis?.is_spam && (
                 <div style={{
                     background: ticket.metadata.spam_analysis.risk_level === 'high' ? '#fef2f2' : '#fffbeb',
@@ -360,7 +359,6 @@ const AdminTicketDetail = () => {
                     </div>
                 </div>
             )}
-
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Primary Column */}
                 <div className="lg:col-span-8 space-y-8">
@@ -382,7 +380,16 @@ const AdminTicketDetail = () => {
                                     <p style={{ fontSize: '10px', color: '#9ca3af', letterSpacing: '0.12em', fontWeight: 700, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                                         <ImageIcon size={14} color="#16a34a" /> VISUAL EVIDENCE
                                     </p>
-                                    <div style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid #f0fdf4', background: '#f8faf9', cursor: 'zoom-in' }} onClick={() => window.open(imageUrl, '_blank')}>
+                                    <div
+                                        style={{ borderRadius: '16px', overflow: 'hidden', border: '1px solid #f0fdf4', background: '#f8faf9', cursor: 'zoom-in' }}
+                                        onClick={() => window.open(imageUrl, '_blank')}
+                                        tabIndex={0}
+                                        onKeyDown={e => {
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                window.open(imageUrl, '_blank');
+                                            }
+                                        }}>
                                         <img src={imageUrl} alt="Telemetry Evidence" style={{ width: '100%', objectFit: 'contain', maxHeight: '500px' }} />
                                     </div>
                                 </div>
@@ -517,7 +524,6 @@ const AdminTicketDetail = () => {
                     )}
                 </div>
             </div>
-
             {/* Modals */}
             {isReassigning && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
@@ -543,7 +549,6 @@ const AdminTicketDetail = () => {
                     </Card>
                 </div>
             )}
-
             {isCorrecting && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6 text-slate-900">
                     <Card className="w-full max-w-sm bg-white rounded-[2rem] border-none shadow-2xl p-8 space-y-6 text-black">

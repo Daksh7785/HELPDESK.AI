@@ -88,7 +88,16 @@ const DocsPortal = () => {
             {/* Sleek, Premium Standalone Docs Navbar */}
             <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
                 <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+                    <div
+                        className="flex items-center gap-3 cursor-pointer"
+                        onClick={() => navigate('/')}
+                        tabIndex={0}
+                        onKeyDown={e => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                navigate('/');
+                            }
+                        }}>
                         <div className="flex items-center justify-center">
                             <img src="/favicon.png" alt="HELPDESK.AI Logo" className="w-7 h-7 object-contain" />
                         </div>
@@ -106,7 +115,6 @@ const DocsPortal = () => {
                     </button>
                 </div>
             </header>
-
             <div className="max-w-[1100px] mx-auto px-4 md:px-6 flex flex-col gap-8 mt-8">
                 
                 {/* 🌟 Docs Hero Header */}

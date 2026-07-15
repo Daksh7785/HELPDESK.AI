@@ -481,7 +481,7 @@ const CreateTicket = () => {
                                     {/* ── v2: Conditional rendering — TemplateForm OR manual textarea ── */}
                                     {activatedTemplateId ? (
                                         /* Template mode: show structured dynamic form */
-                                        <div className="space-y-2">
+                                        (<div className="space-y-2">
                                             <label className="text-sm font-bold text-gray-700">Fill in the details</label>
                                             <TemplateForm
                                                 fields={TICKET_TEMPLATES.find(t => t.id === activatedTemplateId)?.fields || []}
@@ -489,17 +489,16 @@ const CreateTicket = () => {
                                                 onChange={handleFormFieldChange}
                                                 disabled={isLoading}
                                             />
-                                        </div>
+                                        </div>)
                                     ) : (
                                         /* Manual mode: original textarea with language selector */
-                                        <div className="space-y-2 flex-grow flex flex-col relative">
+                                        (<div className="space-y-2 flex-grow flex flex-col relative">
                                             <div className="flex items-center justify-between">
                                                 <label className="text-sm font-bold text-gray-700">Describe your issue</label>
                                                 <span className={`text-xs font-semibold ${issue.length >= MAX_CHARS ? 'text-red-500' : 'text-gray-400'}`}>
                                                     {issue.length} / {MAX_CHARS}
                                                 </span>
                                             </div>
-
                                             {/* Premium Language Selector */}
                                             <div className="flex items-center gap-2">
                                                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wider shrink-0">Language:</label>
@@ -575,7 +574,7 @@ const CreateTicket = () => {
                                                     disabled={isLoading}
                                                 />
                                             </div>
-                                        </div>
+                                        </div>)
                                     )}
 
                                     {/* Premium Voice Visualizer */}
@@ -598,7 +597,13 @@ const CreateTicket = () => {
                                                         ${isListening
                                                             ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg shadow-red-200 scale-110'
                                                             : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-200'}`}
-                                                >
+                                                    tabIndex={0}
+                                                    onKeyDown={e => {
+                                                        if (e.key === "Enter" || e.key === " ") {
+                                                            e.preventDefault();
+                                                            toggleMic(e);
+                                                        }
+                                                    }}>
                                                     {isListening ? <Volume2 className="animate-bounce" size={24} /> : <Mic size={24} />}
                                                 </Button>
                                             </div>
@@ -700,7 +705,13 @@ const CreateTicket = () => {
                                                             size="icon"
                                                             onClick={removeFile}
                                                             className="text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full shrink-0"
-                                                        >
+                                                            tabIndex={0}
+                                                            onKeyDown={e => {
+                                                                if (e.key === "Enter" || e.key === " ") {
+                                                                    e.preventDefault();
+                                                                    removeFile(e);
+                                                                }
+                                                            }}>
                                                             <X size={18} />
                                                         </Button>
                                                     </div>
@@ -746,7 +757,6 @@ const CreateTicket = () => {
 
                 </div>
             </main>
-
             {/* Premium Voice Modal Overlay */}
             <AnimatePresence>
                 {showVoiceModal && (
@@ -830,7 +840,13 @@ const CreateTicket = () => {
                                     variant="outline"
                                     onClick={handleCancelVoice}
                                     className="flex-1 font-bold text-gray-600 border-gray-200 hover:bg-white h-12 rounded-xl"
-                                >
+                                    tabIndex={0}
+                                    onKeyDown={e => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            handleCancelVoice(e);
+                                        }
+                                    }}>
                                     Cancel
                                 </Button>
                                 <Button
@@ -838,7 +854,13 @@ const CreateTicket = () => {
                                     onClick={handleSaveVoice}
                                     disabled={!voiceTranscript && !interimVoice}
                                     className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-12 rounded-xl shadow-lg shadow-emerald-200"
-                                >
+                                    tabIndex={0}
+                                    onKeyDown={e => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            handleSaveVoice(e);
+                                        }
+                                    }}>
                                     Insert Text
                                 </Button>
                             </div>

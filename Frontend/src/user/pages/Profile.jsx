@@ -331,7 +331,13 @@ const Profile = () => {
                                     <Button
                                         onClick={() => setIsEditing(true)}
                                         className="rounded-2xl bg-white border-2 border-slate-100 px-6 py-6 font-black text-[10px] uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:border-emerald-500 hover:text-emerald-600 transition-all group"
-                                    >
+                                        tabIndex={0}
+                                        onKeyDown={e => {
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                setIsEditing(true);
+                                            }
+                                        }}>
                                         <Pencil className="w-3.5 h-3.5 mr-2 transition-transform group-hover:-rotate-12" />
                                         Modify Profile
                                     </Button>
@@ -340,7 +346,13 @@ const Profile = () => {
                                         <Button
                                             onClick={handleSaveProfile}
                                             className="rounded-2xl bg-emerald-600 px-6 py-6 font-black text-[10px] uppercase tracking-widest text-white hover:bg-emerald-700 shadow-lg shadow-emerald-500/20"
-                                        >
+                                            tabIndex={0}
+                                            onKeyDown={e => {
+                                                if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
+                                                    handleSaveProfile(e);
+                                                }
+                                            }}>
                                             <Check className="w-3.5 h-3.5 mr-2" />
                                             Synchronize
                                         </Button>
@@ -348,7 +360,13 @@ const Profile = () => {
                                             variant="ghost"
                                             onClick={() => setIsEditing(false)}
                                             className="rounded-2xl px-6 py-6 font-black text-[10px] uppercase tracking-widest text-slate-400 hover:text-red-500"
-                                        >
+                                            tabIndex={0}
+                                            onKeyDown={e => {
+                                                if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
+                                                    setIsEditing(false);
+                                                }
+                                            }}>
                                             <X className="w-3.5 h-3.5 mr-2" />
                                             Abort
                                         </Button>
@@ -542,7 +560,6 @@ const Profile = () => {
                     </div>
                 </div>
             </main>
-
             {/* Change Password Modal */}
             <AnimatePresence>
                 {showPasswordModal && (
@@ -598,7 +615,13 @@ const Profile = () => {
                                     onClick={handlePasswordChange}
                                     disabled={passwordLoading}
                                     className="w-full h-14 bg-emerald-600 text-white font-black rounded-2xl hover:bg-emerald-700 shadow-xl shadow-emerald-500/20 text-xs uppercase tracking-widest flex items-center justify-center gap-2"
-                                >
+                                    tabIndex={0}
+                                    onKeyDown={e => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            handlePasswordChange(e);
+                                        }
+                                    }}>
                                     {passwordLoading ? <Loader2 size={16} className="animate-spin" /> : <ShieldCheck size={16} />}
                                     {passwordLoading ? "Syncing..." : "Update Security"}
                                 </Button>
@@ -607,8 +630,6 @@ const Profile = () => {
                     </div>
                 )}
             </AnimatePresence>
-
-
         </div>
     );
 };

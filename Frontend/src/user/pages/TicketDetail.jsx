@@ -178,7 +178,6 @@ const TicketDetail = () => {
                     </div>
                 </div>
             </div>
-
             {/* 2-Column Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
@@ -288,7 +287,13 @@ const TicketDetail = () => {
                             <div
                                 className="rounded-xl overflow-hidden border border-gray-100 bg-gray-50 cursor-pointer group relative"
                                 onClick={() => window.open(ticket.image_url || ticket.image || ticket.capturedFileBase64, '_blank')}
-                            >
+                                tabIndex={0}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        window.open(ticket.image_url || ticket.image || ticket.capturedFileBase64, '_blank');
+                                    }
+                                }}>
                                 <img
                                     src={ticket.image_url || ticket.image || ticket.capturedFileBase64}
                                     alt="User uploaded screenshot"
@@ -375,7 +380,6 @@ const TicketDetail = () => {
 
                 </div>
             </div>
-
             {/* CSAT Modal */}
             {showCsat && (
                 <CSATModal

@@ -11,7 +11,16 @@ export default function CookiePolicy() {
             {/* Header */}
             <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
                 <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/')}>
+                    <div
+                        className="flex items-center gap-3 cursor-pointer"
+                        onClick={() => navigate('/')}
+                        tabIndex={0}
+                        onKeyDown={e => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                navigate('/');
+                            }
+                        }}>
                         <img src="/favicon.png" alt="HELPDESK.AI Logo" className="w-7 h-7 object-contain" />
                         <div className="flex items-baseline gap-2">
                             <h1 className="text-xl font-black tracking-tighter text-gray-900 italic">HELPDESK.AI</h1>
@@ -26,7 +35,6 @@ export default function CookiePolicy() {
                     </button>
                 </div>
             </header>
-
             <div className="max-w-[800px] mx-auto px-4 md:px-6 mt-12 space-y-8">
                 <div className="space-y-4">
                     <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-500/10 border border-slate-500/20 rounded-full text-slate-700 text-xs font-bold">

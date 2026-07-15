@@ -137,7 +137,6 @@ function MyTickets() {
                     Create New Ticket
                 </button>
             </div>
-
             {/* Toolbar section */}
             <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
                 <div className="relative flex-1">
@@ -175,9 +174,7 @@ function MyTickets() {
                     />
                 </div>
             </div>
-
             {/* Main Content */}
-
             {loading ? (
                 <Card className="border border-gray-100 rounded-2xl bg-white shadow-sm overflow-hidden p-6 w-full">
                     <div className="space-y-6">
@@ -225,7 +222,7 @@ function MyTickets() {
                 </Card>
             ) : tickets.length === 0 ? (
                 // True Empty State
-                <Card className="flex flex-col items-center justify-center py-20 text-center border-dashed border-2 border-gray-200 bg-transparent shadow-none rounded-2xl">
+                (<Card className="flex flex-col items-center justify-center py-20 text-center border-dashed border-2 border-gray-200 bg-transparent shadow-none rounded-2xl">
                     <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                         <Inbox className="text-gray-400 w-8 h-8" />
                     </div>
@@ -239,10 +236,10 @@ function MyTickets() {
                     >
                         Create your first ticket
                     </button>
-                </Card>
+                </Card>)
             ) : filteredTickets.length === 0 ? (
                 // Filter Empty State
-                <Card className="flex flex-col items-center justify-center py-16 text-center border border-gray-100 shadow-sm rounded-2xl bg-white">
+                (<Card className="flex flex-col items-center justify-center py-16 text-center border border-gray-100 shadow-sm rounded-2xl bg-white">
                     <Filter className="text-gray-300 w-12 h-12 mb-4" />
                     <h3 className="text-lg font-bold text-gray-900 mb-1">No matching tickets found</h3>
                     <p className="text-gray-500 text-sm mb-4">Try adjusting your search or filters.</p>
@@ -256,10 +253,10 @@ function MyTickets() {
                     >
                         Clear all filters
                     </button>
-                </Card>
+                </Card>)
             ) : (
                 // Table View
-                <Card className="border border-gray-100 rounded-2xl bg-white shadow-sm overflow-hidden">
+                (<Card className="border border-gray-100 rounded-2xl bg-white shadow-sm overflow-hidden">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left whitespace-nowrap">
                             <thead>
@@ -279,7 +276,13 @@ function MyTickets() {
                                             key={ticket.id}
                                             onClick={() => navigate(`/ticket/${ticket.id}`)}
                                             className="group hover:bg-emerald-50/30 transition-colors cursor-pointer"
-                                        >
+                                            tabIndex={0}
+                                            onKeyDown={e => {
+                                                if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
+                                                    navigate(`/ticket/${ticket.id}`);
+                                                }
+                                            }}>
                                             <td className="px-6 py-4">
                                                 <Tooltip>
                                                     <TooltipTrigger asChild>
@@ -347,7 +350,7 @@ function MyTickets() {
                             </TooltipProvider>
                         </table>
                     </div>
-                </Card>
+                </Card>)
             )}
         </main>
     );

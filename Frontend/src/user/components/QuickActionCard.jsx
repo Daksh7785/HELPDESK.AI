@@ -16,7 +16,13 @@ const QuickActionCard = ({ icon: Icon, title, description, colorClass }) => {
             <Card
                 onClick={() => navigate('/create-ticket')}
                 className="group flex flex-col items-start p-6 bg-white rounded-xl border border-gray-200 shadow-sm hover:border-emerald-600/50 text-left w-full cursor-pointer transition-colors"
-            >
+                tabIndex={0}
+                onKeyDown={e => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        navigate('/create-ticket');
+                    }
+                }}>
                 <div className={`size-12 rounded-lg ${colorClass} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform`}>
                     <Icon className="w-6 h-6" />
                 </div>

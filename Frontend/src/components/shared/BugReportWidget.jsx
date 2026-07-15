@@ -82,14 +82,19 @@ const CustomSelect = ({ label, value, options, onChange, name }) => {
                 <span className="truncate">{selectedOption.label}</span>
                 <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
             </button>
-
             <AnimatePresence>
                 {isOpen && (
                     <>
                         <div
                             className="fixed inset-0 z-[60]"
                             onClick={() => setIsOpen(false)}
-                        />
+                            tabIndex={0}
+                            onKeyDown={e => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    setIsOpen(false);
+                                }
+                            }} />
                         <motion.div
                             initial={{ opacity: 0, y: -10, scale: 0.95 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -393,13 +398,20 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                     </motion.button>
                 )}
             </AnimatePresence>
-
             {customTrigger && !isOpen && (
-                <div onClick={handleOpen} className="inline-block cursor-pointer">
+                <div
+                    onClick={handleOpen}
+                    className="inline-block cursor-pointer"
+                    tabIndex={0}
+                    onKeyDown={e => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleOpen(e);
+                        }
+                    }}>
                     {customTrigger}
                 </div>
             )}
-
             {/* Modal Dialog */}
             <AnimatePresence>
                 {isOpen && (
@@ -673,7 +685,6 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                     </div>
                 )}
             </AnimatePresence>
-
             {/* Region Selection Overlay */}
             <AnimatePresence>
                 {isSelectingRegion && (
@@ -714,7 +725,6 @@ const BugReportWidget = ({ advanced = false, customTrigger = null }) => {
                     </motion.div>
                 )}
             </AnimatePresence>
-
             {/* Global style overrides just for scrollbar inside modal if needed */}
             <style dangerouslySetInnerHTML={{
                 __html: `

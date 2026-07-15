@@ -219,7 +219,6 @@ function Signup() {
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden p-6 py-12" style={{ fontFamily: "'Inter', sans-serif", background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
       <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
-
       {/* Back Button */}
       <Link
         to="/"
@@ -233,7 +232,6 @@ function Signup() {
         </div>
         <span>Back to Home</span>
       </Link>
-
       <div className="w-full max-w-md relative z-10">
 
         {/* Logo Header */}
@@ -261,8 +259,16 @@ function Signup() {
             {/* Company Dropdown */}
             <div className="relative" ref={dropdownRef}>
               <label className="block mb-2" style={labelStyle}>Company</label>
-              <div onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: isDropdownOpen ? '#22c55e' : '#e5e7eb', boxShadow: isDropdownOpen ? '0 0 0 3px rgba(34,160,69,0.1)' : 'none' }}>
+              <div
+                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                style={{ ...inputStyle, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderColor: isDropdownOpen ? '#22c55e' : '#e5e7eb', boxShadow: isDropdownOpen ? '0 0 0 3px rgba(34,160,69,0.1)' : 'none' }}
+                tabIndex={0}
+                onKeyDown={e => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setIsDropdownOpen(!isDropdownOpen);
+                  }
+                }}>
                 {selectedCompany ? (
                   <div className="flex items-center gap-2">
                     <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: '#f0fdf4' }}><Building2 className="w-3.5 h-3.5" style={{ color: '#16a34a' }} /></div>
@@ -287,8 +293,17 @@ function Signup() {
                       </div>
                     ) : filteredCompanies.length > 0 ? (
                       filteredCompanies.map((c) => (
-                        <div key={c.id} onClick={() => { setSelectedCompany(c); setIsDropdownOpen(false); setCompanySearch(""); }}
-                          className="px-3 py-2.5 rounded-lg cursor-pointer flex items-center gap-3 transition-colors hover:bg-green-50 group">
+                        <div
+                          key={c.id}
+                          onClick={() => { setSelectedCompany(c); setIsDropdownOpen(false); setCompanySearch(""); }}
+                          className="px-3 py-2.5 rounded-lg cursor-pointer flex items-center gap-3 transition-colors hover:bg-green-50 group"
+                          tabIndex={0}
+                          onKeyDown={e => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedCompany(c);setIsDropdownOpen(false);setCompanySearch("");
+                            }
+                          }}>
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ border: '1px solid #e5e7eb', background: '#fff' }}>
                             <Building2 className="w-4 h-4 transition-colors" style={{ color: '#9ca3af' }} />
                           </div>

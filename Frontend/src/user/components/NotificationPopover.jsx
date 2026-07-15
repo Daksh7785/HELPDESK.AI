@@ -67,7 +67,17 @@ const NotificationPopover = ({ isAdmin = false }) => {
                                         navigate(route);
                                     }}
                                     className={`p-4 hover:bg-gray-50/80 transition cursor-pointer flex gap-3 ${!notif.read ? 'bg-emerald-50/20' : ''}`}
-                                >
+                                    tabIndex={0}
+                                    onKeyDown={e => {
+                                        if (e.key === "Enter" || e.key === " ") {
+                                            e.preventDefault();
+                                            // Correct route: /admin/ticket/:id for admins, /ticket/:id for users
+                                            const route = isAdmin
+                                                ? `/admin/ticket/${notif.ticketId}`
+                                                : `/ticket/${notif.ticketId}`;
+                                            navigate(route);
+                                        }
+                                    }}>
                                     <div className="mt-1 shrink-0 p-2 bg-gray-50 rounded-lg">
                                         {getIcon(notif.type)}
                                     </div>

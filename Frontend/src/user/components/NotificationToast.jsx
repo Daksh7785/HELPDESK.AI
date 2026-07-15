@@ -56,7 +56,14 @@ const NotificationToast = () => {
                             setCurrentToast(null);
                         }}
                         className="bg-white border border-gray-100 shadow-2xl rounded-2xl p-4 flex gap-4 cursor-pointer hover:shadow-emerald-500/10 transition-all group relative overflow-hidden"
-                    >
+                        tabIndex={0}
+                        onKeyDown={e => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                navigate(`/ticket/${currentToast.ticketId}`);
+                                setCurrentToast(null);
+                            }
+                        }}>
                         {/* Progress bar background */}
                         <motion.div
                             initial={{ width: '100%' }}

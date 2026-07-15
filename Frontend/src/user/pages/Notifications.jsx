@@ -33,7 +33,6 @@ const NotificationsPage = () => {
                     Mark all as read
                 </button>
             </div>
-
             <div className="space-y-4">
                 {notifications.length > 0 ? (
                     notifications.map((notif) => (
@@ -41,7 +40,13 @@ const NotificationsPage = () => {
                             key={notif.id}
                             onClick={() => navigate(`/ticket/${notif.ticketId}`)}
                             className={`p-6 rounded-2xl border transition-all cursor-pointer group flex gap-5 items-start ${!notif.read ? 'border-emerald-200 bg-emerald-50/20 shadow-sm' : 'border-gray-100 hover:border-gray-200'}`}
-                        >
+                            tabIndex={0}
+                            onKeyDown={e => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    navigate(`/ticket/${notif.ticketId}`);
+                                }
+                            }}>
                             <div className={`p-3 rounded-xl shrink-0 ${!notif.read ? 'bg-emerald-100/50' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
                                 {getIcon(notif.type)}
                             </div>

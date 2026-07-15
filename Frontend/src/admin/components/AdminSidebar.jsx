@@ -83,7 +83,6 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                     </button>
                 )}
             </div>
-
             {/* Navigation Links */}
             <nav className="flex-1 px-3 py-8 space-y-1.5 overflow-y-auto custom-scrollbar">
                 {showLabels && (
@@ -106,7 +105,13 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                             justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
                         })}
                         className="group hover:bg-gray-50 relative"
-                    >
+                        tabIndex={0}
+                        onKeyDown={e => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                (isMobile ? onClose : undefined)(e);
+                            }
+                        }}>
                         <item.icon size={20} className="shrink-0 transition-transform group-hover:scale-110" />
                         {showLabels && (
                             <span className="text-sm tracking-tight truncate animate-in fade-in slide-in-from-left-2 duration-300">
@@ -122,7 +127,6 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                     </NavLink>
                 ))}
             </nav>
-
             {/* Bottom Profile / Logout Shortcut */}
             <div className="p-4 border-t border-gray-50 space-y-1.5 pb-8 flex flex-col items-stretch">
                 <NavLink
@@ -138,7 +142,13 @@ const AdminSidebar = ({ isMobile, onClose, isCollapsed, onToggleCollapse }) => {
                         justifyContent: isCollapsed && !isMobile ? 'center' : 'flex-start'
                     })}
                     className="group hover:bg-gray-50"
-                >
+                    tabIndex={0}
+                    onKeyDown={e => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            (isMobile ? onClose : undefined)(e);
+                        }
+                    }}>
                     <Settings size={20} className="shrink-0 group-hover:rotate-45 transition-transform duration-300" />
                     {showLabels && <span className="text-sm tracking-tight animate-in fade-in duration-300">Settings</span>}
                 </NavLink>

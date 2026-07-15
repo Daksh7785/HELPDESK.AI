@@ -22,7 +22,6 @@ const AdminLayout = () => {
             >
                 <AdminSidebar isCollapsed={isSidebarCollapsed} onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
             </div>
-
             {/* Viewport Execution Layer */}
             <div className="flex-1 flex flex-col min-w-0 relative h-full">
                 {/* Global Command Header */}
@@ -40,20 +39,30 @@ const AdminLayout = () => {
                     </div>
                 </main>
             </div>
-
             {/* Real-time System Notifications */}
             <NotificationToast />
-
             {/* Mobile Nav Overlay (Emergency protocols) */}
             {isMobileNavOpen && (
                 <div
                     className="fixed inset-0 bg-slate-900/80 backdrop-blur-md z-50 lg:hidden flex transition-opacity duration-300"
                     onClick={() => setIsMobileNavOpen(false)}
-                >
+                    tabIndex={0}
+                    onKeyDown={e => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setIsMobileNavOpen(false);
+                        }
+                    }}>
                     <div
                         className="w-[85%] max-w-[280px] h-full shadow-2xl animate-in slide-in-from-left duration-300"
                         onClick={(e) => e.stopPropagation()}
-                    >
+                        tabIndex={0}
+                        onKeyDown={e => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        }}>
                         <AdminSidebar isMobile={true} onClose={() => setIsMobileNavOpen(false)} />
                     </div>
                 </div>

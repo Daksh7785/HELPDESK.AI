@@ -46,7 +46,16 @@ const TopNav = () => {
         <header className="w-full bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-50">
             <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
                 {/* Left: Logo */}
-                <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate('/dashboard')}>
+                <div
+                    className="flex items-center gap-3 cursor-pointer"
+                    onClick={() => navigate('/dashboard')}
+                    tabIndex={0}
+                    onKeyDown={e => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            navigate('/dashboard');
+                        }
+                    }}>
                     <div className="flex items-center justify-center overflow-hidden">
                         <img src="/favicon.png" alt="HELPDESK.AI Logo" className="w-7 h-7 object-contain" />
                     </div>
@@ -77,7 +86,13 @@ const TopNav = () => {
                         <Avatar
                             onClick={() => navigate('/profile')}
                             className="size-9 border border-gray-200 cursor-pointer hover:ring-2 hover:ring-emerald-500 hover:ring-offset-2 transition-all"
-                        >
+                            tabIndex={0}
+                            onKeyDown={e => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    navigate('/profile');
+                                }
+                            }}>
                             <AvatarImage src={profile?.profile_picture} />
                             <AvatarFallback className="bg-gray-100 font-bold text-gray-600 text-xs">{initials}</AvatarFallback>
                         </Avatar>
@@ -90,7 +105,6 @@ const TopNav = () => {
                     </button>
                 </div>
             </div>
-
             {/* Mobile Menu Overlay */}
             {isMenuOpen && (
                 <div className="md:hidden bg-white dark:bg-gray-900 border-t border-gray-100 dark:border-gray-700 absolute w-full shadow-2xl z-50 animate-in fade-in slide-in-from-top-2 duration-200">
@@ -107,20 +121,56 @@ const TopNav = () => {
                         </div>
 
                         <div className="space-y-4">
-                            <Link to="/dashboard" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors">
+                            <Link
+                                to="/dashboard"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors"
+                                tabIndex={0}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        setIsMenuOpen(false);
+                                    }
+                                }}>
                                 <Box size={20} className="text-gray-400" /> Dashboard
                             </Link>
-                            <Link to="/my-tickets" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors">
+                            <Link
+                                to="/my-tickets"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors"
+                                tabIndex={0}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        setIsMenuOpen(false);
+                                    }
+                                }}>
                                 <MessageSquare size={20} className="text-gray-400" /> My Tickets
                             </Link>
-                            <Link to="/profile" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors">
+                            <Link
+                                to="/profile"
+                                onClick={() => setIsMenuOpen(false)}
+                                className="flex items-center gap-3 text-lg font-bold text-gray-700 dark:text-gray-200 hover:text-emerald-700 transition-colors"
+                                tabIndex={0}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        setIsMenuOpen(false);
+                                    }
+                                }}>
                                 <UserIcon size={20} className="text-gray-400" /> My Profile
                             </Link>
                             <Link
                                 to="/docs"
                                 onClick={() => setIsMenuOpen(false)}
                                 className="flex items-center gap-3 text-lg font-bold text-gray-700 hover:text-emerald-700 transition-colors"
-                            >
+                                tabIndex={0}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        setIsMenuOpen(false);
+                                    }
+                                }}>
                                 <BookOpen size={20} className="text-gray-400" /> Documentation
                             </Link>
                         </div>

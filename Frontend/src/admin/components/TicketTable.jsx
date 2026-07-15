@@ -94,7 +94,13 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                 onClick={() => navigate(`/admin/ticket/${ticket.ticket_id || ticket.id}`)}
                                 className="cursor-pointer group transition-colors hover:bg-[#f0fdf4]"
                                 style={{ borderBottom: '1px solid #f9fafb' }}
-                            >
+                                tabIndex={0}
+                                onKeyDown={e => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                        e.preventDefault();
+                                        navigate(`/admin/ticket/${ticket.ticket_id || ticket.id}`);
+                                    }
+                                }}>
                                 {/* Request Identity */}
                                 <td style={{ padding: '14px 24px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -110,7 +116,6 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                         </span>
                                     </div>
                                 </td>
-
                                 {/* Incident Context - FIXED */}
                                 <td style={{ padding: '14px 24px' }}>
                                     <div className="flex items-center gap-3">
@@ -135,7 +140,6 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                         </div>
                                     </div>
                                 </td>
-
                                 {/* Category with colored dot */}
                                 <td style={{ padding: '14px 24px' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -146,7 +150,6 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                         {effectiveSubcategory && <span style={{ fontSize: '10px', color: '#9ca3af', marginLeft: '4px' }}>{effectiveSubcategory}</span>}
                                     </div>
                                 </td>
-
                                 {/* Risk Factor */}
                                 <td style={{ padding: '14px 24px' }}>
                                     <span style={{
@@ -157,7 +160,6 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                         {effectivePriority || 'NORMAL'}
                                     </span>
                                 </td>
-
                                 {/* Assigned Ops */}
                                 <td style={{ padding: '14px 24px' }}>
                                     <div className="flex items-center gap-2">
@@ -167,7 +169,6 @@ const TicketTable = ({ tickets = [], isLoading = false, limit = null }) => {
                                         <span style={{ fontSize: '12px', fontWeight: 500, color: '#374151', whiteSpace: 'nowrap' }}>{effectiveTeam}</span>
                                     </div>
                                 </td>
-
                                 {/* Status */}
                                 <td style={{ padding: '14px 24px' }}>
                                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 12px', borderRadius: '100px', fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', background: statusSt.bg, color: statusSt.text, border: `1px solid ${statusSt.border}` }}>

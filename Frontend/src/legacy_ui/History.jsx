@@ -184,7 +184,13 @@ function History() {
                   danger
                   icon={<DeleteOutlined />}
                   onClick={clearAllTickets}
-                >
+                  tabIndex={0}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      clearAllTickets(e);
+                    }
+                  }}>
                   Clear All
                 </Button>
               )}

@@ -63,11 +63,26 @@ function DemoModal({ onClose }) {
 
     return (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
-            <div className="absolute inset-0 bg-black/80 backdrop-blur-md" onClick={onClose} />
+            <div
+                className="absolute inset-0 bg-black/80 backdrop-blur-md"
+                onClick={onClose}
+                tabIndex={0}
+                onKeyDown={e => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        onClose(e);
+                    }
+                }} />
             <div
                 className="relative bg-gray-950 rounded-3xl border border-white/10 shadow-2xl w-full max-w-4xl overflow-hidden z-10 animate-in fade-in zoom-in duration-300"
                 onClick={e => e.stopPropagation()}
-            >
+                tabIndex={0}
+                onKeyDown={e => {
+                    if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                }}>
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 text-gray-400 hover:text-white bg-white/10 rounded-full p-2 transition-colors z-30"
@@ -81,7 +96,13 @@ function DemoModal({ onClose }) {
                         <div
                             className="absolute inset-0 cursor-pointer overflow-hidden"
                             onClick={() => setIsPlaying(true)}
-                        >
+                            tabIndex={0}
+                            onKeyDown={e => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    setIsPlaying(true);
+                                }
+                            }}>
                             {/* YouTube Thumbnail Poster */}
                             <img
                                 src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
@@ -275,13 +296,21 @@ export default function LandingPage() {
     return (
         <div className="min-h-screen bg-white dark:bg-gray-900 font-sans text-slate-800 dark:text-white">
             {showDemo && <DemoModal onClose={() => setShowDemo(false)} />}
-
             {/* ==================== NAV ==================== */}
             <nav className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-100 shadow-sm">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                         {/* Logo */}
-                        <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+                        <div
+                            className="flex items-center gap-2 cursor-pointer"
+                            onClick={() => navigate('/')}
+                            tabIndex={0}
+                            onKeyDown={e => {
+                                if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    navigate('/');
+                                }
+                            }}>
                             <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
                             <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
                         </div>
@@ -359,7 +388,6 @@ export default function LandingPage() {
                     </div>
                 )}
             </nav>
-
             {/* ==================== HERO ==================== */}
             <section className="relative pt-12 md:pt-20 pb-20 md:pb-32 overflow-hidden">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[300px] md:h-[600px] bg-gradient-to-b from-green-50/80 to-transparent pointer-events-none -z-10" />
@@ -508,7 +536,6 @@ export default function LandingPage() {
                     </div>
                 </div>
             </section>
-
             {/* ==================== STATS BAR ==================== */}
             <section className="bg-emerald-900 py-12 text-white">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -520,7 +547,6 @@ export default function LandingPage() {
                     </div>
                 </div>
             </section>
-
             {/* ==================== FEATURES GRID ==================== */}
             <section className="py-24 bg-white" id="features">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -644,7 +670,6 @@ export default function LandingPage() {
                     </div>
                 </div>
             </section>
-
             {/* ==================== HOW IT WORKS ==================== */}
             <section className="bg-emerald-950 py-16 md:py-32 text-white relative overflow-hidden" id="how-it-works">
                 {/* Background Decorations */}
@@ -673,7 +698,13 @@ export default function LandingPage() {
                                             ? 'bg-white/10 border-white/20 shadow-2xl shadow-black/20'
                                             : 'bg-transparent border-transparent hover:bg-white/5 opacity-40 hover:opacity-100'
                                             }`}
-                                    >
+                                        tabIndex={0}
+                                        onKeyDown={e => {
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                setActiveStep(idx);
+                                            }
+                                        }}>
                                         <div className="flex items-start gap-4 md:gap-6">
                                             <div className={`shrink-0 w-10 md:w-12 h-10 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center font-black text-lg md:text-xl italic transition-all duration-500 ${activeStep === idx ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 rotate-12 scale-110' : 'bg-white/10 text-white/40'}`}>
                                                 {step.num}
@@ -728,7 +759,6 @@ export default function LandingPage() {
                     </div>
                 </div>
             </section>
-
             {/* ==================== PRICING ==================== */}
             <section className="py-24 bg-gray-50" id="pricing">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -798,10 +828,8 @@ export default function LandingPage() {
 
                 </div>
             </section>
-
             {/* ==================== TEAM SECTION ==================== */}
             <TeamSection />
-
             {/* ==================== FOOTER ==================== */}
             <footer className="bg-emerald-950 text-white">
                 {/* CTA Block */}

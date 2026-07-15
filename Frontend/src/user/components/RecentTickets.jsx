@@ -89,7 +89,6 @@ const RecentTickets = () => {
                     View All →
                 </button>
             </div>
-
             {/* Content */}
             <div style={{ padding: loading || error || tickets.length === 0 ? '28px' : '0' }}>
                 {loading ? (
@@ -140,7 +139,13 @@ const RecentTickets = () => {
                                         style={{ borderBottom: '1px solid #f9fafb', cursor: 'pointer', transition: 'background 0.2s' }}
                                         onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'}
                                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
+                                        tabIndex={0}
+                                        onKeyDown={e => {
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                navigate(`/ticket/${ticket.id}`);
+                                            }
+                                        }}>
                                         <td style={{ padding: '16px 28px' }}>
                                             <span style={{ fontFamily: 'monospace', fontSize: '11px', fontWeight: 600, color: '#16a34a' }}>
                                                 #{ticket.id}

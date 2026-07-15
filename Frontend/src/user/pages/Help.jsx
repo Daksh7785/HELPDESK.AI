@@ -8,10 +8,16 @@ import useAuthStore from "../../store/authStore";
 const FAQItem = ({ faq }) => {
     const [isOpen, setIsOpen] = useState(false);
     return (
-        <div 
+        <div
             className="space-y-3 cursor-pointer group rounded-xl p-4 hover:bg-gray-50/50 transition-colors border border-transparent hover:border-gray-100"
             onClick={() => setIsOpen(!isOpen)}
-        >
+            tabIndex={0}
+            onKeyDown={e => {
+                if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setIsOpen(!isOpen);
+                }
+            }}>
             <div className="flex justify-between items-start gap-4">
                 <h4 className="font-bold text-gray-900 text-lg leading-snug group-hover:text-emerald-700 transition-colors">{faq.q}</h4>
                 <div className="text-gray-400 group-hover:text-emerald-500 transition-colors mt-1 shrink-0">
@@ -189,7 +195,6 @@ ${fullName}`;
                     </div>
                 </div>
             </div>
-
             {/* Main Content Hub */}
             <main className="max-w-7xl mx-auto px-6 pt-12">
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
@@ -229,7 +234,7 @@ ${fullName}`;
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {isLoading ? (
                                     /* Premium Skeleton Loaders */
-                                    Array(6).fill(0).map((_, i) => (
+                                    (Array(6).fill(0).map((_, i) => (
                                         <div key={i} className="rounded-2xl border border-gray-100 bg-white overflow-hidden animate-pulse">
                                             <div className="aspect-video bg-gray-200 w-full" />
                                             <div className="p-5 space-y-3">
@@ -238,7 +243,7 @@ ${fullName}`;
                                                 <div className="h-4 bg-gray-100 rounded-md w-5/6" />
                                             </div>
                                         </div>
-                                    ))
+                                    )))
                                 ) : (
                                     videos.map((video) => (
                                         <a 

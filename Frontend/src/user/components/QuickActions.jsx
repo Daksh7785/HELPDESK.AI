@@ -58,7 +58,13 @@ const QuickActions = () => {
                         transition: 'all 0.3s ease',
                         transform: hoveredIdx === index ? 'translateY(-6px)' : 'translateY(0)',
                     }}
-                >
+                    tabIndex={0}
+                    onKeyDown={e => {
+                        if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleActionClick(action);
+                        }
+                    }}>
                     <div style={{
                         width: '48px', height: '48px', borderRadius: '14px', padding: '12px',
                         background: action.iconBg, display: 'flex', alignItems: 'center',

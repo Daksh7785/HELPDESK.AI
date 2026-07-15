@@ -82,7 +82,16 @@ export default function ContactSales() {
             {/* Minimal Nav */}
             <div className="w-full py-6 px-4 md:px-8 border-b border-gray-200 bg-white">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
+                    <div
+                        className="flex items-center gap-2 cursor-pointer"
+                        onClick={() => navigate('/')}
+                        tabIndex={0}
+                        onKeyDown={e => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                navigate('/');
+                            }
+                        }}>
                         <img src="/favicon.png" alt="H" className="w-8 h-8 object-contain" />
                         <span className="font-black text-2xl tracking-tighter text-emerald-900 italic uppercase">HelpDesk.ai</span>
                     </div>
@@ -91,7 +100,6 @@ export default function ContactSales() {
                     </button>
                 </div>
             </div>
-
             <div className="flex-1 flex flex-col lg:flex-row w-full max-w-7xl mx-auto">
                 {/* Left Side: Premium Banner / Value Prop */}
                 <div className="w-full lg:w-5/12 bg-emerald-950 p-10 md:p-16 flex flex-col justify-center relative overflow-hidden">

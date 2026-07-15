@@ -219,7 +219,6 @@ function AdminSignup() {
 
     return (
         <div className="min-h-screen flex overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
-
             {/* Left Side: Branding/Hero */}
             <div className="hidden lg:flex w-5/12 items-center justify-center p-16 relative overflow-hidden" style={{ background: 'linear-gradient(160deg, #f0fdf4 0%, #dcfce7 60%, #bbf7d0 100%)' }}>
                 <div className="absolute top-0 left-0 w-[600px] h-[600px] rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(34,160,69,0.12) 0%, transparent 70%)' }} />
@@ -238,7 +237,17 @@ function AdminSignup() {
                 </Link>
 
                 <div className="relative z-10 max-w-md">
-                    <div className="p-3 rounded-2xl w-fit mb-8 cursor-pointer" style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }} onClick={() => navigate('/')}>
+                    <div
+                        className="p-3 rounded-2xl w-fit mb-8 cursor-pointer"
+                        style={{ background: 'rgba(34,160,69,0.08)', border: '1px solid #d1fae5' }}
+                        onClick={() => navigate('/')}
+                        tabIndex={0}
+                        onKeyDown={e => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                navigate('/');
+                            }
+                        }}>
                         <BrainCircuit className="w-10 h-10" style={{ color: '#16a34a' }} />
                     </div>
                     <p style={{ color: '#16a34a', fontWeight: 700, fontSize: '11px', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: '16px' }}>Enterprise Edition</p>
@@ -284,7 +293,6 @@ function AdminSignup() {
                     </div>
                 </div>
             </div>
-
             {/* Right Side: Step Form */}
             <div className="flex-1 overflow-y-auto px-4 py-8 lg:p-12 relative flex justify-center items-start lg:items-center" style={{ background: '#ffffff', borderLeft: '1px solid #f0fdf4' }}>
 
