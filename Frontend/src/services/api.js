@@ -139,5 +139,15 @@ export const api = {
       // Non-fatal: log but don't break the UI flow
       console.warn("[Correction Log] Failed to save correction:", error);
     }
+  },
+
+  getSystemStatus: async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL}/health`);
+      return response.data;
+    } catch (error) {
+      console.error("Health check failed:", error);
+      return null;
+    }
   }
 };

@@ -13,7 +13,10 @@ import traceback
 import warnings
 import logging
 import hashlib
+import time
 from contextlib import asynccontextmanager
+
+APP_START_TIME = time.time()
 
 # Suppress harmless PyTorch CPU pin_memory warning
 warnings.filterwarnings("ignore", message="'pin_memory'")
@@ -240,6 +243,7 @@ class HealthResponse(BaseModel):
     status: str
     classifier_loaded: bool
     ner_loaded: bool
+    uptime_seconds: float = 0.0
 
 
 class ReadinessResponse(BaseModel):
@@ -468,6 +472,7 @@ async def health_check():
         status="ok",
         classifier_loaded=classifier_service._loaded,
         ner_loaded=ner_service._loaded,
+        uptime_seconds=time.time() - APP_START_TIME,
     )
 
 

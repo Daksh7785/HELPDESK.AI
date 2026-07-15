@@ -1,24 +1,59 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, CheckCircle, AlertTriangle, ArrowLeft, RefreshCw } from 'lucide-react';
+import { Activity, CheckCircle, AlertTriangle, ArrowLeft, RefreshCw, Clock } from 'lucide-react';
 import { Card } from '../components/ui/card';
+import { api } from '../services/api';
+
+const formatUptime = (seconds) => {
+    if (!seconds) return '0s';
+    const d = Math.floor(seconds / (3600*24));
+    const h = Math.floor(seconds % (3600*24) / 3600);
+    const m = Math.floor(seconds % 3600 / 60);
+    const s = Math.floor(seconds % 60);
+    const parts = [];
+    if (d > 0) parts.push(`${d}d`);
+    if (h > 0) parts.push(`${h}h`);
+    if (m > 0) parts.push(`${m}m`);
+    parts.push(`${s}s`);
+    return parts.join(' ');
+};
 
 export default function StatusPage() {
     const navigate = useNavigate();
-    const [isRefreshing, setIsRefreshing] = React.useState(false);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [systemStatus, setSystemStatus] = useState(null);
+
+    const fetchStatus = async () => {
+        setIsRefreshing(true);
+        try {
+            const data = await api.getSystemStatus();
+            if (data) {
+                setSystemStatus(data);
+            }
+        } catch (error) {
+            console.error("Failed to fetch status", error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchStatus();
+    }, []);
 
     const handleRefresh = () => {
-        setIsRefreshing(true);
-        setTimeout(() => setIsRefreshing(false), 1000);
+        fetchStatus();
     };
 
     const services = [
-        { name: 'AI Triage Engine (NER & Categorization)', status: 'Operational', desc: 'Active pipeline & Gemini Model backup failovers' },
+        { name: 'AI Triage Engine (NER & Categorization)', status: systemStatus?.classifier_loaded && systemStatus?.ner_loaded ? 'Operational' : (systemStatus ? 'Degraded' : 'Operational'), desc: 'Active pipeline & Gemini Model backup failovers' },
         { name: 'Supabase Data Gateway', status: 'Operational', desc: 'Secure database endpoints & real-time socket connections' },
         { name: 'Speech Dictation Interface', status: 'Operational', desc: 'Local Web Speech Recognition browser framework compatibility' },
         { name: 'Client-Side OCR Telemetry', status: 'Operational', desc: 'Tesseract.js script injection & parallel image worker processes' },
         { name: 'Stripe Payment Processor Integration', status: 'Operational', desc: 'Live billing checkout links & dynamic upgrade callbacks' }
     ];
+
+    const uptimeText = systemStatus?.uptime_seconds ? formatUptime(systemStatus.uptime_seconds) : null;
 
     return (
         <div className="min-h-screen bg-[#f6f8f7] pb-20">
@@ -53,6 +88,12 @@ export default function StatusPage() {
                         </div>
                         <h2 className="text-3xl font-black italic tracking-tight">All Systems Operational</h2>
                         <p className="text-slate-300 text-xs font-semibold">100% of microservices running successfully within target parameters.</p>
+                        {uptimeText && (
+                            <div className="flex items-center gap-2 mt-2 text-emerald-300">
+                                <Clock size={14} />
+                                <span className="text-xs font-bold tracking-wide uppercase">System Uptime: {uptimeText}</span>
+                            </div>
+                        )}
                     </div>
 
                     <button 
@@ -74,8 +115,8 @@ export default function StatusPage() {
                                     <h4 className="font-extrabold text-slate-900 text-sm">{service.name}</h4>
                                     <p className="text-xs text-slate-400 font-semibold">{service.desc}</p>
                                 </div>
-                                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-[10px] font-black uppercase tracking-widest">
-                                    <CheckCircle size={10} /> {service.status}
+                                <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest ${service.status === 'Operational' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
+                                    {service.status === 'Operational' ? <CheckCircle size={10} /> : <AlertTriangle size={10} />} {service.status}
                                 </span>
                             </Card>
                         ))}
