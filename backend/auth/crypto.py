@@ -4,24 +4,46 @@ import base64
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 # Initialize AESGCM with 32-byte key derived from secret key
-SECRET_KEY = os.environ.get("DB_ENCRYPTION_SECRET_KEY")
-
 _cipher = None
-if SECRET_KEY:
-    # Hash secret key to ensure it is exactly 32 bytes (256 bits)
-    key_bytes = hashlib.sha256(SECRET_KEY.encode()).digest()
-    _cipher = AESGCM(key_bytes)
-else:
-    print("[WARNING] DB_ENCRYPTION_SECRET_KEY not set. Data encryption is disabled (degraded mode).")
+_cipher_initialized = False
+
+def get_cipher():
+    """Lazily load the database encryption key from Supabase Vault or env, and return the AESGCM cipher."""
+    global _cipher, _cipher_initialized
+    if _cipher_initialized:
+        return _cipher
+        
+    try:
+        from backend.config.secrets import get_db_encryption_key
+        secret_key = get_db_encryption_key()
+    except Exception as e:
+        print(f"[Crypto] Error importing/loading encryption key: {e}")
+        secret_key = os.environ.get("DB_ENCRYPTION_SECRET_KEY")
+        
+    if secret_key:
+        try:
+            # Hash secret key to ensure it is exactly 32 bytes (256 bits)
+            key_bytes = hashlib.sha256(secret_key.encode()).digest()
+            _cipher = AESGCM(key_bytes)
+        except Exception as e:
+            print(f"[Crypto Error] Failed to initialize AESGCM: {e}")
+            _cipher = None
+    else:
+        print("[WARNING] DB_ENCRYPTION_SECRET_KEY not set. Data encryption is disabled (degraded mode).")
+        _cipher = None
+        
+    _cipher_initialized = True
+    return _cipher
 
 def encrypt(plain_text: str) -> str:
     """Encrypt plain text using AES-256 GCM and return base64 encoded string."""
-    if not _cipher or not plain_text:
+    cipher = get_cipher()
+    if not cipher or not plain_text:
         return plain_text
     try:
         # Generate 12-byte random nonce for GCM
         nonce = os.urandom(12)
-        encrypted_bytes = _cipher.encrypt(nonce, plain_text.encode(), None)
+        encrypted_bytes = cipher.encrypt(nonce, plain_text.encode(), None)
         # Combine nonce and ciphertext and encode as base64
         combined = nonce + encrypted_bytes
         return base64.b64encode(combined).decode('utf-8')
@@ -31,7 +53,8 @@ def encrypt(plain_text: str) -> str:
 
 def decrypt(cipher_text: str) -> str:
     """Decrypt base64 encoded ciphertext using AES-256 GCM and return plain text."""
-    if not _cipher or not cipher_text:
+    cipher = get_cipher()
+    if not cipher or not cipher_text:
         return cipher_text
     try:
         # Check if cipher_text looks like base64
@@ -45,7 +68,7 @@ def decrypt(cipher_text: str) -> str:
             
         nonce = combined[:12]
         ciphertext = combined[12:]
-        decrypted_bytes = _cipher.decrypt(nonce, ciphertext, None)
+        decrypted_bytes = cipher.decrypt(nonce, ciphertext, None)
         return decrypted_bytes.decode('utf-8')
     except Exception as e:
         # If decryption fails, it might be unencrypted plaintext (graceful degrade for old records)
